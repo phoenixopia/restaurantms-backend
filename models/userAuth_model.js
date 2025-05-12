@@ -10,7 +10,6 @@ module.exports = (sequelize, DataTypes) => {
       },
       restaurant_id: {
         type: DataTypes.UUID,
-        allowNull: false,
         references: {
           model: "restaurants",
           key: "id",
@@ -22,8 +21,15 @@ module.exports = (sequelize, DataTypes) => {
         unique: true,
         allowNull: false,
       },
-      password_hash: DataTypes.TEXT,
-      phone_number: DataTypes.STRING(20),
+      password_hash: {
+        type: DataTypes.TEXT,
+        allowNull: false,
+      },
+      phone_number: {
+        type: DataTypes.STRING(20),
+        unique: true,
+        allowNull: false,
+      },
       address: DataTypes.STRING(20),
       profile_picture: DataTypes.TEXT, // in the case of file use byte
       social_provider: DataTypes.ENUM("Google", "Apple", "Facebook", "None"),

@@ -9,7 +9,6 @@ const rateLimit = require("express-rate-limit");
 const app = express();
 
 app.use(morgan("dev"));
-app.use(bodyParser.json({ limit: "25mb" }));
 app.use(bodyParser.urlencoded({ limit: "25mb", extended: true }));
 app.use(cookieParser());
 
@@ -41,9 +40,8 @@ const corsOptions = {
 };
 app.options("*", cors(corsOptions));
 app.use(cors(corsOptions));
+app.use(express.json());
 
-app.get("/", (req, res) => {
-  res.send("Welcome to `Restaurant Management System Backend`!");
-});
+app.use("/api/v1", require("./routes"));
 
 module.exports = app;

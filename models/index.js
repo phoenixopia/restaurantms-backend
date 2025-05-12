@@ -2,7 +2,7 @@
 
 const fs = require("fs");
 const path = require("path");
-const Sequelize = require("sequelize");
+const { Sequelize } = require("sequelize"); // Corrected import
 const process = require("process");
 const basename = path.basename(__filename);
 const env = process.env.NODE_ENV || "development";
@@ -21,6 +21,7 @@ if (config.use_env_variable) {
   );
 }
 
+// Read all models and import them
 fs.readdirSync(__dirname)
   .filter((file) => {
     return (
@@ -38,11 +39,24 @@ fs.readdirSync(__dirname)
     db[model.name] = model;
   });
 
+// Setup model associations
 Object.keys(db).forEach((modelName) => {
   if (db[modelName].associate) {
     db[modelName].associate(db);
   }
 });
+
+// Sync database in development only
+if (env === "development") {
+  sequelize
+    .sync({ alter: true })
+    .then(() => {
+      console.log("Database synchronized (development mode)");
+    })
+    .catch((err) => {
+      console.error("Failed to synchronize database:", err);
+    });
+}
 
 db.sequelize = sequelize;
 db.Sequelize = Sequelize;
