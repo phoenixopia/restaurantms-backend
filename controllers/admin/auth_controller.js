@@ -2,6 +2,8 @@
 require("dotenv").config();
 const bcrypt = require("bcrypt");
 const { v4: uuidv4 } = require("uuid");
+const { Op } = require("sequelize");
+
 const jwt = require("jsonwebtoken");
 const { User, Role, UserRole } = require("../../models");
 

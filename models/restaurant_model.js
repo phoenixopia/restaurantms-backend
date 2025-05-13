@@ -17,19 +17,22 @@ module.exports = (sequelize, DataTypes) => {
       language: DataTypes.STRING(10),
       rtl_enabled: DataTypes.BOOLEAN, // ask tsebi its neccessity
       plan_id: {
-        type: DataTypes.INTEGER,
+        type: DataTypes.UUID,
         references: {
           model: "plans",
           key: "id",
         },
       },
-      status: DataTypes.ENUM(
-        "active",
-        "trial",
-        "suspended",
-        "cancelled",
-        "pending"
-      ),
+      status: {
+        type: DataTypes.ENUM(
+          "active",
+          "trial",
+          "suspended",
+          "cancelled",
+          "pending"
+        ),
+        defaultValue: "pending",
+      },
     },
     {
       tableName: "restaurants",
