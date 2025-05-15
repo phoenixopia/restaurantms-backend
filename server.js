@@ -22,6 +22,7 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
+
 // 🛡️ Security: CORS with whitelist
 const allowedOrigins = [process.env.CLIENT_URL];
 const corsOptions = {
@@ -47,6 +48,21 @@ app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+
+// DB connection and server start
+sequelize
+  .authenticate()
+  .then(() => {
+    console.log('✅ Connected to the database');
+    app.listen(PORT, () => {
+      console.log(`🚀 Server is running on http://localhost:${PORT}`);
+    });
+  })
+  .catch((error) => {
+    console.error('❌ Unable to connect to the database:', error);
+});
+
+
 // API routes
 const authRoutes = require('./routes/authRoute');
 const userRoutes = require('./routes/userRoute');
@@ -62,14 +78,14 @@ app.get("/", (req, res) => {
 app.use(errorHandler);
 
 // DB connection and server start
-sequelize
-  .authenticate()
-  .then(() => {
-    console.log('✅ Connected to the database');
-    app.listen(PORT, () => {
-      console.log(`🚀 Server is running on http://localhost:${PORT}`);
-    });
-  })
-  .catch((error) => {
-    console.error('❌ Unable to connect to the database:', error);
-  });
+// sequelize
+//   .authenticate()
+//   .then(() => {
+//     console.log('✅ Connected to the database');
+//     app.listen(PORT, () => {
+//       console.log(`🚀 Server is running on http://localhost:${PORT}`);
+//     });
+//   })
+//   .catch((error) => {
+//     console.error('❌ Unable to connect to the database:', error);
+// });
