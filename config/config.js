@@ -1,6 +1,5 @@
 const { parse } = require('pg-connection-string');
 require('dotenv').config();
-require('pg');
 
 const dbUrl = parse(process.env.DATABASE_URL);
 // console.log(dbUrl);
@@ -15,7 +14,8 @@ const commonConfig = {
   logging: false,
   dialectOptions: {
     ssl: { require: true, rejectUnauthorized: false }
-  }
+  },
+  dialectModule: require('pg'),
 };
 module.exports = {
   development: {
