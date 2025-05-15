@@ -1,7 +1,7 @@
 const bcryptjs = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-// const { customAlphabet } = require('nanoid');
-const { customAlphabet } = require('nanoid/non-secure');
+const { customAlphabet } = require('nanoid');
+// const { customAlphabet } = require('nanoid/non-secure');
 
 
 // Generate a unique ID using nanoid
