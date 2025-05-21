@@ -74,7 +74,6 @@ exports.getAllUsers = async (req, res, next) => {
     const totalPages = Math.ceil(userCount / pageSize);
     const users = await Users.findAll({
       // where: { role: {[Op.ne]: 'super-admin'}},
-      attributes: { exclude: ['password', 'resetToken', 'confirmationCode'] },
       // include: [
       //   { model: Notifications, as: 'notification'},
       // ],
