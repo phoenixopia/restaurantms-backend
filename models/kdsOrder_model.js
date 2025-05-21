@@ -8,6 +8,22 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
       },
+      restaurant_id: {
+        type: DataTypes.UUID,
+        allowNull: false,
+        references: {
+          model: "restaurants",
+          key: "id",
+        },
+      },
+      branch_id: {
+        type: DataTypes.UUID,
+        allowNull: false,
+        references: {
+          model: "branches",
+          key: "id",
+        },
+      },
       order_id: {
         type: DataTypes.UUID,
         allowNull: false,
