@@ -24,13 +24,7 @@ module.exports = (sequelize, DataTypes) => {
           key: "id",
         },
       },
-      restaurant_id: {
-        type: DataTypes.UUID,
-        references: {
-          model: "restaurants",
-          key: "id",
-        },
-      },
+
       granted: {
         type: DataTypes.BOOLEAN,
         allowNull: false,
@@ -47,9 +41,6 @@ module.exports = (sequelize, DataTypes) => {
     RolePermission.belongsTo(models.Role, { foreignKey: "role_id" });
     RolePermission.belongsTo(models.Permission, {
       foreignKey: "permission_id",
-    });
-    RolePermission.belongsTo(models.Restaurant, {
-      foreignKey: "restaurant_id",
     });
   };
 

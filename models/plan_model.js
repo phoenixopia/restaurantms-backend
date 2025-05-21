@@ -20,7 +20,6 @@ module.exports = (sequelize, DataTypes) => {
       max_kds: DataTypes.INTEGER,
       kds_enabled: DataTypes.BOOLEAN,
       price: DataTypes.DECIMAL(10, 2),
-      billing_cycle: DataTypes.ENUM("monthly", "yearly"),
     },
     {
       tableName: "plans",
@@ -30,7 +29,6 @@ module.exports = (sequelize, DataTypes) => {
   );
 
   Plan.associate = (models) => {
-    Plan.hasMany(models.Restaurant, { foreignKey: "plan_id" });
     Plan.hasMany(models.Subscription, { foreignKey: "plan_id" });
   };
 

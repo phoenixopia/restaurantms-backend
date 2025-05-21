@@ -49,7 +49,11 @@ module.exports = (sequelize, DataTypes) => {
     Order.belongsTo(models.Restaurant, { foreignKey: "restaurant_id" });
     Order.belongsTo(models.User, { foreignKey: "user_id" });
     Order.belongsTo(models.Table, { foreignKey: "table_id" });
-    Order.hasMany(models.OrderItem, { foreignKey: "order_id" });
+    Order.belongsToMany(models.OrderItem, {
+      through: "OrderItemOrder",
+      foreignKey: "order_id",
+      otherKey: "order_item_id",
+    });
     Order.hasOne(models.Payment, { foreignKey: "order_id" });
     Order.hasOne(models.KdsOrder, { foreignKey: "order_id" });
     Order.hasOne(models.Feedback, { foreignKey: "order_id" });

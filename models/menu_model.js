@@ -8,14 +8,6 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
       },
-      restaurant_id: {
-        type: DataTypes.UUID,
-        allowNull: false,
-        references: {
-          model: "restaurants",
-          key: "id",
-        },
-      },
       name: DataTypes.STRING(255),
       description: DataTypes.TEXT,
       is_active: DataTypes.BOOLEAN,
@@ -28,7 +20,11 @@ module.exports = (sequelize, DataTypes) => {
   );
 
   Menu.associate = (models) => {
-    Menu.belongsTo(models.Restaurant, { foreignKey: "restaurant_id" });
+    Menu.belongsToMany(models.Restaurant, {
+      through: "RestaurantMenu",
+      foreignKey: "menu_id",
+      otherKey: "restaurant_id",
+    });
     Menu.hasMany(models.MenuCategory, { foreignKey: "menu_id" });
     Menu.hasMany(models.MenuItem, { foreignKey: "menu_id" });
   };

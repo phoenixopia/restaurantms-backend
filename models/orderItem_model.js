@@ -8,14 +8,14 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
       },
-      order_id: {
-        type: DataTypes.UUID,
-        allowNull: false,
-        references: {
-          model: "orders",
-          key: "id",
-        },
-      },
+      // order_id: {
+      //   type: DataTypes.UUID,
+      //   allowNull: false,
+      //   references: {
+      //     model: "orders",
+      //     key: "id",
+      //   },
+      // },
       menu_item_id: {
         type: DataTypes.UUID,
         allowNull: false,
@@ -35,8 +35,12 @@ module.exports = (sequelize, DataTypes) => {
   );
 
   OrderItem.associate = (models) => {
-    OrderItem.belongsTo(models.Order, { foreignKey: "order_id" });
-    OrderItem.belongsTo(models.MenuItem, { foreignKey: "menu_item_id" });
+    OrderItem.belongsToMany(models.Order, {
+      through: "OrderItemOrder",
+      foreignKey: "order_item_id",
+      otherKey: "order_id",
+    });
+    OrderItem.belongsToMany(models.MenuItem, { foreignKey: "menu_item_id" });
   };
 
   return OrderItem;

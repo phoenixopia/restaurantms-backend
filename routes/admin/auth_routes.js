@@ -1,6 +1,12 @@
 const express = require("express");
 const authController = require("../../controllers/authController");
 
+const { auth } = require("google-auth-library");
+
+const { protect } = require("../../middleware/protect");
+const { authorize } = require("../../middleware/authorize");
+const checkPermission = require("../../middleware/checkPermission");
+
 const router = express.Router();
 
 router.post("/register", authController.register);

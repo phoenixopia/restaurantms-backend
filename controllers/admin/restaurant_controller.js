@@ -1,7 +1,14 @@
-const { where } = require("sequelize");
-const { Restaurant, Plan, RestaurantUser, User } = require("../../../models");
+const { Sequelize, where } = require("sequelize");
+const {
+  Restaurant,
+  Plan,
+  RestaurantUser,
+  User,
+  sequelize,
+} = require("../../models");
+const capitalizeFirstLetter = require("../../utils/capitalizeFirstLetter");
 
-const getRestaurants = async (req, res) => {
+const getRestaurant = async (req, res) => {
   try {
     const userId = req.user.id;
 
@@ -14,6 +21,7 @@ const getRestaurants = async (req, res) => {
 
     const restaurants = await Restaurant.findAll({
       where: { id: restaurantIds },
+      attributes: { exclude: ["created_at", "updated_at"] },
       include: [
         {
           model: Plan,
@@ -29,7 +37,8 @@ const getRestaurants = async (req, res) => {
   }
 };
 
-const createRestaurant = async (req, res) => {
+const registerRestaurant = async (req, res) => {
+  const t = await sequelize.transaction();
   try {
     const {
       restaurant_name,
@@ -51,46 +60,50 @@ const createRestaurant = async (req, res) => {
         .json({ message: "Restaurant name and plan are required." });
     }
 
-    const formattedPlan =
-      plan.charAt(0).toUpperCase() + plan.slice(1).toLowerCase();
-    const selectedPlan = await Plan.findOne({ where: { name: formattedPlan } });
+    const formattedPlan = capitalizeFirstLetter.capitalizeFirstLetter(plan);
+    const selectedPlan = await Plan.findOne({
+      where: { name: formattedPlan },
+      transaction: t,
+    });
 
     if (!selectedPlan) {
       return res.status(404).json({ message: "Plan not found." });
     }
 
-    const newRestaurant = await Restaurant.create({
-      restaurant_name,
-      logo_url,
-      primary_color,
-      language,
-      rtl_enabled,
-      plan_id: selectedPlan.id,
-      status: "pending",
-    });
-
-    await RestaurantUser.create({
-      user_id: user.id,
-      restaurant_id: newRestaurant.id,
-    });
-
-    await User.update(
-      { restaurant_id: newRestaurant.id },
-      { where: { id: user.id } }
+    const newRestaurant = await Restaurant.create(
+      {
+        restaurant_name,
+        logo_url,
+        primary_color,
+        language,
+        rtl_enabled,
+        plan_id: selectedPlan.id,
+        status: "trial",
+      },
+      { transaction: t }
     );
 
-    return res.status(201).json({
-      message: "Restaurant created successfully",
-    });
+    await RestaurantUser.create(
+      {
+        user_id: user.id,
+        restaurant_id: newRestaurant.id,
+      },
+      { transaction: t }
+    );
+
+    await t.commit();
+    return res.status(201).json({ message: "Restaurant created successfully" });
   } catch (error) {
+    await t.rollback();
     console.error("Error creating restaurant:", error);
-    res.status(500).json({
-      message: "Server error while creating restaurant.",
-    });
+    res
+      .status(500)
+      .json({ message: "Server error while creating restaurant." });
   }
 };
 
 const updateRestaurant = async (req, res) => {
+  const t = await sequelize.transaction();
   try {
     const userId = req.user.id;
     const { id } = req.params;
@@ -104,16 +117,19 @@ const updateRestaurant = async (req, res) => {
       return res.status(403).json({ message: "Unauthorized" });
     }
 
-    await Restaurant.update(updates, { where: { id } });
+    await Restaurant.update(updates, { where: { id }, transaction: t });
+    await t.commit();
 
     res.status(200).json({ message: "Restaurant updated successfully" });
   } catch (error) {
+    await t.rollback();
     console.error("Error updating restaurant:", error);
     res.status(500).json({ message: "Server error" });
   }
 };
 
 const deleteRestaurant = async (req, res) => {
+  const t = await sequelize.transaction();
   try {
     const { id } = req.params;
     const userId = req.user.id;
@@ -130,18 +146,20 @@ const deleteRestaurant = async (req, res) => {
         .status(403)
         .json({ message: "You are not authorized to delete this restaurant." });
     }
+
     await RestaurantUser.destroy({
       where: { user_id: userId, restaurant_id: id },
+      transaction: t,
     });
 
-    await Restaurant.destroy({ where: { id } });
+    await Restaurant.destroy({ where: { id }, transaction: t });
 
-    await User.update({ restaurant_id: null }, { where: { id: userId } });
-
+    await t.commit();
     return res
       .status(200)
       .json({ message: "Restaurant deleted successfully." });
   } catch (error) {
+    await t.rollback();
     console.error("Error deleting restaurant:", error);
     res
       .status(500)
@@ -150,8 +168,8 @@ const deleteRestaurant = async (req, res) => {
 };
 
 module.exports = {
-  getRestaurants,
-  createRestaurant,
+  getRestaurant,
+  registerRestaurant,
   updateRestaurant,
   deleteRestaurant,
 };

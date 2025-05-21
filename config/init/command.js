@@ -1,6 +1,6 @@
 const { Command } = require("commander");
 const inquirer = require("inquirer");
-const { createSuperAdmin } = require("./index");
+const { createSuperAdmin } = require("./index.js"); // CommonJS require
 
 const program = new Command();
 
@@ -12,9 +12,15 @@ program
     const questions = [
       {
         type: "input",
-        name: "name",
-        message: "Enter Full Name:",
-        validate: (input) => (input ? true : "Name is required"),
+        name: "first_name",
+        message: "Enter First Name:",
+        validate: (input) => (input ? true : "First name is required"),
+      },
+      {
+        type: "input",
+        name: "last_name",
+        message: "Enter Last Name:",
+        validate: (input) => (input ? true : "Last name is required"),
       },
       {
         type: "input",

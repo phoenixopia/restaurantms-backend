@@ -8,11 +8,11 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
       },
-      restaurant_id: {
+      branch_id: {
         type: DataTypes.UUID,
         allowNull: false,
         references: {
-          model: "restaurants",
+          model: "branches",
           key: "id",
         },
       },
@@ -38,7 +38,7 @@ module.exports = (sequelize, DataTypes) => {
 
   MenuCategory.associate = (models) => {
     MenuCategory.belongsTo(models.Menu, { foreignKey: "menu_id" });
-    MenuCategory.belongsTo(models.Restaurant, { foreignKey: "restaurant_id" });
+    MenuCategory.belongsTo(models.Branch, { foreignKey: "branch_id" });
     MenuCategory.hasMany(models.MenuItem, { foreignKey: "menu_category_id" });
   };
 

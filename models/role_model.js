@@ -12,8 +12,12 @@ module.exports = (sequelize, DataTypes) => {
         "super_admin",
         "restaurant_admin",
         "customer",
+        "manager",
+        "cashier",
+        "waiter",
+        "chef",
         "staff"
-      ), // we can remove the staff role.... i added in case of future use
+      ),
       description: DataTypes.TEXT,
     },
     {
@@ -24,12 +28,12 @@ module.exports = (sequelize, DataTypes) => {
   );
 
   Role.associate = (models) => {
-    Role.belongsToMany(models.User, {
-      through: models.UserRole,
-      foreignKey: "role_id",
-    });
     Role.belongsToMany(models.Permission, {
       through: models.RolePermission,
+      foreignKey: "role_id",
+      otherKey: "permission_id",
+    });
+    Role.hasMany(models.User, {
       foreignKey: "role_id",
     });
   };

@@ -15,23 +15,10 @@ module.exports = (sequelize, DataTypes) => {
       logo_url: DataTypes.TEXT,
       primary_color: DataTypes.STRING(7),
       language: DataTypes.STRING(10),
-      rtl_enabled: DataTypes.BOOLEAN, // ask tsebi its neccessity
-      plan_id: {
-        type: DataTypes.UUID,
-        references: {
-          model: "plans",
-          key: "id",
-        },
-      },
+      rtl_enabled: DataTypes.BOOLEAN,
       status: {
-        type: DataTypes.ENUM(
-          "active",
-          "trial",
-          "suspended",
-          "cancelled",
-          "pending"
-        ),
-        defaultValue: "pending",
+        type: DataTypes.ENUM("active", "trial", "cancelled", "expired"),
+        defaultValue: "trial",
       },
     },
     {
@@ -42,11 +29,26 @@ module.exports = (sequelize, DataTypes) => {
   );
 
   Restaurant.associate = (models) => {
-    Restaurant.belongsTo(models.Plan, { foreignKey: "plan_id" });
-    Restaurant.hasMany(models.User, { foreignKey: "restaurant_id" });
-    Restaurant.hasMany(models.Subscription, { foreignKey: "restaurant_id" });
-    Restaurant.hasMany(models.Menu, { foreignKey: "restaurant_id" });
+    Restaurant.hasOne(models.Subscription, { foreignKey: "restaurant_id" });
+
+    Restaurant.belongsToMany(models.User, {
+      through: "RestaurantUser",
+      foreignKey: "restaurant_id",
+      otherKey: "user_id",
+    });
+    Restaurant.hasMany(models.Branch, {
+      foreignKey: "restaurant_id",
+    });
+
+    // One Tenant can have multiple Locations
     Restaurant.hasMany(models.Location, { foreignKey: "restaurant_id" });
+
+    Restaurant.belongsToMany(models.Menu, {
+      through: "RestaurantMenu",
+      foreignKey: "restaurant_id",
+      otherKey: "menu_id",
+    });
+
     Restaurant.hasMany(models.Reservation, { foreignKey: "restaurant_id" });
     Restaurant.hasMany(models.Feedback, { foreignKey: "restaurant_id" });
     Restaurant.hasMany(models.SupportTicket, { foreignKey: "restaurant_id" });

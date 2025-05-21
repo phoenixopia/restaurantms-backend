@@ -1,7 +1,6 @@
 require("dotenv").config();
 const express = require("express");
 const morgan = require("morgan");
-const bodyParser = require("body-parser");
 const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const rateLimit = require("express-rate-limit");
@@ -9,7 +8,8 @@ const rateLimit = require("express-rate-limit");
 const app = express();
 
 app.use(morgan("dev"));
-app.use(bodyParser.urlencoded({ limit: "25mb", extended: true }));
+app.use(express.json());
+app.use(express.urlencoded({ limit: "25mb", extended: true }));
 app.use(cookieParser());
 
 const limiter = rateLimit({
@@ -40,7 +40,6 @@ const corsOptions = {
 };
 app.options("*", cors(corsOptions));
 app.use(cors(corsOptions));
-app.use(express.json());
 
 app.use("/api/v1", require("./routes"));
 

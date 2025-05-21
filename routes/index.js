@@ -1,19 +1,17 @@
 const express = require("express");
 const router = express.Router();
+const userController = require("../controllers/userController");
 
-// auth routes for admin both super admin and restaurant admin
-router.use("/admin/auth", require("./admin/admin_auth_routes"));
+// routes for admin side
+router.use("/admin", require("./admin/index"));
 
-// route for super admin
-router.use("/admin/plan", require("./admin/super-admin/admin_plan_routes"));
+// routes for customers side
+router.use("/customer", require("./customer/index"));
 
-// route for restaurant admin
-router.use(
-  "/admin/restaurant",
-  require("./admin/restaurant-admin/restaurant_route")
-);
-
-// auth routes for customers
-router.use("/customer/auth", require("./customer/userAuthRoutes"));
+// common routes for both admin and customer
+router.get("/profile", userController.getProfile);
+router.put("/update-profile", userController.updateProfile);
+router.delete("/delete-profile", userController.deleteAccount);
+router.post("/change-password", userController.changePassword);
 
 module.exports = router;
