@@ -3,7 +3,7 @@
 
 const bcryptjs = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { getGeneratedId } = require('../utils/idGenerator');
+// const { getGeneratedId } = require('../utils/idGenerator');
 
 // let generateId;
 // (async () => {
