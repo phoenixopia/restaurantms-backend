@@ -2,7 +2,7 @@ const jwt = require('jsonwebtoken');
 const ErrorResponse = require('../utils/errorResponse');
 
 // check the user authenticated
-exports.protect = async (req, res, next) => {
+exports.isAuthenticated = async (req, res, next) => {
   let token;
   if (req.cookies.token) {
     token = req.cookies.token;
@@ -27,7 +27,7 @@ exports.authorize = (...roles) => {
   return (req, res, next) => {
     if (!roles.includes(req.user?.role)) {
       return next(
-        new ErrorResponse(`User role '${req.user.role}' is not authorized`, 403)
+        new ErrorResponse(`Access Denied. User role '${req.user.role}' is not authorized`, 403)
       );
       // return res.status(403).json({success: false, message: `User role '${req.user.role}' is not authorized` });
     }

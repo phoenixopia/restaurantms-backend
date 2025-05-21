@@ -16,7 +16,7 @@ exports.sendTokenResponse = async (user, statusCode, res) => {
                 success: true,
                 data: {
                   id: user.id,
-                  role: user.role,
+                  // role: user.role,
                   token,
                 }
             });
