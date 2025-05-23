@@ -32,12 +32,34 @@ fs.readdirSync(__dirname)
     );
   })
   .forEach((file) => {
-    const model = require(path.join(__dirname, file))(
-      sequelize,
-      Sequelize.DataTypes
-    );
+    console.log("Importing model file:", file);
+    const modelImport = require(path.join(__dirname, file));
+    if (typeof modelImport !== "function") {
+      console.error(`Error: File "${file}" does NOT export a function`);
+      return; // skip this file
+    }
+    const model = modelImport(sequelize, Sequelize.DataTypes);
+    if (!model) {
+      console.error(
+        `Error: Model returned from file "${file}" is undefined or null`
+      );
+      return; // skip this file
+    }
+    if (!model.name) {
+      console.error(
+        `Error: Model from file "${file}" does not have a 'name' property`
+      );
+      return; // skip this file
+    }
     db[model.name] = model;
   });
+// .forEach((file) => {
+//   const model = require(path.join(__dirname, file))(
+//     sequelize,
+//     Sequelize.DataTypes
+//   );
+//   db[model.name] = model;
+// });
 
 // Setup model associations
 Object.keys(db).forEach((modelName) => {

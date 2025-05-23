@@ -12,6 +12,10 @@ module.exports = (sequelize, DataTypes) => {
       user_id: {
         type: DataTypes.UUID,
         allowNull: false,
+        references: {
+          model: "users",
+          key: "id",
+        },
       },
       secret_key: {
         type: DataTypes.TEXT,
@@ -36,7 +40,6 @@ module.exports = (sequelize, DataTypes) => {
   TwoFA.associate = function (models) {
     TwoFA.belongsTo(models.User, {
       foreignKey: "user_id",
-      as: "twoFA",
       onDelete: "CASCADE",
     });
   };

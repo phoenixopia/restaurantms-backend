@@ -2,7 +2,7 @@
 
 module.exports = (sequelize, DataTypes) => {
   const OrderItemOrder = sequelize.define(
-    "OrderItemOrder",
+    "OrdersOrderItems",
     {
       id: {
         type: DataTypes.UUID,

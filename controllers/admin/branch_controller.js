@@ -1,4 +1,4 @@
-const { Branch } = require("../models");
+const { Restaurant, Location, User, sequelize } = require("../models");
 const getBranchStatusByTime = require("../utils/getBranchStatusByTime");
 
 exports.createBranch = async (req, res) => {

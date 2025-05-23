@@ -8,7 +8,7 @@ const jwt = require("jsonwebtoken");
 const speakeasy = require("speakeasy");
 
 const { User, sequelize, TwoFA } = require("../models");
-const { hashPassword, comparePassword } = require("../utils/hash");
+// const { hashPassword, comparePassword } = require("../utils/hash");
 const { capitalizeFirstLetter } = require("../utils/capitalizeFirstLetter");
 const { sendTokenResponse } = require("../utils/sendTokenResponse");
 const {
@@ -116,35 +116,38 @@ exports.register = async (req, res) => {
   }
 };
 exports.login = async (req, res) => {
-  const { email, password, device_type, code } = req.body;
+  const { phone_number, email, password, device_type, code } = req.body;
 
-  if (!email || !password) {
-    return res
-      .status(400)
-      .json({ success: false, message: "Please provide email and password." });
+  if (!email || !password || !phone_number) {
+    return res.status(400).json({
+      success: false,
+      message:
+        "Please provide required fields (email, phone number, password).",
+    });
   }
   const t = await sequelize.transaction();
   try {
     const user = await User.findOne({
       where: { email: { [Op.iLike]: email } },
-      attributes: { include: ["password_hash"] },
       include: [{ model: TwoFA, as: "twoFA" }],
       transaction: t,
-      // lock: t.LOCK.UPDATE,
     });
+
     if (!user) {
       await t.rollback();
       return res
         .status(404)
         .json({ success: false, message: "No account found with this email." });
     }
-    if (!user.isConfirmed) {
+
+    if (!user.email_verified_at) {
       await t.rollback();
       return res.status(400).json({
         success: false,
         message: "Email not confirmed. Please check your inbox.",
       });
     }
+
     if (user.isLocked()) {
       await t.rollback();
       return res.status(403).json({
@@ -152,7 +155,8 @@ exports.login = async (req, res) => {
         message: `Your account is locked until ${user.locked_until}. Please try again later.`,
       });
     }
-    const isMatched = await comparePassword(password, user.password_hash);
+    const isMatched = await user.comparePassword(password);
+
     if (!isMatched) {
       await user.markFailedLoginAttempt();
       await t.rollback();
@@ -268,24 +272,19 @@ exports.googleLogin = async (req, res) => {
   }
 };
 exports.confirmEmail = async (req, res) => {
-  const { email, device_type } = req.body;
-  const { confirmationCode } = req.params;
+  const { code, email, device_type = "unknown" } = req.body;
 
-  if (!email || !confirmationCode) {
-    return res
-      .status(400)
-      .json({ success: false, message: "Missing confirmation code or email." });
-  }
   const t = await sequelize.transaction();
+
   try {
     const user = await User.findOne({
       where: {
-        confirmationCode,
         email: { [Op.iLike]: email },
-        isConfirmed: false,
+        confirmation_code: code,
+        email_verified_at: null,
       },
-      lock: t.LOCK.UPDATE,
       transaction: t,
+      lock: t.LOCK.UPDATE,
     });
     if (!user) {
       await t.rollback();
@@ -294,11 +293,19 @@ exports.confirmEmail = async (req, res) => {
         message: "Invalid confirmation code or email.",
       });
     }
-    user.isConfirmed = true;
+
+    user.email_verified_at = new Date();
+    user.confirmation_code = null;
     await user.save({ transaction: t });
+
     const ip = getClientIp(req);
-    user.markSuccessfulLoginAttempt(ip, device_type);
+    await user.markSuccessfulLoginAttempt(ip, device_type);
+
     await t.commit();
+    return res.status(200).json({
+      success: true,
+      message: "Email confirmed successfully!",
+    });
   } catch (err) {
     await t.rollback();
     console.error("Error confirming email:", err);
@@ -400,3 +407,25 @@ exports.reset = async (req, res) => {
     });
   }
 };
+
+/* 
+exports.register = async (req, res) => {
+  const roleName = req.roleName || 'customer'; // fallback to customer if missing
+
+  // get role from DB
+  const role = await Role.findOne({ where: { name: roleName } });
+  if (!role) {
+    return res.status(500).json({ message: 'Role not found' });
+  }
+
+  const userData = {
+    ...req.body,
+    role_id: role.id,
+    // ...other user fields set properly
+  };
+
+  // Create user with role_id set
+  // ...
+};
+
+*/

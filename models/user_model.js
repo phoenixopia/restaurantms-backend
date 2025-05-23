@@ -130,7 +130,7 @@ module.exports = (sequelize, DataTypes) => {
       },
       role_id: {
         type: DataTypes.UUID,
-        allowNull: false,
+        // allowNull: false,
         references: {
           model: "roles",
           key: "id",
@@ -237,6 +237,10 @@ module.exports = (sequelize, DataTypes) => {
     });
     User.belongsTo(models.Role, {
       foreignKey: "role_id",
+    });
+    User.hasOne(models.TwoFA, {
+      foreignKey: "manager_id",
+      as: "manager",
     });
   };
   return User;
