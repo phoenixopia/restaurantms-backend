@@ -14,6 +14,7 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         validate: { isIn: [["Basic", "Pro", "Enterprise"]] },
       },
+      max_branches: DataTypes.INTEGER,
       max_locations: DataTypes.INTEGER,
       max_staff: DataTypes.INTEGER,
       max_users: DataTypes.INTEGER,
@@ -25,6 +26,11 @@ module.exports = (sequelize, DataTypes) => {
       tableName: "plans",
       timestamps: true,
       underscored: true,
+      defaultScope: {
+        attributes: {
+          exclude: ["id", "created_at", "updated_at"],
+        },
+      },
     }
   );
 

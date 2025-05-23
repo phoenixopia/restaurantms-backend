@@ -24,14 +24,6 @@ module.exports = (sequelize, DataTypes) => {
           key: "id",
         },
       },
-      created_by_user_id: {
-        type: DataTypes.UUID,
-        allowNull: true,
-        references: {
-          model: "users",
-          key: "id",
-        },
-      },
       billing_cycle: {
         type: DataTypes.ENUM("monthly", "yearly"),
         allowNull: false,
@@ -49,10 +41,15 @@ module.exports = (sequelize, DataTypes) => {
   );
 
   Subscription.associate = (models) => {
-    Subscription.belongsTo(models.Restaurant, { foreignKey: "restaurant_id" });
-    Subscription.belongsTo(models.Plan, { foreignKey: "plan_id" });
-    Subscription.belongsTo(models.User, {
-      foreignKey: "created_by_user_id",
+    Subscription.belongsTo(models.Restaurant, {
+      foreignKey: "restaurant_id",
+      onDelete: "CASCADE",
+      hooks: true,
+    });
+    Subscription.belongsTo(models.Plan, {
+      foreignKey: "plan_id",
+      onDelete: "CASCADE",
+      hooks: true,
     });
   };
 

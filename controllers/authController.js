@@ -20,15 +20,42 @@ const { OAuth2Client } = require("google-auth-library");
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 exports.register = async (req, res) => {
-  const { firstName, lastName, email, phone_number, password } = req.body;
+  const {
+    firstName,
+    lastName,
+    email,
+    phone_number,
+    password,
+    signup_method, // email or phone
+  } = req.body;
   const t = await sequelize.transaction();
 
   try {
-    if (!firstName || !lastName || !email || !phone_number || !password) {
+    if (!firstName || !lastName || !signup_method) {
       return res.status(400).json({
         success: false,
-        message: "All fields are required",
+        message: "All Fields are Required!!",
       });
+    }
+
+    const first_name = capitalizeFirstLetter(firstName);
+    const last_name = capitalizeFirstLetter(lastName);
+
+    let userData = {
+      first_name,
+      last_name,
+      phone_number,
+      social_provider: "none",
+      is_active: true,
+    };
+
+    if (signup_method === "email") {
+      if (!email || !password) {
+        return res.status(400).json({
+          success: false,
+          message: "Email and password are required for email signup.",
+        });
+      }
     }
 
     if (!/\S+@\S+\.\S+/.test(email)) {
@@ -38,16 +65,13 @@ exports.register = async (req, res) => {
       });
     }
 
-    const hashedPassword = await hashPassword(password);
+    const confirmationCode = uuidv4();
 
-    const userData = {
-      first_name: capitalizeFirstLetter(firstName),
-      last_name: capitalizeFirstLetter(lastName),
+    userData = {
+      ...userData,
       email: email.toLowerCase(),
-      phone_number,
-      password_hash: hashedPassword,
-      is_active: true,
-      social_provider: "None",
+      password,
+      confirmation_code: confirmationCode,
     };
 
     const [newUser, created] = await User.findOrCreate({
@@ -68,7 +92,7 @@ exports.register = async (req, res) => {
       });
     }
 
-    const confirmationLink = `${process.env.FRONTEND_URL}/confirm/${newUser.id}`;
+    const confirmationLink = `${process.env.FRONTEND_URL}/confirm/${newUser.id}?code=${confirmationCode}`;
 
     await sendConfirmationEmail(
       newUser.email,
@@ -81,16 +105,12 @@ exports.register = async (req, res) => {
     return res.status(201).json({
       success: true,
       message:
-        "Please check your email for confirmation to verify your account.",
-      user: {
-        id: newUser.id,
-        email: newUser.email,
-        isConfirmed: newUser.isConfirmed,
-      },
+        "Please check your email for confirmation to verify your account",
     });
   } catch (err) {
     console.error(err);
     return res.status(500).json({
+      success: false,
       message: "Something went wrong",
     });
   }

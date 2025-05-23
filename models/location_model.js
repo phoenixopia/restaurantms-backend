@@ -21,9 +21,17 @@ module.exports = (sequelize, DataTypes) => {
   );
 
   Location.associate = (models) => {
-    Location.belongsTo(models.Restaurant, { foreignKey: "restaurant_id" });
-    Location.hasMany(models.Branch, { foreignKey: "location_id" });
-    Location.hasMany(models.Table, { foreignKey: "location_id" });
+    Location.hasOne(models.Restaurant, {
+      foreignKey: "location_id",
+      onUpdate: "CASCADE",
+      onDelete: "SET NULL",
+    });
+    Location.hasOne(models.Branch, {
+      foreignKey: "location_id",
+      onUpdate: "CASCADE",
+      onDelete: "SET NULL",
+    });
+    // Location.hasMany(models.Table, { foreignKey: "location_id" });
   };
 
   return Location;

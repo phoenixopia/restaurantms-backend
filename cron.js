@@ -6,6 +6,7 @@ cron.schedule("0 2 * * *", () => {
   runSubscriptionJob();
 });
 
+// check its availability every hour
 cron.schedule("0 * * * *", () => {
   runBranchStatusJob();
 });

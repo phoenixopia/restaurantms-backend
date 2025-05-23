@@ -75,9 +75,13 @@ module.exports = (sequelize, DataTypes) => {
   Branch.associate = (models) => {
     Branch.belongsTo(models.Restaurant, {
       foreignKey: "restaurant_id",
+      onDelete: "CASCADE",
+      hooks: true,
     });
     Branch.belongsTo(models.Location, {
       foreignKey: "location_id",
+      onUpdate: "CASCADE",
+      onDelete: "SET NULL",
     });
     Branch.belongsTo(models.User, {
       foreignKey: "manager_id",

@@ -1,6 +1,6 @@
 "use strict";
-const { RestaurantUser } = require("../models");
 const jwt = require("jsonwebtoken");
+const bcryptjs = require("bcryptjs");
 
 module.exports = (sequelize, DataTypes) => {
   const User = sequelize.define(
@@ -9,6 +9,7 @@ module.exports = (sequelize, DataTypes) => {
       id: {
         type: DataTypes.UUID,
         defaultValue: DataTypes.UUIDV4,
+        allowNull: false,
         primaryKey: true,
       },
       first_name: {
@@ -21,7 +22,6 @@ module.exports = (sequelize, DataTypes) => {
       },
       email: {
         type: DataTypes.STRING,
-        allowNull: false,
         unique: true,
         validate: {
           isEmail: {
@@ -37,7 +37,6 @@ module.exports = (sequelize, DataTypes) => {
       phone_number: {
         type: DataTypes.STRING(20),
         unique: true,
-        allowNull: true,
         validate: {
           is: {
             args: /^\+?[1-9]\d{1,14}$/,
@@ -45,21 +44,17 @@ module.exports = (sequelize, DataTypes) => {
           },
         },
       },
-      password_hash: {
+      password: {
         type: DataTypes.TEXT,
-        allowNull: true,
+        validate: {
+          len: [8, 100],
+        },
       },
       address: DataTypes.STRING(20),
       profile_picture: DataTypes.TEXT,
       confirmation_code: {
         type: DataTypes.STRING,
-        allowNull: false,
-        defaultValue: () =>
-          Math.floor(100000 + Math.random() * 900000).toString(),
-      },
-      isConfirmed: {
-        type: DataTypes.BOOLEAN,
-        defaultValue: false,
+        allowNull: true,
       },
       email_verified_at: {
         type: DataTypes.DATE,
@@ -133,12 +128,26 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.DATE,
         allowNull: true,
       },
+      role_id: {
+        type: DataTypes.UUID,
+        allowNull: false,
+        references: {
+          model: "roles",
+          key: "id",
+        },
+      },
     },
     {
       tableName: "users",
       paranoid: true,
       timestamps: true,
       underscored: true,
+
+      getterMethods: {
+        full_name() {
+          return `${this.first_name} ${this.last_name}`;
+        },
+      },
 
       defaultScope: {
         attributes: {
@@ -148,22 +157,33 @@ module.exports = (sequelize, DataTypes) => {
     }
   );
 
-  User.prototype.getJwtToken = async function () {
-    let restaurantId = null;
-    const RestaurantUser = this.sequelize.models.RestaurantUser;
-
-    const link = await RestaurantUser.findOne({
-      where: { user_id: this.id },
-    });
-    if (link) {
-      restaurantId = link.restaurant_id;
+  const hashPassword = async (user) => {
+    if (user.password) {
+      try {
+        const salt = await bcryptjs.genSalt(10);
+        user.password = await bcryptjs.hash(user.password, salt);
+      } catch (error) {
+        throw new Error("Error hashing password");
+      }
     }
+  };
+
+  User.beforeCreate(hashPassword);
+  User.beforeSave(async (user) => {
+    if (user.changed("password")) {
+      await hashPassword(user);
+    }
+  });
+
+  User.prototype.comparePassword = async function (enteredPassword) {
+    return await bcryptjs.compare(enteredPassword, this.password);
+  };
+
+  User.prototype.getJwtToken = function () {
     return jwt.sign(
       {
         id: this.id,
-        role: this.role,
-        role_id: this.role_id || null,
-        restaurant_id: restaurantId,
+        role_id: this.role_id,
       },
       process.env.JWT_SECRET,
       { expiresIn: "6h" }
@@ -171,20 +191,10 @@ module.exports = (sequelize, DataTypes) => {
   };
 
   User.prototype.getResetPasswordToken = async function () {
-    let restaurantId = null;
-
-    const link = await RestaurantUser.findOne({
-      where: { user_id: this.id },
-    });
-    if (link) {
-      restaurantId = link.restaurant_id;
-    }
     return jwt.sign(
       {
         id: this.id,
-        role: this.role,
-        role_id: this.role_id || null,
-        restaurant_id: restaurantId,
+        role_id: this.role_id,
       },
       process.env.JWT_SECRET,
       {
@@ -205,7 +215,7 @@ module.exports = (sequelize, DataTypes) => {
 
   User.prototype.markFailedLoginAttempt = async function (
     lockThreshold = 5,
-    lockMinutes = 15
+    lockMinutes = 5
   ) {
     this.failed_login_attempts += 1;
 
@@ -222,32 +232,38 @@ module.exports = (sequelize, DataTypes) => {
   };
 
   User.associate = (models) => {
-    User.belongsToMany(models.Restaurant, {
-      through: "RestaurantUser",
-      foreignKey: "user_id",
-      otherKey: "restaurant_id",
-    });
-    User.hasOne(models.TwoFA, {
-      foreignKey: "user_id",
-      as: "twoFA",
-      onDelete: "CASCADE",
-      onUpdate: "CASCADE",
-    });
-    User.hasMany(models.Branch, {
-      foreignKey: "manager_id",
+    User.hasMany(models.Restaurant, {
+      foreignKey: "created_by",
     });
     User.belongsTo(models.Role, {
       foreignKey: "role_id",
-      onDelete: "SET NULL",
     });
-    User.hasMany(models.Order, { foreignKey: "user_id" });
-    User.hasMany(models.Feedback, { foreignKey: "user_id" });
-    User.hasMany(models.Reservation, { foreignKey: "customer_id" });
-    User.hasMany(models.StaffSchedule, { foreignKey: "staff_id" });
-    User.hasMany(models.SupportTicket, { foreignKey: "user_id" });
-    User.hasMany(models.SupportTicket, { foreignKey: "assigned_to" });
-    User.hasOne(models.LoyaltyPoint, { foreignKey: "customer_id" });
   };
-
   return User;
 };
+
+// User.belongsToMany(models.Restaurant, {
+//   through: "RestaurantUser",
+//   foreignKey: "user_id",
+//   otherKey: "restaurant_id",
+// });
+// User.hasOne(models.TwoFA, {
+//   foreignKey: "user_id",
+//   as: "twoFA",
+//   onDelete: "CASCADE",
+//   onUpdate: "CASCADE",
+// });
+// User.hasMany(models.Branch, {
+//   foreignKey: "manager_id",
+// });
+// User.belongsTo(models.Role, {
+//   foreignKey: "role_id",
+//   onDelete: "SET NULL",
+// });
+// User.hasMany(models.Order, { foreignKey: "user_id" });
+// User.hasMany(models.Feedback, { foreignKey: "user_id" });
+// User.hasMany(models.Reservation, { foreignKey: "customer_id" });
+// User.hasMany(models.StaffSchedule, { foreignKey: "staff_id" });
+// User.hasMany(models.SupportTicket, { foreignKey: "user_id" });
+// User.hasMany(models.SupportTicket, { foreignKey: "assigned_to" });
+// User.hasOne(models.LoyaltyPoint, { foreignKey: "customer_id" });
