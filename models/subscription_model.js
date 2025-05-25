@@ -1,25 +1,21 @@
 "use strict";
-
-const { getGeneratedId } = require("../utils/idGenerator");
-
 module.exports = (sequelize, DataTypes) => {
   const Subscription = sequelize.define(
     "Subscription",
     {
       id: {
-        type: DataTypes.UUID,
-        defaultValue: DataTypes.UUIDV4,
+        type: DataTypes.INTEGER,
+        autoIncrement: true,
         primaryKey: true,
+      },
+      restaurant_id: {
+        type: DataTypes.UUID,
         allowNull: false,
-    },
-      // restaurant_id: {
-      //   type: DataTypes.UUID,
-      //   allowNull: false,
-      //   references: {
-      //     model: "restaurants",
-      //     key: "id",
-      //   },
-      // },
+        references: {
+          model: "restaurants",
+          key: "id",
+        },
+      },
       plan_id: {
         type: DataTypes.UUID,
         allowNull: false,
@@ -28,9 +24,13 @@ module.exports = (sequelize, DataTypes) => {
           key: "id",
         },
       },
+      billing_cycle: {
+        type: DataTypes.ENUM("monthly", "yearly"),
+        allowNull: false,
+      },
       start_date: DataTypes.DATEONLY,
       end_date: DataTypes.DATEONLY,
-      billing_provider: DataTypes.ENUM("stripe", "paypal", "telebirr", "cash", "cbe"),
+      billing_provider: DataTypes.ENUM("stripe", "paypal", "telebirr"),
       status: DataTypes.ENUM("active", "cancelled", "expired"),
     },
     {
@@ -41,8 +41,16 @@ module.exports = (sequelize, DataTypes) => {
   );
 
   Subscription.associate = (models) => {
-    Subscription.hasMany(models.Restaurant, { foreignKey: "subscription_id" });
-    Subscription.belongsTo(models.Plan, { foreignKey: "plan_id" });
+    Subscription.belongsTo(models.Restaurant, {
+      foreignKey: "restaurant_id",
+      onDelete: "CASCADE",
+      hooks: true,
+    });
+    Subscription.belongsTo(models.Plan, {
+      foreignKey: "plan_id",
+      onDelete: "CASCADE",
+      hooks: true,
+    });
   };
 
   return Subscription;

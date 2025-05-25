@@ -8,14 +8,6 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
       },
-      restaurant_id: {
-        type: DataTypes.UUID,
-        allowNull: false,
-        references: {
-          model: "restaurants",
-          key: "id",
-        },
-      },
       name: DataTypes.STRING(255),
       address: DataTypes.TEXT,
       latitude: DataTypes.DECIMAL(10, 6),
@@ -29,8 +21,17 @@ module.exports = (sequelize, DataTypes) => {
   );
 
   Location.associate = (models) => {
-    Location.belongsTo(models.Restaurant, { foreignKey: "restaurant_id" });
-    Location.hasMany(models.Table, { foreignKey: "location_id" });
+    Location.hasOne(models.Restaurant, {
+      foreignKey: "location_id",
+      onUpdate: "CASCADE",
+      onDelete: "SET NULL",
+    });
+    Location.hasOne(models.Branch, {
+      foreignKey: "location_id",
+      onUpdate: "CASCADE",
+      onDelete: "SET NULL",
+    });
+    // Location.hasMany(models.Table, { foreignKey: "location_id" });
   };
 
   return Location;

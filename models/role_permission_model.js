@@ -1,15 +1,12 @@
 "use strict";
-
-const { getGeneratedId } = require("../utils/idGenerator");
-
 module.exports = (sequelize, DataTypes) => {
-  const RolePermission = sequelize.define("RolePermission",
+  const RolePermission = sequelize.define(
+    "RolePermission",
     {
       id: {
         type: DataTypes.UUID,
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
-        allowNull: false,
       },
       role_id: {
         type: DataTypes.UUID,
@@ -27,13 +24,7 @@ module.exports = (sequelize, DataTypes) => {
           key: "id",
         },
       },
-      restaurant_id: {
-        type: DataTypes.UUID,
-        references: {
-          model: "restaurants",
-          key: "id",
-        },
-      },
+
       granted: {
         type: DataTypes.BOOLEAN,
         allowNull: false,
@@ -45,6 +36,13 @@ module.exports = (sequelize, DataTypes) => {
       underscored: true,
     }
   );
+
+  RolePermission.associate = (models) => {
+    RolePermission.belongsTo(models.Role, { foreignKey: "role_id" });
+    RolePermission.belongsTo(models.Permission, {
+      foreignKey: "permission_id",
+    });
+  };
 
   return RolePermission;
 };
