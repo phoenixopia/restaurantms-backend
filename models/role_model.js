@@ -11,9 +11,8 @@ module.exports = (sequelize, DataTypes) => {
       name: DataTypes.ENUM(
         "super_admin",
         "restaurant_admin",
-        "customer",
-        "manager",
-        "staff"
+        "staff",
+        "customer"
       ),
       description: DataTypes.TEXT,
     },

@@ -22,8 +22,22 @@ exports.protect = async (req, res, next) => {
       attributes: { exclude: ["password"] },
       include: [
         {
-          association: "Role",
+          model: Role,
+          as: "Role",
           attributes: ["name"],
+          include: [
+            {
+              model: RolePermission,
+              where: { granted: true },
+              required: false,
+              include: [
+                {
+                  model: Permission,
+                  attributes: ["name"],
+                },
+              ],
+            },
+          ],
         },
       ],
     });

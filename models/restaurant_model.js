@@ -1,6 +1,7 @@
 "use strict";
-
-module.exports = (sequelize, DataTypes) => {
+const validator = require("validator");
+const { DataTypes } = require("sequelize");
+module.exports = (sequelize) => {
   const Restaurant = sequelize.define(
     "Restaurant",
     {
@@ -25,11 +26,45 @@ module.exports = (sequelize, DataTypes) => {
           key: "id",
         },
       },
-      restaurant_name: DataTypes.STRING(255),
-      logo_url: DataTypes.TEXT,
+      restaurant_name: {
+        type: DataTypes.STRING(255),
+        allowNull: false,
+      },
+      logo_url: {
+        type: DataTypes.STRING(500),
+        validate: {
+          isUrl: {
+            msg: "Invalid logo URL",
+            args: {
+              protocols: ["http", "https"],
+              require_protocol: true,
+              allow_underscores: true,
+              allow_localhost: true,
+            },
+          },
+        },
+      },
       images: {
-        type: DataTypes.ARRAY(DataTypes.TEXT),
-        allowNull: true,
+        type: DataTypes.ARRAY(DataTypes.STRING(500)),
+        defaultValue: [],
+        validate: {
+          isUrlArray(value) {
+            if (!Array.isArray(value))
+              throw new Error("Images must be an array");
+            value.forEach((url) => {
+              if (
+                !validator.isURL(url, {
+                  protocols: ["http", "https"],
+                  require_protocol: true,
+                  allow_underscores: true,
+                  allow_localhost: true,
+                })
+              ) {
+                throw new Error("Invalid URL in images array");
+              }
+            });
+          },
+        },
       },
       primary_color: DataTypes.STRING(7),
       language: DataTypes.STRING(10),
@@ -46,9 +81,9 @@ module.exports = (sequelize, DataTypes) => {
       defaultScope: {
         attributes: {
           exclude: [
-            "id",
             "created_by",
             "primary_color",
+            "rtl_enabled",
             "created_at",
             "updated_at",
           ],
@@ -65,36 +100,24 @@ module.exports = (sequelize, DataTypes) => {
     });
     Restaurant.belongsTo(models.User, {
       foreignKey: "created_by",
-      onUpdate: "CASCADE",
       onDelete: "CASCADE",
+      onUpdate: "CASCADE",
+    });
+    Restaurant.belongsTo(models.Location, {
+      foreignKey: "location_id",
+      onDelete: "CASCADE",
+      onUpdate: "CASCADE",
     });
     Restaurant.hasMany(models.Branch, {
       foreignKey: "restaurant_id",
       onDelete: "CASCADE",
       onUpdate: "CASCADE",
     });
-    Restaurant.belongsTo(models.Location, {
-      foreignKey: "location_id",
-      onUpdate: "CASCADE",
-      onDelete: "SET NULL",
+    Restaurant.belongsToMany(models.User, {
+      through: "RestaurantUser",
+      foreignKey: "restaurant_id",
+      otherKey: "user_id",
     });
-
-    //   // One Tenant can have multiple Locations
-    //   Restaurant.hasMany(models.Location, { foreignKey: "restaurant_id" });
-
-    //   Restaurant.belongsToMany(models.Menu, {
-    //     through: "RestaurantMenu",
-    //     foreignKey: "restaurant_id",
-    //     otherKey: "menu_id",
-    //   });
-
-    //   Restaurant.hasMany(models.Reservation, { foreignKey: "restaurant_id" });
-    //   Restaurant.hasMany(models.Feedback, { foreignKey: "restaurant_id" });
-    //   Restaurant.hasMany(models.SupportTicket, { foreignKey: "restaurant_id" });
-    //   Restaurant.hasOne(models.SystemSetting, { foreignKey: "restaurant_id" });
-    //   Restaurant.hasMany(models.AnalyticsSnapshot, {
-    //     foreignKey: "restaurant_id",
-    //   });
   };
 
   Restaurant.paginate = async function (page = 1, limit = 10, filter = {}) {

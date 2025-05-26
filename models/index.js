@@ -46,18 +46,6 @@ Object.keys(db).forEach((modelName) => {
   }
 });
 
-// Sync database in development only
-if (env === "development") {
-  sequelize
-    .sync({ alter: true })
-    .then(() => {
-      console.log("Database synchronized (development mode)");
-    })
-    .catch((err) => {
-      console.error("Failed to synchronize database:", err);
-    });
-}
-
 db.sequelize = sequelize;
 db.Sequelize = Sequelize;
 

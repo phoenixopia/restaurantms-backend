@@ -248,15 +248,19 @@ module.exports = (sequelize, DataTypes) => {
       onDelete: "CASCADE",
       onUpdate: "CASCADE",
     });
+    User.hasMany(models.Branch, {
+      foreignKey: "user_id",
+      as: "manager",
+    });
+    User.belongsToMany(models.Restaurant, {
+      through: "RestaurantUser",
+      foreignKey: "user_id",
+      otherKey: "restaurant_id",
+    });
   };
   return User;
 };
 
-// User.belongsToMany(models.Restaurant, {
-//   through: "RestaurantUser",
-//   foreignKey: "user_id",
-//   otherKey: "restaurant_id",
-// });
 // User.hasOne(models.TwoFA, {
 //   foreignKey: "user_id",
 //   as: "twoFA",

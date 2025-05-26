@@ -19,14 +19,8 @@ const { OAuth2Client } = require("google-auth-library");
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 exports.register = async (req, res) => {
-  const {
-    firstName,
-    lastName,
-    email,
-    phone_number,
-    password,
-    signup_method, // email or phone
-  } = req.body;
+  const { firstName, lastName, email, phone_number, password, signup_method } =
+    req.body;
 
   if (!firstName || !lastName || !signup_method) {
     return res.status(400).json({
@@ -73,7 +67,7 @@ exports.register = async (req, res) => {
       userData.confirmation_code = confirmationCode;
       userData.confirmation_code_expires = new Date(
         Date.now() + 10 * 60 * 1000
-      ); // 10 minute
+      );
     }
 
     console.log("User data to create:", userData);
@@ -350,7 +344,6 @@ exports.forgotPassword = async (req, res) => {
       });
     }
 
-    // Generate 6-digit code for both email and phone
     const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
 
     if (email) {
@@ -365,7 +358,7 @@ exports.forgotPassword = async (req, res) => {
       await user.update(
         {
           confirmation_code: resetCode,
-          confirmation_code_expires: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes
+          confirmation_code_expires: new Date(Date.now() + 10 * 60 * 1000),
         },
         { transaction: t }
       );
@@ -495,7 +488,7 @@ exports.resetPassword = async (req, res) => {
 exports.logout = async (req, res) => {
   const cookieOptions = {
     httpOnly: true,
-    secure: false, // Must match login cookie settings only for local dev!
+    secure: false,
     sameSite: "Lax",
   };
   try {
@@ -543,7 +536,6 @@ exports.googleLogin = async (req, res) => {
         picture,
       } = payload;
 
-      // Check for existing user
       const [user, created] = await User.findOrCreate({
         where: {
           [Op.or]: [
@@ -560,12 +552,11 @@ exports.googleLogin = async (req, res) => {
           profile_picture: picture,
           email_verified_at: new Date(),
           is_active: true,
-          password: null, // Explicitly set password to null
+          password: null,
         },
         transaction: t,
       });
 
-      // Prevent password login for Google-authenticated users
       if (!created && user.social_provider !== "google") {
         await t.rollback();
         return res.status(400).json({
@@ -575,7 +566,6 @@ exports.googleLogin = async (req, res) => {
         });
       }
 
-      // Block password login attempts for Google users
       if (user.social_provider === "google" && req.path === "/login") {
         await t.rollback();
         return res.status(401).json({
@@ -584,7 +574,6 @@ exports.googleLogin = async (req, res) => {
         });
       }
 
-      // Update user info if not new
       if (!created) {
         await user.update(
           {
