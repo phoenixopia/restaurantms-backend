@@ -11,6 +11,7 @@ const {
   RestaurantUser,
   Subscription,
 } = require("../models/index");
+const { hashPassword } = require("../utils/hash");
 const image = "https://drive.google.com/uc?id=1pMGXklJAHoz9YkE1udmLOLCofJhh9SPW";
 
 
@@ -118,15 +119,18 @@ const image = "https://drive.google.com/uc?id=1pMGXklJAHoz9YkE1udmLOLCofJhh9SPW"
     const permissionMap = {};
     permissions.forEach(p => permissionMap[p.name] = p.id);
 
-    // Step 3: Create Users
+    
+    // Create Users
     const users = await User.bulkCreate([
       {
         first_name: "Super",
         last_name: "Admin",
         email: "super@admin.com",
-        password: "SuperAdmin123",
+        password: await hashPassword("SuperAdmin123"),
+        // password: "SuperAdmin123",
         phone_number: "+251919765445",
         role_id: roleMap["super_admin"] ,
+        isConfirmed: true,
         is_active: true,
         is_staff: true,
         is_superuser: true,
@@ -135,9 +139,10 @@ const image = "https://drive.google.com/uc?id=1pMGXklJAHoz9YkE1udmLOLCofJhh9SPW"
         first_name: "Admin",
         last_name: "Test",
         email: "admin@test.com",
-        password: "Admin123",
+        password: await hashPassword("Admin123"),
         phone_number: "+251919765447",
         role_id: roleMap["admin"],
+        isConfirmed: true,
         is_active: true,
         is_staff: true,
         is_superuser: false,
@@ -146,15 +151,15 @@ const image = "https://drive.google.com/uc?id=1pMGXklJAHoz9YkE1udmLOLCofJhh9SPW"
         first_name: "Customer",
         last_name: "Test",
         email: "customer@test.com",
-        password: "Customer123",
+        password: await hashPassword("Customer123"),
         phone_number: "+251919765447",
         role_id: roleMap["admin"],
+        isConfirmed: true,
         is_active: true,
         is_staff: false,
         is_superuser: false,
       },
-    ]);
-
+    ],);
     const userMap = {};
     users.forEach(user => userMap[user.email] = user.id);
 

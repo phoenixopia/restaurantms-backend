@@ -1,7 +1,9 @@
-const { Plan } = require("../../models/index");
+const { Plan, sequelize } = require("../../models/index");
+const { capitalizeFirstLetter } = require("../../utils/capitalizeFirstLetter");
+const { Op } = require("sequelize");
 
 
-// === GET ALL USERS ===
+// === GET ALL PLANS ===
 exports.listPlans = async (req, res, next) => {
   try {
     const { page, limit } = req.query;
@@ -30,92 +32,160 @@ exports.listPlans = async (req, res, next) => {
 };
 
 
-// === CREATE A PLAN ===
-exports.createPlan = async (req, res) => {
+// === GET PLAN BY NAME ===
+exports.getPlanByName = async (req, res) => {
   try {
-    const {
-      name,
-      max_locations,
-      max_staff,
-      max_users,
-      max_kds,
-      kds_enabled,
-      price,
-      billing_cycle,
-    } = req.body;
+    const { name } = req.params;
+    const formattedName = capitalizeFirstLetter(name);
 
-    const formattedName =
-      name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+    const plan = await Plan.findOne({ where: { name: formattedName } });
 
-    if (!["Basic", "Pro", "Enterprise"].includes(formattedName)) {
-      return res.status(400).json({
+    if (!plan) {
+      return res.status(404).json({
         success: false,
-        message: "Invalid plan name. Must be Basic, Pro, or Enterprise",
+        message: "Plan not found",
       });
     }
-    const existingPlan = await Plan.findOne({ where: { name } });
-    if (existingPlan) {
-      return res.status(400).json({success: false, message: "Plan already exists" });
-    }
-    const newPlan = await Plan.create({
-      name: formattedName,
-      max_locations,
-      max_staff,
-      max_users,
-      max_kds,
-      kds_enabled,
-      price,
-      billing_cycle,
+
+    return res.status(200).json({
+      success: true,
+      message: "Plan fetched successfully",
+      data: plan,
     });
-    return res.status(201).json({ success: true, message: "Plan created successfully", data: newPlan });
   } catch (error) {
-    console.error("Error creating plan:", error);
+    console.error("Error fetching plan by name:", error);
     return res.status(500).json({
+      success: false,
+      message: "Failed to fetch plan",
+    });
+  }
+};
+
+
+// === GET PLAN BY ID ===
+exports.getPlanById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const plan = await Plan.findByPk(id);
+
+    if (!plan) {
+      return res.status(404).json({
+        success: false,
+        message: "Plan not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Plan fetched successfully",
+      data: plan,
+    });
+  } catch (error) {
+    console.error("Error fetching plan by ID:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch plan",
+    });
+  }
+};
+
+// === UPDATE PLAN ===
+exports.updatePlan = async (req, res) => {
+  const t = await sequelize.transaction();
+  try {
+    const { id } = req.params;
+    const updates = req.body;
+
+    const plan = await Plan.findByPk(id, { transaction: t });
+
+    if (!plan) {
+      await t.rollback();
+      return res.status(404).json({
+        success: false,
+        message: "Plan not found",
+      });
+    }
+
+    const allowedFields = [
+      "name",
+      "max_branches",
+      "max_locations",
+      "max_staff",
+      "max_users",
+      "max_kds",
+      "kds_enabled",
+      "price",
+    ];
+
+    allowedFields.forEach((field) => {
+      if (updates[field] !== undefined) {
+        plan[field] = updates[field];
+      }
+    });
+
+    if (updates.name) {
+      const formattedName = capitalizeFirstLetter(updates.name);
+      const exists = await Plan.findOne({
+        where: {
+          name: formattedName,
+          id: { [Op.ne]: plan.id },
+        },
+        transaction: t,
+      });
+      if (exists) {
+        await t.rollback();
+        return res.status(400).json({
+          success: false,
+          message: "Another plan with this name already exists",
+        });
+      }
+      plan.name = formattedName;
+    }
+
+    await plan.save({ transaction: t });
+    await t.commit();
+
+    return res.status(200).json({
+      success: true,
+      message: "Plan updated successfully",
+    });
+  } catch (error) {
+    await t.rollback();
+    console.error("Error updating plan:", error);
+    return res.status(500).json({
+      success: false,
       message: "Something went wrong",
     });
   }
 };
 
 
-// === UPDATE A PLAN ===
-exports.updatePlan = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const updates = req.body;
-
-    const plan = await Plan.findByPk(id);
-
-    if (!plan) {
-      return res.status(404).json({ message: "Plan not found" });
-    }
-
-    Object.keys(updates).forEach((key) => {
-      if (updates[key] !== undefined) {
-        plan[key] = updates[key];
-      }
-    });
-
-    await plan.save();
-
-    return res.status(200).json({ message: "Plan updated successfully" });
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: "Something went wrong" });
-  }
-};
-
+// === DELETE PLAN ===
 exports.deletePlan = async (req, res) => {
+  const t = await sequelize.transaction();
   try {
     const { id } = req.params;
 
-    const plan = await Plan.findByPk(id);
+    const plan = await Plan.findByPk(id, { transaction: t });
+
     if (!plan) {
-      return res.status(404).json({ message: "Plan not found" });
+      await t.rollback();
+      return res.status(404).json({
+        success: false,
+        message: "Plan not found",
+      });
     }
-    await plan.destroy();
-    return res.status(200).json({ message: "Plan deleted successfully" });
+    await plan.destroy({ transaction: t });
+    await t.commit();
+    return res.status(200).json({
+      success: true,
+      message: "Plan deleted successfully",
+    });
   } catch (error) {
     console.error("Error deleting plan:", error);
-    return res.status(500).json({ message: "Something went wrong" });
+    return res.status(500).json({
+      success: false,
+      message: "Failed to delete plan",
+    });
   }
 };

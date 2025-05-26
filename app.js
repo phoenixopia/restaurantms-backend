@@ -42,6 +42,10 @@ app.options("*", cors(corsOptions));
 app.use(cors(corsOptions));
 app.use(express.json());
 
+app.get("/", (req, res) => {
+  res.send("Welcome to `Restaurant Management System Backend`!");
+});
+
 app.use("/api/v1", require("./routes"));
 
 module.exports = app;

@@ -1,50 +1,13 @@
 const { Op } = require('sequelize');
 const { sendPasswordResetEmail, sendConfirmationEmail } = require('../utils/sendEmail');
-const { sequelize, Users } = require('../models/index');
+const { sequelize, User, Role, Permission } = require('../models/index');
 const { sendTokenResponse } = require('../utils/sendTokenResponse');
 const { capitalizeFirstLetter } = require('../utils/capitalizeFirstLetter');
 const { OAuth2Client } = require('google-auth-library');
 const speakeasy = require('speakeasy');
-const qrcode = require('qrcode');
 const { getClientIp } = require('../utils/getClientIp');
+const { comparePassword, hashPassword } = require('../utils/hash');
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
-
-
-// === Set Up 2FA ===
-exports.setup2FA = async (req, res) => {
-  if (!req.user.id) {
-    return res.status(400).json({ success: false, message: 'Missing required field. Please login.' });
-  }
-
-  const t = await sequelize.transaction();
-  try{
-    const user = await Users.findOne({ where: { id: req.user.id }, transaction: t});
-    if (!user) {
-      await t.rollback();
-      return res.status(404).json({ success: false, message: 'No user found.' });
-    }
-    const secret = speakeasy.generateSecret({
-      name: `Restaurant MS (${user.email})`, // app name
-    });
-
-    // Generate QR code to display on frontend
-    const qrCodeDataURL = await qrcode.toDataURL(secret.otpauth_url);
-
-    // Save secret to DB (only base32)
-    user.two_factor_secret = secret.base32;
-    user.two_factor_enabled = true;
-    user.two_factor_qrCodeURL = qrCodeDataURL
-    await user.save({ transaction: t });
-
-    await t.commit()
-    return res.status(200).json({sucees: true, data: { qrCode: qrCodeDataURL, secret: secret.base32}})
-
-  } catch(err){
-    await t.rollback();
-    console.error("Error on Set Up 2FA:", err);
-    return res.status(500).json({success: false, message: 'Server Error', error: err.message})
-  }
-};
 
 
 
@@ -63,9 +26,9 @@ exports.googleLogin = async (req, res) => {
       const { email, given_name, family_name } = payload;
   
       // Check if user exists
-      let user = await Users.findOne({ where: { email } });
+      let user = await User.findOne({ where: { email } });
       if (!user) {
-        user = await Users.create({
+        user = await User.create({
           email,
           first_name: given_name,
           last_name: family_name,
@@ -84,57 +47,64 @@ exports.googleLogin = async (req, res) => {
   
   
   
-  // === SIGNUP ===
+  // === CUSTOMER SIGNUP ===
   exports.signup = async (req, res) => {
-      const { firstName, lastName, email, phoneNumber, password } = req.body;
+      const { first_name, last_name, email, phone_number, password } = req.body;
       const t = await sequelize.transaction();
       try {
-        if (!firstName || !lastName || !email || !password) {
+        if (!first_name || !last_name || !email || !password) {
           return res.status(400).json({ success: false, message: 'All fields are required.' });
         }
     
         if (!/\S+@\S+\.\S+/.test(email)) {
           return res.status(400).json({ success: false, message: 'Invalid email format.' });
         }
-    
-        const userData = {
-          firstName: capitalizeFirstLetter(firstName),
-          lastName: capitalizeFirstLetter(lastName),
-          email: email.toLowerCase(),
-          phoneNumber,
-          password,
-          userType: 'Customer'
-        };
-    
-        const [newUser, created] = await Users.findOrCreate({
-          where: { email: { [Op.iLike]: email } },
-          defaults: userData,
-          transaction: t
+
+        // E.164 format RegEx
+        if (phone_number && !/^\+?[1-9]\d{9,14}$/.test(phone_number)) {
+          return res.status(400).json({ success: false, error: 'Invalid phone number. Must be in E.164 format (e.g., +12345678901)',});
+        }
+
+        const existingUser = await User.findOne({
+          where: {
+            [Op.or]: [{ email }, { phone_number }],
+          },
         });
     
-        if (!created) {
+        if (existingUser) {
           await t.rollback();
           return res.status(400).json({ success: false, message: 'Email already in use.' });
         }
+
+        const role = await Role.findOne({ where: { name: "customer" },});
+
+        const newUser = await User.create({
+          first_name,
+          last_name,
+          email,
+          phone_number,
+          password,
+          role_id: role.id,
+        });
     
         const confirmationLink = `${process.env.CLIENT_URL}/confirm/${newUser.confirmationCode}`;
-        await sendConfirmationEmail(newUser.email, newUser.firstName, newUser.lastName, confirmationLink);
+        await sendConfirmationEmail(newUser.email, newUser.first_name, newUser.last_name, confirmationLink);
     
         await t.commit();
         return res.status(201).json({
           success: true,
           message: 'Please check your email for confirmation to verify your account.',
-          user: { id: newUser.id, email: newUser.email, isConfirmed: newUser.isConfirmed }
+          data: newUser
         });
       } catch (error) {
         await t.rollback();
         console.error('Signup Error:', error);
-        return res.status(500).json({ success: false, message: 'Internal Server Error.' });
+        return res.status(500).json({ success: false, message: 'Internal Server Error.', error: error.message });
       }
     };
     
   
-    // === CONFIRMATION ===
+    // === CUSTOMER CONFIRMATION ===
     exports.confirm = async (req, res) => {
       const { email, device_type } = req.body;
       const { confirmationCode } = req.params;
@@ -145,12 +115,22 @@ exports.googleLogin = async (req, res) => {
     
       const t = await sequelize.transaction();
       try {
-        const user = await Users.findOne({
+        const user = await User.findOne({
           where: {
             confirmationCode,
             email: { [Op.iLike]: email },
             isConfirmed: false
           },
+          include: [
+            {
+                model: Role,
+                include: [
+                  {
+                      model: Permission,
+                  },
+              ],
+            },
+        ],
           lock: t.LOCK.UPDATE,
           transaction: t
         });
@@ -164,7 +144,10 @@ exports.googleLogin = async (req, res) => {
         }
     
         user.isConfirmed = true;
+        user.confirmationCode = "";
+        user.last_login_at = new Date();
         await user.save({ transaction: t });
+
         const ip = getClientIp(req);
         user.markSuccessfulLogin(ip, device_type);
         await t.commit();
@@ -177,6 +160,7 @@ exports.googleLogin = async (req, res) => {
       }
     };
     
+
     // === SIGNIN ===
     exports.signin = async (req, res) => {
       const { email, password , device_type, code} = req.body;
@@ -187,10 +171,20 @@ exports.googleLogin = async (req, res) => {
       const t = await sequelize.transaction();
       try {
     
-        const user = await Users.findOne({
+        const user = await User.findOne({
           where: { email: { [Op.iLike]: email } },
+          include: [
+            {
+                model: Role,
+                include: [
+                  {
+                      model: Permission,
+                  },
+              ],
+            },
+          ],
           attributes: { include: ['password'] },
-          lock: t.LOCK.UPDATE,
+          // lock: t.LOCK.UPDATE,
           transaction: t
         });
     
@@ -208,17 +202,18 @@ exports.googleLogin = async (req, res) => {
           await t.rollback();
           return res.status(403).json({ success: false, message: `Your account is locked until ${user.locked_until}. Please try again later.`});
         }
-  
+
         const isMatched = await user.comparePassword(password);
+
+        // const isMatched = await comparePassword(password, user.password)
         if (!isMatched) {
           await t.rollback();
           user.markFailedLoginAttempt();
-          return res.status(401).json({ success: false, message: `Invalid credentials. Your remaining atemts are ${5-user.failed_login_attempts}` });
+          return res.status(400).json({ success: false, message: `Invalid credentials. Your remaining atemts are ${5-user.failed_login_attempts}` });
         }
        
         // Reset failed login attempts on successful login
         const ip = getClientIp(req);
-        console.log('User login from IP:', ip);
         user.markSuccessfulLogin(ip, device_type);
   
   
@@ -243,7 +238,7 @@ exports.googleLogin = async (req, res) => {
         return sendTokenResponse(user, 200, res);
       } catch (error) {
         console.error('Signin Error:', error);
-        return res.status(500).json({ success: false, message: 'Internal Server Error.', error: err.message });
+        return res.status(500).json({ success: false, message: 'Internal Server Error.', error: error.message });
       }
     };
   
@@ -269,7 +264,7 @@ exports.googleLogin = async (req, res) => {
     }
     const t = await sequelize.transaction();
     try {
-      const user = await Users.findOne({ where: { email: { [Op.iLike]: email } }, transaction: t });
+      const user = await User.findOne({ where: { email: { [Op.iLike]: email } }, transaction: t });
   
       if (!user) {
         await t.rollback();
@@ -315,7 +310,7 @@ exports.googleLogin = async (req, res) => {
   
           const decoded = jwt.verify(resetToken, process.env.JWT_SECRET);
   
-          const user = await Users.findOne({ where: { id: decoded.id, resetToken }, transaction: t });
+          const user = await User.findOne({ where: { id: decoded.id, resetToken }, transaction: t });
   
           if (!user) {
               await t.rollback();
@@ -342,7 +337,7 @@ exports.googleLogin = async (req, res) => {
 // === GET USER PROFILE ===
 exports.getProfile = async (req, res) => {
     try {
-        const user = await Users.findOne({
+        const user = await User.findOne({
           where: { id: req.user.id },
           attributes: { exclude: ['password', 'resetToken', 'confirmationCode'] }
         });
@@ -372,7 +367,7 @@ exports.updateProfile = async (req, res) => {
 
   const t = await sequelize.transaction();
   try {
-    const user = await Users.findByPk(req.user.id, { transaction: t });
+    const user = await User.findByPk(req.user.id, { transaction: t });
 
     if (!user) {
       await t.rollback();
@@ -387,7 +382,7 @@ exports.updateProfile = async (req, res) => {
     await user.save({ transaction: t });
     await t.commit();
 
-    const updatedUser = await Users.findByPk(user.id, {
+    const updatedUser = await User.findByPk(user.id, {
       attributes: { exclude: ['password', 'resetToken', 'confirmationCode'] }
     });
 
@@ -406,7 +401,7 @@ exports.deleteAccount = async (req, res) => {
     const t = await sequelize.transaction();
     try {
         const user
-    = await Users.findOne({ where: { id: req.user.id }, transaction: t });
+    = await User.findOne({ where: { id: req.user.id }, transaction: t });
         if (!user) {
             await t.rollback();
             return res.status(404).json({ success: false, message: 'User not found.' });
@@ -436,7 +431,7 @@ exports.changePassword = async (req, res) => {
             return res.status(400).json({ success: false, message: 'All fields are required.' });
         }
     
-        const user = await Users.findOne({ where: { id: req.user.id }, attributes: { include: ['password'] }, transaction: t });
+        const user = await User.findOne({ where: { id: req.user.id }, attributes: { include: ['password'] }, transaction: t });
     
         if (!user) {
             await t.rollback();
