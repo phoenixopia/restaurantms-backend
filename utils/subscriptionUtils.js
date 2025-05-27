@@ -13,7 +13,6 @@ const deactivateExpiredSubscriptions = async () => {
 
     const isFirstDayOfMonth = today.getDate() === 1;
 
-    // Decide which billing cycles to include
     const billingCyclesToCheck = ["monthly"];
     if (isFirstDayOfMonth) {
       billingCyclesToCheck.push("yearly");

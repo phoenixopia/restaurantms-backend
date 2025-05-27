@@ -30,7 +30,13 @@ module.exports = (sequelize, DataTypes) => {
       },
       start_date: DataTypes.DATEONLY,
       end_date: DataTypes.DATEONLY,
-      billing_provider: DataTypes.ENUM("stripe", "paypal", "telebirr"),
+      billing_provider: DataTypes.ENUM(
+        "stripe",
+        "paypal",
+        "telebirr",
+        "cash",
+        "CBE"
+      ),
       status: DataTypes.ENUM("active", "cancelled", "expired"),
     },
     {

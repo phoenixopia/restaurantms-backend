@@ -1,14 +1,11 @@
-const bcryptjs = require("bcryptjs");
 const {
   sequelize,
   User,
   Role,
   Permission,
-  UserRole,
   RolePermission,
   Plan,
   Restaurant,
-  RestaurantUser,
   Subscription,
 } = require("../models/index");
 const image =
@@ -33,23 +30,33 @@ const image =
     const plans = await Plan.bulkCreate([
       {
         name: "Basic",
+        max_branches: 2,
         max_locations: 1,
         max_staff: 5,
         max_users: 10,
         max_kds: 2,
         kds_enabled: false,
         price: 29.99,
-        billing_cycle: "monthly",
       },
       {
         name: "Pro",
+        max_branches: 5,
         max_locations: 5,
         max_staff: 20,
         max_users: 50,
         max_kds: 5,
         kds_enabled: true,
         price: 99.99,
-        billing_cycle: "monthly",
+      },
+      {
+        name: "Enterprise",
+        max_branches: 10,
+        max_locations: 10,
+        max_staff: 30,
+        max_users: 100,
+        max_kds: 10,
+        kds_enabled: true,
+        price: 149.99,
       },
     ]);
     const planMap = {};
@@ -61,6 +68,7 @@ const image =
       start_date: new Date(),
       end_date: new Date(new Date().setMonth(new Date().getMonth() + 1)),
       billing_provider: "cash",
+      billing_cycle: "monthly",
       status: "active",
     });
 
@@ -80,6 +88,7 @@ const image =
       { name: "super_admin", description: "Super administrator role" },
       { name: "admin", description: "Admin of a restaurant" },
       { name: "customer", description: "Customer role" },
+      { name: "staff", description: "Staff member of a restaurant" },
     ]);
 
     const roleMap = {};
@@ -155,14 +164,6 @@ const image =
     const userMap = {};
     users.forEach((user) => (userMap[user.email] = user.id));
 
-    // Assign Roles to Users
-    // await UserRole.bulkCreate([
-    //   { user_id: userMap["admin@gmail.com"], role_id: roleMap["super_admin"] },
-    //   { user_id: userMap["user@gmail.com"], role_id: roleMap["customer"] },
-    //   { user_id: userMap["test@gmail.com"], role_id: roleMap["customer"] },
-    // ]);
-
-    // Assign Permissions to Roles
     await RolePermission.bulkCreate([
       {
         restaurant_id: restaurant.id,
@@ -193,22 +194,6 @@ const image =
         role_id: roleMap["customer"],
         permission_id: permissionMap["view_orders"],
         granted: true,
-      },
-    ]);
-
-    // Assign user to rrestaurant
-    await RestaurantUser.bulkCreate([
-      {
-        user_id: userMap["super@admin.com"],
-        restaurant_id: restaurant.id,
-      },
-      {
-        user_id: userMap["admin@test.com"],
-        restaurant_id: restaurant.id,
-      },
-      {
-        user_id: userMap["customer@test.com"],
-        restaurant_id: restaurant.id,
       },
     ]);
 
