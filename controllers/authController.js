@@ -213,7 +213,7 @@ exports.login = async (req, res) => {
     }
 
     await t.commit();
-    return sendTokenResponse(user, 200, res);
+    return sendTokenResponse(user, 200, res, req.originalUrl);
   } catch (error) {
     console.error("Signin Error:", error);
     return res.status(500).json({
@@ -265,10 +265,7 @@ exports.verifyCode = async (req, res) => {
     );
 
     await t.commit();
-    return res.status(200).json({
-      success: true,
-      message: "Verification successful!",
-    });
+    return sendTokenResponse(user, 200, res, req.originalUrl);
   } catch (err) {
     await t.rollback();
     console.error("Verification error:", err);
@@ -606,7 +603,7 @@ exports.googleLogin = async (req, res) => {
       await user.markSuccessfulLogin(ip, "web");
 
       await t.commit();
-      return sendTokenResponse(user, 200, res);
+      return sendTokenResponse(user, 200, res, req.originalUrl);
     } catch (error) {
       await t.rollback();
       console.error("Google login error:", error);
