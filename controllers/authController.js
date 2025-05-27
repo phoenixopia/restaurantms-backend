@@ -1,4 +1,5 @@
 const { Op } = require('sequelize');
+const jwt = require('jsonwebtoken');
 const { sendPasswordResetEmail, sendConfirmationEmail } = require('../utils/sendEmail');
 const { sequelize, User, Role, Permission } = require('../models/index');
 const { sendTokenResponse } = require('../utils/sendTokenResponse');
@@ -6,7 +7,6 @@ const { capitalizeFirstLetter } = require('../utils/capitalizeFirstLetter');
 const { OAuth2Client } = require('google-auth-library');
 const speakeasy = require('speakeasy');
 const { getClientIp } = require('../utils/getClientIp');
-const { comparePassword, hashPassword } = require('../utils/hash');
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 
@@ -87,7 +87,7 @@ exports.googleLogin = async (req, res) => {
           role_id: role.id,
         });
     
-        const confirmationLink = `${process.env.CLIENT_URL}/confirm/${newUser.confirmationCode}`;
+        const confirmationLink = `${process.env.CLIENT_URL}/confirm/${newUser.confirmation_code}`;
         await sendConfirmationEmail(newUser.email, newUser.first_name, newUser.last_name, confirmationLink);
     
         await t.commit();
@@ -107,9 +107,9 @@ exports.googleLogin = async (req, res) => {
     // === CUSTOMER CONFIRMATION ===
     exports.confirm = async (req, res) => {
       const { email, device_type } = req.body;
-      const { confirmationCode } = req.params;
+      const { confirmation_code } = req.params;
     
-      if (!email || !confirmationCode) {
+      if (!email || !confirmation_code) {
         return res.status(400).json({ success: false, message: 'Missing confirmation code or email.' });
       }
     
@@ -117,7 +117,7 @@ exports.googleLogin = async (req, res) => {
       try {
         const user = await User.findOne({
           where: {
-            confirmationCode,
+            confirmation_code,
             email: { [Op.iLike]: email },
             isConfirmed: false
           },
@@ -144,7 +144,7 @@ exports.googleLogin = async (req, res) => {
         }
     
         user.isConfirmed = true;
-        user.confirmationCode = "";
+        user.confirmation_code = "";
         user.last_login_at = new Date();
         await user.save({ transaction: t });
 
@@ -279,13 +279,13 @@ exports.googleLogin = async (req, res) => {
       }
   
       // Generate a unique reset code
-      const resetToken = user.getResetPasswordToken();
+      const reset_token = user.getResetPasswordToken();
   
       // Save the token in DB
-      user.resetToken = resetToken;
+      user.reset_token = reset_token;
       await user.save({ transaction: t });
   
-      const resetLink = `${process.env.CLIENT_URL}/reset-password/${resetToken}`;
+      const resetLink = `${process.env.CLIENT_URL}/reset-password/${reset_token}`;
   
       // Send reset email
       await sendPasswordResetEmail(user.email, resetLink);
@@ -302,9 +302,9 @@ exports.googleLogin = async (req, res) => {
   // User Reset Password
   exports.reset = async (req, res) => {
       const { email, password } = req.body;
-      const { resetToken } = req.params;
+      const { reset_token } = req.params;
   
-      if (!password || !resetToken) {
+      if (!password || !reset_token) {
           return res.status(400).json({ success: false, message: "Password and token are required." });
       }
       // Validate password length
@@ -315,9 +315,8 @@ exports.googleLogin = async (req, res) => {
       const t = await sequelize.transaction();
       try {
   
-          const decoded = jwt.verify(resetToken, process.env.JWT_SECRET);
-  
-          const user = await User.findOne({ where: { id: decoded.id, resetToken }, transaction: t });
+          const decoded = jwt.verify(reset_token, process.env.JWT_SECRET);
+          const user = await User.findOne({ where: { id: decoded.id, reset_token }, transaction: t });
   
           if (!user) {
               await t.rollback();
@@ -326,7 +325,7 @@ exports.googleLogin = async (req, res) => {
   
           // Update the password
           user.password = password;
-          user.resetToken = null;
+          user.reset_token = null;
           await user.save({ transaction: t });
   
           await t.commit();
@@ -346,7 +345,7 @@ exports.getProfile = async (req, res) => {
     try {
         const user = await User.findOne({
           where: { id: req.user.id },
-          attributes: { exclude: ['password', 'resetToken', 'confirmationCode'] }
+          attributes: { exclude: ['password', 'reset_token', 'confirmation_code'] }
         });
     
         if (!user) {
@@ -390,7 +389,7 @@ exports.updateProfile = async (req, res) => {
     await t.commit();
 
     const updatedUser = await User.findByPk(user.id, {
-      attributes: { exclude: ['password', 'resetToken', 'confirmationCode'] }
+      attributes: { exclude: ['password', 'reset_token', 'confirmation_code'] }
     });
 
     return res.status(200).json({ success: true, message: 'Profile updated successfully.', data: updatedUser });

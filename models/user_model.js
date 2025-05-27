@@ -199,7 +199,7 @@ module.exports = (sequelize, DataTypes) => {
 
     User.prototype.getResetPasswordToken = function () {
         return jwt.sign(
-            { id: this.id, role_id: this.role_id }, process.env.JWT_SECRET, { expiresIn: '10m' }
+            { id: this.id, role_id: this.role_id }, process.env.JWT_SECRET, { expiresIn: '1h' }
         );
     };
 
