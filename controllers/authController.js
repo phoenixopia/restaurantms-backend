@@ -2,9 +2,7 @@
 
 require("dotenv").config();
 
-const { v4: uuidv4 } = require("uuid");
 const { Op } = require("sequelize");
-const jwt = require("jsonwebtoken");
 const speakeasy = require("speakeasy");
 
 const { User, sequelize, TwoFA } = require("../models");
@@ -118,7 +116,7 @@ exports.register = async (req, res) => {
 
 exports.login = async (req, res) => {
   const { phone_number, email, password, device_type, code } = req.body;
-  console.log("Login attempt:", { email, password, code });
+
   if ((!email && !phone_number) || !password) {
     return res.status(400).json({
       success: false,
@@ -226,18 +224,23 @@ exports.login = async (req, res) => {
 };
 
 exports.verifyCode = async (req, res) => {
-  const { code } = req.body;
-  if (!code) {
+  const { emailOrPhone, signupMethod, code } = req.body;
+
+  if (!code || !emailOrPhone || !signupMethod) {
     return res.status(400).json({
       success: false,
-      message: "Verification code is required",
+      message: "Missing required fields",
     });
   }
+
   const t = await sequelize.transaction();
 
   try {
+    const identifierField = signupMethod === "email" ? "email" : "phone";
+
     const user = await User.findOne({
       where: {
+        [identifierField]: emailOrPhone,
         confirmation_code: code.toString().trim(),
         confirmation_code_expires: { [Op.gt]: new Date() },
       },
@@ -264,7 +267,7 @@ exports.verifyCode = async (req, res) => {
     await t.commit();
     return res.status(200).json({
       success: true,
-      message: "Email successfully verified!",
+      message: "Verification successful!",
     });
   } catch (err) {
     await t.rollback();
@@ -277,19 +280,39 @@ exports.verifyCode = async (req, res) => {
 };
 
 exports.resendCode = async (req, res) => {
-  const { email } = req.body;
+  const { emailOrPhone, signupMethod } = req.body;
+
+  if (!emailOrPhone || !signupMethod) {
+    return res.status(400).json({
+      success: false,
+      message: "Missing email or phone and signup method",
+    });
+  }
 
   try {
-    const user = await User.findOne({ where: { email: email.toLowerCase() } });
+    const identifierField = signupMethod === "email" ? "email" : "phone";
 
-    if (!user)
+    const user = await User.findOne({
+      where: {
+        [identifierField]: emailOrPhone.toLowerCase?.() || emailOrPhone,
+      },
+    });
+
+    if (!user) {
       return res
         .status(404)
         .json({ success: false, message: "User not found" });
-    if (user.email_verified_at)
-      return res
-        .status(400)
-        .json({ success: false, message: "Email already verified" });
+    }
+
+    if (user.email_verified_at) {
+      return res.status(400).json({
+        success: false,
+        message:
+          signupMethod === "email"
+            ? "Email already verified"
+            : "Phone already verified",
+      });
+    }
 
     const newCode = crypto.randomInt(100000, 999999).toString();
 
@@ -298,12 +321,18 @@ exports.resendCode = async (req, res) => {
       confirmation_code_expires: new Date(Date.now() + 10 * 60 * 1000),
     });
 
-    await sendConfirmationEmail(
-      user.email,
-      user.first_name,
-      user.last_name,
-      newCode
-    );
+    if (signupMethod === "email") {
+      await sendConfirmationEmail(
+        user.email,
+        user.first_name,
+        user.last_name,
+        newCode
+      );
+    }
+    // to send sms as well
+    // } else {
+    //   await sendConfirmationSMS(user.phone, newCode);
+    // }
 
     return res.status(200).json({ success: true, message: "New code sent" });
   } catch (err) {
@@ -315,24 +344,23 @@ exports.resendCode = async (req, res) => {
 };
 
 exports.forgotPassword = async (req, res) => {
-  const { email, phone_number } = req.body;
+  const { emailOrPhone, signupMethod } = req.body;
 
-  if (!email && !phone_number) {
+  if (!emailOrPhone || !signupMethod) {
     return res.status(400).json({
       success: false,
-      message:
-        "Please provide either email or phone number for password reset.",
+      message: "Please provide email or phone number and signup method.",
     });
   }
 
   const t = await sequelize.transaction();
   try {
-    const whereCondition = email
-      ? { email: { [Op.iLike]: email } }
-      : { phone_number: { [Op.iLike]: phone_number } };
+    const identifierField = signupMethod === "email" ? "email" : "phone_number";
 
     const user = await User.findOne({
-      where: whereCondition,
+      where: {
+        [identifierField]: { [Op.iLike]: emailOrPhone },
+      },
       transaction: t,
     });
 
@@ -344,25 +372,30 @@ exports.forgotPassword = async (req, res) => {
       });
     }
 
-    const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+    if (
+      (signupMethod === "email" && !user.email_verified_at) ||
+      (signupMethod === "phone" && !user.phone_verified_at)
+    ) {
+      await t.rollback();
+      return res.status(400).json({
+        success: false,
+        message: `${
+          signupMethod === "email" ? "Email" : "Phone number"
+        } not verified. Please verify first.`,
+      });
+    }
 
-    if (email) {
-      if (!user.email_verified_at) {
-        await t.rollback();
-        return res.status(400).json({
-          success: false,
-          message: "Email not verified. Please verify your email first.",
-        });
-      }
+    const resetCode = crypto.randomInt(100000, 1000000).toString();
 
-      await user.update(
-        {
-          confirmation_code: resetCode,
-          confirmation_code_expires: new Date(Date.now() + 10 * 60 * 1000),
-        },
-        { transaction: t }
-      );
+    await user.update(
+      {
+        confirmation_code: resetCode,
+        confirmation_code_expires: new Date(Date.now() + 10 * 60 * 1000),
+      },
+      { transaction: t }
+    );
 
+    if (signupMethod === "email") {
       await sendPasswordResetEmail(
         user.email,
         user.first_name,
@@ -370,31 +403,15 @@ exports.forgotPassword = async (req, res) => {
         resetCode
       );
     }
-
-    if (phone_number) {
-      if (!user.phone_verified_at) {
-        await t.rollback();
-        return res.status(400).json({
-          success: false,
-          message: "Phone number not verified. Please verify your phone first.",
-        });
-      }
-
-      await user.update(
-        {
-          confirmation_code: resetCode,
-          confirmation_code_expires: new Date(Date.now() + 10 * 60 * 1000),
-        },
-        { transaction: t }
-      );
-
-      console.log(`SMS reset code for ${phone_number}: ${resetCode}`);
-    }
+    // for sms
+    // else {
+    //   await sendPasswordResetSMS(user.phone_number, resetCode);
+    // }
 
     await t.commit();
     return res.status(200).json({
       success: true,
-      message: `Reset code sent to your ${email ? "email" : "phone"}.`,
+      message: `Reset code sent to your ${signupMethod}.`,
     });
   } catch (error) {
     await t.rollback();

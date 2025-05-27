@@ -1,12 +1,55 @@
 const { Op } = require("sequelize");
 const { Restaurant, Subscription, Branch, Plan } = require("../models");
 
-const checkBranchLimit = async (req, res, next) => {
+const { Branch, Location } = require("../models");
+
+exports.filterActiveBranches = async (req, res, next) => {
+  try {
+    const restaurantId = req.params.restaurantId;
+    if (!restaurantId) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Restaurant ID is required." });
+    }
+
+    const branches = await Branch.findAll({
+      where: {
+        restaurant_id: restaurantId,
+        status: "active",
+      },
+      attributes: [
+        "id",
+        "opening_time",
+        "closing_time",
+        "email",
+        "phone_number",
+        "name",
+      ],
+      include: [
+        {
+          model: Location,
+          attributes: ["name", "address"],
+        },
+      ],
+    });
+
+    req.branches = branches;
+    next();
+  } catch (error) {
+    console.error("Error filtering active branches:", error.message);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to filter active branches.",
+    });
+  }
+};
+
+// this is for to check branch limit
+exports.banchLimit = async (req, res, next) => {
   const transaction = await sequelize.transaction();
   try {
     const userId = req.user.id;
 
-    // Get user's restaurant
     const restaurant = await Restaurant.findOne({
       where: { created_by: userId },
       transaction,
@@ -20,7 +63,6 @@ const checkBranchLimit = async (req, res, next) => {
       });
     }
 
-    // Check active OR trial subscription
     const activeSubscription = await Subscription.findOne({
       where: {
         restaurant_id: restaurant.id,
@@ -40,13 +82,11 @@ const checkBranchLimit = async (req, res, next) => {
       });
     }
 
-    // Count existing branches
     const branchCount = await Branch.count({
       where: { restaurant_id: restaurant.id },
       transaction,
     });
 
-    // Check against plan limit
     if (branchCount >= activeSubscription.Plan.branch_limit) {
       await transaction.rollback();
       return res.status(402).json({
@@ -57,7 +97,6 @@ const checkBranchLimit = async (req, res, next) => {
       });
     }
 
-    // Attach critical information to request object
     req.restaurantData = {
       restaurantId: restaurant.id,
       branchLimit: activeSubscription.Plan.branch_limit,
@@ -75,5 +114,3 @@ const checkBranchLimit = async (req, res, next) => {
     });
   }
 };
-
-module.exports = checkBranchLimit;
