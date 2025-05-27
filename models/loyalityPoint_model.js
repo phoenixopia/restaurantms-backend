@@ -26,7 +26,7 @@ module.exports = (sequelize, DataTypes) => {
   );
 
   LoyaltyPoint.associate = (models) => {
-    LoyaltyPoint.belongsTo(models.User, { foreignKey: "customer_id" });
+    LoyaltyPoint.belongsTo(models.User, { foreignKey: "customer_id", as: "customer" });
   };
 
   return LoyaltyPoint;

@@ -45,9 +45,9 @@ module.exports = (sequelize, DataTypes) => {
   );
 
   Feedback.associate = (models) => {
-    Feedback.belongsTo(models.Restaurant, { foreignKey: "restaurant_id" });
-    Feedback.belongsTo(models.Order, { foreignKey: "order_id" });
-    Feedback.belongsTo(models.User, { foreignKey: "user_id" });
+    Feedback.belongsTo(models.Restaurant, { foreignKey: "restaurant_id", as: "restaurant" });
+    Feedback.belongsTo(models.Order, { foreignKey: "order_id", as: "order" });
+    Feedback.belongsTo(models.User, { foreignKey: "user_id", as: "user" });
   };
 
   return Feedback;

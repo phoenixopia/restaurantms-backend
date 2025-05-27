@@ -36,7 +36,7 @@ module.exports = (sequelize, DataTypes) => {
 
   Plan.associate = (models) => {
     // Plan.hasMany(models.Restaurant, { foreignKey: "plan_id" });
-    Plan.hasMany(models.Subscription, { foreignKey: "plan_id" });
+    Plan.hasMany(models.Subscription, { foreignKey: "plan_id", as: "subscriptions" });
   };
 
   return Plan;

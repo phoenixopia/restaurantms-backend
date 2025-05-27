@@ -28,9 +28,9 @@ module.exports = (sequelize, DataTypes) => {
   );
 
   Table.associate = (models) => {
-    Table.belongsTo(models.Location, { foreignKey: "location_id" });
-    Table.hasMany(models.Order, { foreignKey: "table_id" });
-    Table.hasMany(models.Reservation, { foreignKey: "table_id" });
+    Table.belongsTo(models.Location, { foreignKey: "location_id", as: "location" });
+    Table.hasMany(models.Order, { foreignKey: "table_id", as: "orders" });
+    Table.hasMany(models.Reservation, { foreignKey: "table_id", as: "reservations" });
   };
 
   return Table;

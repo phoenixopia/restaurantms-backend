@@ -38,10 +38,10 @@ module.exports = (sequelize, DataTypes) => {
   );
 
   MenuItem.associate = (models) => {
-    MenuItem.belongsTo(models.Menu, { foreignKey: "menu_id" });
-    MenuItem.belongsTo(models.MenuCategory, { foreignKey: "menu_category_id" });
-    MenuItem.hasMany(models.OrderItem, { foreignKey: "menu_item_id" });
-    MenuItem.hasMany(models.AnalyticsSnapshot, { foreignKey: "top_item_id" });
+    MenuItem.belongsTo(models.Menu, { foreignKey: "menu_id", as: "menu" });
+    MenuItem.belongsTo(models.MenuCategory, { foreignKey: "menu_category_id", as: "category" });
+    MenuItem.hasMany(models.OrderItem, { foreignKey: "menu_item_id", as: "orderItems" });
+    MenuItem.hasMany(models.AnalyticsSnapshot, { foreignKey: "top_item_id", as: "analyticsSnapshots" });
   };
 
   return MenuItem;

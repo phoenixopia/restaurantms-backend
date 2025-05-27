@@ -40,6 +40,7 @@ module.exports = (sequelize, DataTypes) => {
   TwoFA.associate = function (models) {
     TwoFA.belongsTo(models.User, {
       foreignKey: "user_id",
+      as: "user",
       onDelete: "CASCADE",
     });
   };

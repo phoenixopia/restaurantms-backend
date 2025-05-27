@@ -41,9 +41,9 @@ module.exports = (sequelize, DataTypes) => {
 
   AnalyticsSnapshot.associate = (models) => {
     AnalyticsSnapshot.belongsTo(models.Restaurant, {
-      foreignKey: "restaurant_id",
+      foreignKey: "restaurant_id", as: "restaurant"
     });
-    AnalyticsSnapshot.belongsTo(models.MenuItem, { foreignKey: "top_item_id" });
+    AnalyticsSnapshot.belongsTo(models.MenuItem, { foreignKey: "top_item_id", as: "topItem" });
   };
 
   return AnalyticsSnapshot;

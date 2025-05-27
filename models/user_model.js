@@ -233,19 +233,20 @@ module.exports = (sequelize, DataTypes) => {
     };
 
     User.associate = models => {
-        User.belongsTo(models.Role, { foreignKey: "role_id",});
+        User.belongsTo(models.Role, { foreignKey: "role_id", as: "roles" });
         // User.belongsTo(models.Restaurant, { foreignKey: "restaurant_id",});
         User.belongsToMany(models.Restaurant, {
             through: models.RestaurantUser,
             foreignKey: "user_id",
+            as: "restaurants"
         });
-        User.hasMany(models.Order, { foreignKey: "user_id" });
-        User.hasMany(models.Feedback, { foreignKey: "user_id" });
-        User.hasMany(models.Reservation, { foreignKey: "customer_id" });
-        User.hasMany(models.StaffSchedule, { foreignKey: "staff_id" });
-        User.hasMany(models.SupportTicket, { foreignKey: "user_id" });
-        User.hasMany(models.SupportTicket, { foreignKey: "assigned_to" });
-        User.hasOne(models.LoyaltyPoint, { foreignKey: "customer_id" });
+        User.hasMany(models.Order, { foreignKey: "user_id", as: "orders" });
+        User.hasMany(models.Feedback, { foreignKey: "user_id", as: "feedbacks" });
+        User.hasMany(models.Reservation, { foreignKey: "customer_id", as: "reservations" });
+        User.hasMany(models.StaffSchedule, { foreignKey: "staff_id", as: "schedules" });
+        User.hasMany(models.SupportTicket, { foreignKey: "user_id", as: "support_tickets" });
+        User.hasMany(models.SupportTicket, { foreignKey: "assigned_to", as: "assigned_tickets" });
+        User.hasOne(models.LoyaltyPoint, { foreignKey: "customer_id", as: "loyalty_points" });
     };
 
     return User;

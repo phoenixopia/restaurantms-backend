@@ -41,8 +41,8 @@ module.exports = (sequelize, DataTypes) => {
   );
 
   Subscription.associate = (models) => {
-    Subscription.hasMany(models.Restaurant, { foreignKey: "subscription_id" });
-    Subscription.belongsTo(models.Plan, { foreignKey: "plan_id" });
+    Subscription.hasMany(models.Restaurant, { foreignKey: "subscription_id", as: "restaurants" });
+    Subscription.belongsTo(models.Plan, { foreignKey: "plan_id", as: "plan" });
   };
 
   return Subscription;

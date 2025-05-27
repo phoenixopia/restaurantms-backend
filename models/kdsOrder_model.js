@@ -26,7 +26,7 @@ module.exports = (sequelize, DataTypes) => {
   );
 
   KdsOrder.associate = (models) => {
-    KdsOrder.belongsTo(models.Order, { foreignKey: "order_id" });
+    KdsOrder.belongsTo(models.Order, { foreignKey: "order_id", as: "order" });
   };
 
   return KdsOrder;

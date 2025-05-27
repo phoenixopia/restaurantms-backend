@@ -176,9 +176,14 @@ exports.googleLogin = async (req, res) => {
           include: [
             {
                 model: Role,
+                attributes: { exclude: ['createdAt', 'updatedAt'] },
+                as: 'roles',
                 include: [
                   {
                       model: Permission,
+                      through: { attributes: ["granted"] },
+                      attributes: { exclude: ['createdAt', 'updatedAt'] },
+                      as: "permissions"
                   },
               ],
             },
@@ -192,6 +197,8 @@ exports.googleLogin = async (req, res) => {
           await t.rollback();
           return res.status(404).json({ success: false, message: 'No account found with this email.' });
         }
+
+        console.log('\n\nUser found:', user.roles);
     
         if (!user.isConfirmed) {
           await t.rollback();

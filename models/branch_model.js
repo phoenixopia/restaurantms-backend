@@ -77,11 +77,13 @@ module.exports = (sequelize, DataTypes) => {
       foreignKey: "restaurant_id",
       onDelete: "CASCADE",
       hooks: true,
+      as: "restaurant",
     });
     Branch.belongsTo(models.Location, {
       foreignKey: "location_id",
       onUpdate: "CASCADE",
       onDelete: "SET NULL",
+      as: "location",
     });
     Branch.belongsTo(models.User, {
       foreignKey: "manager_id",

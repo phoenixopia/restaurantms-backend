@@ -62,15 +62,15 @@ module.exports = (sequelize, DataTypes) => {
   Restaurant.associate = (models) => {
     // Restaurant.belongsTo(models.Plan, { foreignKey: "plan_id", onDelete: 'CASCADE', hooks: true });
     // Restaurant.hasMany(models.User, { foreignKey: "restaurant_id", onDelete: 'CASCADE', hooks: true });
-    Restaurant.belongsToMany(models.User, { through: models.RestaurantUser, foreignKey: "restaurant_id", onDelete: 'CASCADE', hooks: true});
-    Restaurant.belongsTo(models.Subscription, { foreignKey: "subscription_id", onDelete: 'CASCADE', hooks: true });
-    Restaurant.hasMany(models.Menu, { foreignKey: "restaurant_id", onDelete: 'CASCADE', hooks: true });
-    Restaurant.hasMany(models.Location, { foreignKey: "restaurant_id", onDelete: 'CASCADE', hooks: true });
-    Restaurant.hasMany(models.Reservation, { foreignKey: "restaurant_id", onDelete: 'CASCADE', hooks: true });
-    Restaurant.hasMany(models.Feedback, { foreignKey: "restaurant_id", onDelete: 'CASCADE', hooks: true });
-    Restaurant.hasMany(models.SupportTicket, { foreignKey: "restaurant_id", onDelete: 'CASCADE', hooks: true });
-    Restaurant.hasOne(models.SystemSetting, { foreignKey: "restaurant_id", onDelete: 'CASCADE', hooks: true });
-    Restaurant.hasMany(models.AnalyticsSnapshot, { foreignKey: "restaurant_id", onDelete: 'CASCADE', hooks: true});
+    Restaurant.belongsToMany(models.User, { through: models.RestaurantUser, foreignKey: "restaurant_id", onDelete: 'CASCADE', hooks: true, as: "users" });
+    Restaurant.belongsTo(models.Subscription, { foreignKey: "subscription_id", onDelete: 'CASCADE', hooks: true, as: "subscription" });
+    Restaurant.hasMany(models.Menu, { foreignKey: "restaurant_id", onDelete: 'CASCADE', hooks: true, as: "menus" });
+    Restaurant.hasMany(models.Location, { foreignKey: "restaurant_id", onDelete: 'CASCADE', hooks: true, as: "locations" });
+    Restaurant.hasMany(models.Reservation, { foreignKey: "restaurant_id", onDelete: 'CASCADE', hooks: true, as: "reservations" });
+    Restaurant.hasMany(models.Feedback, { foreignKey: "restaurant_id", onDelete: 'CASCADE', hooks: true, as: "feedbacks" });
+    Restaurant.hasMany(models.SupportTicket, { foreignKey: "restaurant_id", onDelete: 'CASCADE', hooks: true, as: "supportTickets" });
+    Restaurant.hasOne(models.SystemSetting, { foreignKey: "restaurant_id", onDelete: 'CASCADE', hooks: true, as: "systemSetting" });
+    Restaurant.hasMany(models.AnalyticsSnapshot, { foreignKey: "restaurant_id", onDelete: 'CASCADE', hooks: true, as: "analyticsSnapshots" });
   };
 
   return Restaurant;

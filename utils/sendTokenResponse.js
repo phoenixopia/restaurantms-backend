@@ -16,8 +16,10 @@ exports.sendTokenResponse = async (user, statusCode, res) => {
                 success: true,
                 data: {
                   id: user.id,
-                  // role: user.role,
+                  role_id: user.role_id,
+                  email: user.email,
                   token,
+                  roles: user.roles,
                 }
             });
     } catch (error) {

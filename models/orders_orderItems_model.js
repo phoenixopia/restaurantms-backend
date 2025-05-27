@@ -33,9 +33,5 @@ module.exports = (sequelize, DataTypes) => {
     }
   );
 
-  OrderItemOrder.associate = (models) => {
-    OrderItemOrder.belongsTo(models.Order, { foreignKey: "order_id" });
-    OrderItemOrder.belongsTo(models.OrderItem, { foreignKey: "order_item_id" });
-  };
   return OrderItemOrder;
 };

@@ -43,8 +43,8 @@ module.exports = (sequelize, DataTypes) => {
   );
 
   SupportTicket.associate = (models) => {
-    SupportTicket.belongsTo(models.Restaurant, { foreignKey: "restaurant_id" });
-    SupportTicket.belongsTo(models.User, { foreignKey: "user_id" });
+    SupportTicket.belongsTo(models.Restaurant, { foreignKey: "restaurant_id", as: "restaurant" });
+    SupportTicket.belongsTo(models.User, { foreignKey: "user_id", as: "user" });
     SupportTicket.belongsTo(models.User, {
       foreignKey: "assigned_to",
       as: "AssignedStaff",

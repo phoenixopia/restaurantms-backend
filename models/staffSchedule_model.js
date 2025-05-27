@@ -27,7 +27,7 @@ module.exports = (sequelize, DataTypes) => {
   );
 
   StaffSchedule.associate = (models) => {
-    StaffSchedule.belongsTo(models.User, { foreignKey: "staff_id" });
+    StaffSchedule.belongsTo(models.User, { foreignKey: "staff_id", as: "staff" });
   };
 
   return StaffSchedule;

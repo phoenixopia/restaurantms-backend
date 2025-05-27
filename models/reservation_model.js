@@ -44,9 +44,9 @@ module.exports = (sequelize, DataTypes) => {
   );
 
   Reservation.associate = (models) => {
-    Reservation.belongsTo(models.Restaurant, { foreignKey: "restaurant_id" });
-    Reservation.belongsTo(models.User, { foreignKey: "customer_id" });
-    Reservation.belongsTo(models.Table, { foreignKey: "table_id" });
+    Reservation.belongsTo(models.Restaurant, { foreignKey: "restaurant_id", as: "restaurant" });
+    Reservation.belongsTo(models.User, { foreignKey: "customer_id", as: "customer" });
+    Reservation.belongsTo(models.Table, { foreignKey: "table_id", as: "table" });
   };
 
   return Reservation;

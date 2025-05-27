@@ -32,7 +32,7 @@ module.exports = (sequelize, DataTypes) => {
   );
 
   SystemSetting.associate = (models) => {
-    SystemSetting.belongsTo(models.Restaurant, { foreignKey: "restaurant_id" });
+    SystemSetting.belongsTo(models.Restaurant, { foreignKey: "restaurant_id", as: "restaurant" });
   };
 
   return SystemSetting;
