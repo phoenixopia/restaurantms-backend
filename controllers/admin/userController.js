@@ -42,14 +42,8 @@ exports.createUser = async (req, res) => {
           return res.status(400).json({ success: false, message: 'Email already in use.' });
       }
 
-      // await UserRole.create({
-      //   user_id: newUser.id,
-      //   role_id,
-      //   restaurant_id,
-      // });
-
-      const confirmationLink = `${process.env.CLIENT_URL}/confirm/${newUser.confirmationCode}`;
-      await sendConfirmationEmail(newUser.email, newUser.firstName, newUser.lastName, confirmationLink);
+      // const confirmationLink = `${process.env.CLIENT_URL}/confirm/${newUser.confirmationCode}`;
+      // await sendConfirmationEmail(newUser.email, newUser.firstName, newUser.lastName, confirmationLink);
       await t.commit();
       return res.status(201).json({
           success: true,
@@ -59,7 +53,7 @@ exports.createUser = async (req, res) => {
   } catch (error) {
       await t.rollback();
       console.error('Create User Error:', error);
-      return res.status(500).json({ success: false, message: 'Internal Server Error.' });
+      return res.status(500).json({ success: false, message: 'Internal Server Error.', error: error.message });
   }
 };
 

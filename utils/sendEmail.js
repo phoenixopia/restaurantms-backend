@@ -1,19 +1,28 @@
 const nodemailer = require('nodemailer');
 
 const transporter = nodemailer.createTransport({
-    service: 'Gmail', 
+    // service: 'Gmail', 
+    // auth: {
+    //     "user": process.env.USER_1,
+    //     "pass": process.env.PASS_1
+    // },
+    host: 'phoenixopia.com',
+    port: 465,
+    secure: true, 
     auth: {
-        "user": process.env.USER_1,
-        "pass": process.env.PASS_1
+        user: process.env.USER_1, 
+        pass: process.env.PASS_1
     },
-
+    tls: {
+        rejectUnauthorized: false // optional but helps with self-signed certs
+    }
 });
 
 
 // Send confirmation email to the new user
 exports.sendConfirmationEmail = async (to, firstName, lastName, confirmationLink) => {
     const mailOptions = {
-        from: '"Phoenixopia Solutions" <process.env.USER_1>',
+        from: `"Phoenixopia Solutions" <${process.env.USER_1}>`,
         to: to,
         subject: 'Please Confirm Your Email Address',
         html: `
@@ -54,7 +63,7 @@ exports.sendConfirmationEmail = async (to, firstName, lastName, confirmationLink
 // Send reset email
 exports.sendPasswordResetEmail = async (to, resetLink) => {
     const mailOptions = {
-        from: '"Phoenixopia Solutions" <process.env.USER_1>',
+        from: `"Phoenixopia Solutions" <${process.env.USER_1}>`,
         to: to,
         subject: 'Password Reset Request',
         html: `
