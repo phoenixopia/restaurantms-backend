@@ -2,36 +2,16 @@ const { Role, RolePermission, Permission } = require("../models");
 
 exports.sendTokenResponse = async (user, statusCode, res, reqUrl) => {
   try {
-    const role = await Role.findByPk(user.role_id, {
-      include: [
-        {
-          model: RolePermission,
-          where: { granted: true },
-          required: false,
-          include: [
-            {
-              model: Permission,
-              attributes: ["name"],
-            },
-          ],
-        },
-      ],
-    });
-
-    const permissions =
-      role.RolePermissions?.map(
-        (rp) => rp.Permission?.code || rp.Permission?.name
-      ) || [];
-
+    const isCustomer = reqUrl.includes("/customer");
     const token = await user.getJwtToken();
+
     const cookieOptions = {
       httpOnly: true,
-      secure: false, // Set true in production with HTTPS
+      secure: false,
       sameSite: "Lax",
       maxAge: 8 * 60 * 60 * 1000,
     };
 
-    const isCustomer = reqUrl.includes("/customer");
     if (isCustomer) {
       const {
         id,
@@ -82,6 +62,28 @@ exports.sendTokenResponse = async (user, statusCode, res, reqUrl) => {
       });
     }
 
+    // this part  for admin, staff . . . . .
+    let role = null;
+    let permissions = [];
+
+    if (user.role_id) {
+      role = await Role.findByPk(user.role_id, {
+        include: [
+          {
+            model: RolePermission,
+            where: { granted: true },
+            required: false,
+            include: [{ model: Permission, attributes: ["name"] }],
+          },
+        ],
+      });
+
+      permissions =
+        role?.RolePermissions?.map(
+          (rp) => rp.Permission?.code || rp.Permission?.name
+        ) || [];
+    }
+
     return res
       .status(statusCode)
       .cookie("token", token, cookieOptions)
@@ -89,7 +91,7 @@ exports.sendTokenResponse = async (user, statusCode, res, reqUrl) => {
         success: true,
         data: {
           id: user.id,
-          role: role.name,
+          role: role?.name || null,
           permissions,
         },
       });

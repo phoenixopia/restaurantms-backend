@@ -34,13 +34,14 @@ exports.register = async (req, res) => {
         message: "Email and password are required for email signup.",
       });
     }
+    if (!/\S+@\S+\.\S+/.test(email)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid email format",
+      });
+    }
   }
-  if (!/\S+@\S+\.\S+/.test(email)) {
-    return res.status(400).json({
-      success: false,
-      message: "Invalid email format",
-    });
-  }
+
   const t = await sequelize.transaction();
 
   try {
@@ -265,7 +266,15 @@ exports.verifyCode = async (req, res) => {
     );
 
     await t.commit();
-    return sendTokenResponse(user, 200, res, req.originalUrl);
+
+    if (req.originalUrl.includes("/customer")) {
+      return sendTokenResponse(user, 200, res, req.originalUrl);
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Verification successful",
+    });
   } catch (err) {
     await t.rollback();
     console.error("Verification error:", err);

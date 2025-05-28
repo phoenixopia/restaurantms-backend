@@ -23,11 +23,6 @@ module.exports = (sequelize, DataTypes) => {
       email: {
         type: DataTypes.STRING,
         unique: true,
-        validate: {
-          isEmail: {
-            msg: "Please enter a valid email address.",
-          },
-        },
         set(value) {
           if (value) {
             this.setDataValue("email", value.toLowerCase());
@@ -37,12 +32,6 @@ module.exports = (sequelize, DataTypes) => {
       phone_number: {
         type: DataTypes.STRING(20),
         unique: true,
-        validate: {
-          is: {
-            args: /^\+?[1-9]\d{1,14}$/,
-            msg: "Please enter a valid phone number.",
-          },
-        },
       },
       password: {
         type: DataTypes.TEXT,
@@ -53,7 +42,7 @@ module.exports = (sequelize, DataTypes) => {
       address: DataTypes.STRING(20),
       profile_picture: DataTypes.TEXT,
       confirmation_code: {
-        type: DataTypes.STRING(6), // Change to 6 characters
+        type: DataTypes.STRING(6),
         allowNull: true,
       },
       confirmation_code_expires: {
