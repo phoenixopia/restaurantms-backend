@@ -16,7 +16,6 @@ const getClientIp = require("../utils/getClientIp");
 const { OAuth2Client } = require("google-auth-library");
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
-// sign up with email or phone number
 exports.register = async (req, res) => {
   const { firstName, lastName, emailOrPhone, password, signupMethod } =
     req.body;
@@ -111,9 +110,8 @@ exports.register = async (req, res) => {
   }
 };
 
-// login
 exports.login = async (req, res) => {
-  const { password, signupMethod, device_type, code } = req.body;
+  const { password, emailOrPhone, signupMethod, device_type, code } = req.body;
 
   if (!signupMethod || !password) {
     return res.status(400).json({
