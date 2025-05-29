@@ -23,11 +23,6 @@ module.exports = (sequelize, DataTypes) => {
       email: {
         type: DataTypes.STRING,
         unique: true,
-        set(value) {
-          if (value) {
-            this.setDataValue("email", value.toLowerCase());
-          }
-        },
       },
       phone_number: {
         type: DataTypes.STRING(20),
@@ -36,7 +31,7 @@ module.exports = (sequelize, DataTypes) => {
       password: {
         type: DataTypes.TEXT,
         validate: {
-          len: [8, 100],
+          len: [6, 100],
         },
       },
       address: DataTypes.STRING(20),
@@ -225,6 +220,17 @@ module.exports = (sequelize, DataTypes) => {
   };
 
   User.associate = (models) => {
+    // to get created users by restaurant admin
+    User.hasMany(models.User, {
+      foreignKey: "created_by",
+      as: "createdUsers",
+    });
+    // to get the restaurant admins who created the users
+    User.belongsTo(models.User, {
+      foreignKey: "created_by",
+      as: "creator",
+    });
+
     User.hasOne(models.Restaurant, {
       foreignKey: "created_by",
     });

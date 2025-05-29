@@ -16,28 +16,23 @@ const getClientIp = require("../utils/getClientIp");
 const { OAuth2Client } = require("google-auth-library");
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
+// sign up with email or phone number
 exports.register = async (req, res) => {
-  const { firstName, lastName, email, phone_number, password, signup_method } =
+  const { firstName, lastName, emailOrPhone, password, signupMethod } =
     req.body;
 
-  if (!firstName || !lastName || !signup_method) {
+  if (!firstName || !lastName || !signupMethod || !emailOrPhone) {
     return res.status(400).json({
       success: false,
-      message: "All Fields are Required!!",
+      message: "Missing required fields",
     });
   }
 
-  if (signup_method === "email") {
-    if (!email || !password) {
+  if (signupMethod === "email") {
+    if (!password || !/\S+@\S+\.\S+/.test(emailOrPhone)) {
       return res.status(400).json({
         success: false,
-        message: "Email and password are required for email signup.",
-      });
-    }
-    if (!/\S+@\S+\.\S+/.test(email)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid email format",
+        message: "Invalid or missing email/password for email signup.",
       });
     }
   }
@@ -47,6 +42,7 @@ exports.register = async (req, res) => {
   try {
     const first_name = capitalizeFirstLetter(firstName);
     const last_name = capitalizeFirstLetter(lastName);
+    const identifierField = signupMethod === "email" ? "email" : "phone_number";
 
     let userData = {
       first_name,
@@ -56,33 +52,14 @@ exports.register = async (req, res) => {
       is_active: true,
     };
 
-    const confirmationCode = Math.floor(
-      100000 + Math.random() * 900000
-    ).toString();
-
-    if (signup_method === "email") {
-      userData.email = email.toLowerCase();
-      userData.password = password;
-      userData.confirmation_code = confirmationCode;
-      userData.confirmation_code_expires = new Date(
-        Date.now() + 10 * 60 * 1000
-      );
-    }
-
-    console.log("User data to create:", userData);
-
-    const [newUser, created] = await User.findOrCreate({
+    const existingUser = await User.findOne({
       where: {
-        [Op.or]: [
-          email ? { email: { [Op.iLike]: email } } : null,
-          phone_number ? { phone_number: { [Op.iLike]: phone_number } } : null,
-        ].filter(Boolean),
+        [identifierField]: { [Op.iLike]: emailOrPhone },
       },
-      defaults: userData,
       transaction: t,
     });
 
-    if (!created) {
+    if (existingUser) {
       await t.rollback();
       return res.status(400).json({
         success: false,
@@ -90,7 +67,26 @@ exports.register = async (req, res) => {
       });
     }
 
-    if (signup_method === "email") {
+    const confirmationCode = Math.floor(
+      100000 + Math.random() * 900000
+    ).toString();
+
+    if (signupMethod === "email") {
+      userData.email = emailOrPhone.toLowerCase();
+      userData.password = password;
+      userData.confirmation_code = confirmationCode;
+      userData.confirmation_code_expires = new Date(
+        Date.now() + 10 * 60 * 1000
+      );
+    }
+    // for phone sms
+    // else {
+    //   userData.phone_number = emailOrPhone;
+    // }
+
+    const newUser = await User.create(userData, { transaction: t });
+
+    if (signupMethod === "email") {
       await sendConfirmationEmail(
         newUser.email,
         newUser.first_name,
@@ -103,22 +99,23 @@ exports.register = async (req, res) => {
 
     return res.status(201).json({
       success: true,
-      message:
-        "Please check your email for confirmation to verify your account",
+      message: `User registered. Please check your ${signupMethod} for the confirmation code.`,
     });
   } catch (err) {
-    console.error(err);
+    await t.rollback();
+    console.error("Register error:", err);
     return res.status(500).json({
       success: false,
-      message: "Something went wrong",
+      message: "Something went wrong while registering the user.",
     });
   }
 };
 
+// login
 exports.login = async (req, res) => {
-  const { phone_number, email, password, device_type, code } = req.body;
+  const { password, signupMethod, device_type, code } = req.body;
 
-  if ((!email && !phone_number) || !password) {
+  if (!signupMethod || !password) {
     return res.status(400).json({
       success: false,
       message:
@@ -127,17 +124,15 @@ exports.login = async (req, res) => {
   }
   const t = await sequelize.transaction();
   try {
-    const whereCondition = email
-      ? { email: { [Op.iLike]: email } }
-      : { phone_number: { [Op.iLike]: phone_number } };
+    const identifierField = signupMethod === "email" ? "email" : "phone";
 
     const user = await User.findOne({
-      where: whereCondition,
-      include: [{ model: TwoFA, as: "twoFA" }],
-      transaction: t,
+      where: {
+        [identifierField]: emailOrPhone,
+        include: [{ model: TwoFA, as: "twoFA" }],
+        transaction: t,
+      },
     });
-
-    console.log("User found:", user ? user.id : null);
 
     if (!user) {
       await t.rollback();
@@ -145,7 +140,6 @@ exports.login = async (req, res) => {
         .status(404)
         .json({ success: false, message: "No account found with this email." });
     }
-    console.log("Email verified:", !!user.email_verified_at);
     if (!user.email_verified_at) {
       await t.rollback();
       return res.status(400).json({
@@ -153,18 +147,27 @@ exports.login = async (req, res) => {
         message: "Email not confirmed. Please check your inbox.",
       });
     }
-    console.log("Is account locked:", user.isLocked());
     if (user.isLocked()) {
+      const remainingMs = new Date(user.locked_until) - new Date();
+      const remainingMinutes = Math.floor(remainingMs / 60000);
+      const remainingSeconds = Math.floor((remainingMs % 60000) / 1000);
+
       await t.rollback();
       return res.status(403).json({
         success: false,
-        message: `Your account is locked until ${user.locked_until}. Please try again later.`,
+        message:
+          user.failed_login_attempts === 5
+            ? `Your account is locked for 5 minutes due to too many failed login attempts.`
+            : `Your account is still locked.`,
+        locked_until: user.locked_until,
+        remaining_time: {
+          minutes: remainingMinutes,
+          seconds: remainingSeconds,
+        },
       });
     }
-    console.log("Hashed password to store:", user.password);
 
     const isMatched = await user.comparePassword(password);
-    console.log("Password matched:", isMatched);
 
     if (!isMatched) {
       await user.markFailedLoginAttempt();
@@ -176,7 +179,6 @@ exports.login = async (req, res) => {
         }`,
       });
     }
-    console.log("2FA enabled:", user.twoFA?.is_enabled);
     const ip = getClientIp(req);
     await user.markSuccessfulLogin(ip, device_type);
 
@@ -294,6 +296,7 @@ exports.resendCode = async (req, res) => {
       message: "Missing email or phone and signup method",
     });
   }
+  const t = await sequelize.transaction();
 
   try {
     const identifierField = signupMethod === "email" ? "email" : "phone";
@@ -305,12 +308,14 @@ exports.resendCode = async (req, res) => {
     });
 
     if (!user) {
+      await t.rollback();
       return res
         .status(404)
         .json({ success: false, message: "User not found" });
     }
 
     if (user.email_verified_at) {
+      await t.rollback();
       return res.status(400).json({
         success: false,
         message:
@@ -339,7 +344,7 @@ exports.resendCode = async (req, res) => {
     // } else {
     //   await sendConfirmationSMS(user.phone, newCode);
     // }
-
+    await t.commit();
     return res.status(200).json({ success: true, message: "New code sent" });
   } catch (err) {
     console.error("Resend error:", err);
@@ -430,44 +435,23 @@ exports.forgotPassword = async (req, res) => {
 };
 
 exports.resetPassword = async (req, res) => {
-  const { email, phone_number, code, newPassword, confirmPassword } = req.body;
+  const { code, newPassword, signupMethod, emailOrPhone } = req.body;
 
-  if (!newPassword || !confirmPassword) {
+  if (!code || !newPassword || !signupMethod || !emailOrPhone) {
     return res.status(400).json({
       success: false,
-      message: "New password and confirmation are required.",
-    });
-  }
-
-  if (newPassword !== confirmPassword) {
-    return res.status(400).json({
-      success: false,
-      message: "Passwords do not match.",
+      message: "Missing reset parameters.",
     });
   }
 
   const t = await sequelize.transaction();
   try {
-    let user;
-    const whereCondition = {};
+    const identifierField = signupMethod === "email" ? "email" : "phone_number";
 
-    if (email && code) {
-      whereCondition.email = { [Op.iLike]: email };
-      whereCondition.confirmation_code = code;
-    } else if (phone_number && code) {
-      whereCondition.phone_number = { [Op.iLike]: phone_number };
-      whereCondition.confirmation_code = code;
-    } else {
-      await t.rollback();
-      return res.status(400).json({
-        success: false,
-        message: "Invalid reset parameters.",
-      });
-    }
-
-    user = await User.findOne({
+    const user = await User.findOne({
       where: {
-        ...whereCondition,
+        [identifierField]: { [Op.iLike]: emailOrPhone },
+        confirmation_code: code,
         confirmation_code_expires: { [Op.gt]: new Date() },
       },
       transaction: t,
