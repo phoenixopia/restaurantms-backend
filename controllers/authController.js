@@ -41,12 +41,11 @@ exports.register = async (req, res) => {
   try {
     const first_name = capitalizeFirstLetter(firstName);
     const last_name = capitalizeFirstLetter(lastName);
-    const identifierField = signupMethod === "email" ? "email" : "phone_number";
+    const identifierField = signupMethod === "email" ? "email" : "phone";
 
     let userData = {
       first_name,
       last_name,
-      phone_number,
       social_provider: "none",
       is_active: true,
     };
@@ -78,8 +77,8 @@ exports.register = async (req, res) => {
         Date.now() + 10 * 60 * 1000
       );
     }
-    // for phone sms
-    // else {
+    // for sms
+    //  else {
     //   userData.phone_number = emailOrPhone;
     // }
 
@@ -113,11 +112,11 @@ exports.register = async (req, res) => {
 exports.login = async (req, res) => {
   const { password, emailOrPhone, signupMethod, device_type, code } = req.body;
 
-  if (!signupMethod || !password) {
+  if (!signupMethod || !password || !emailOrPhone) {
     return res.status(400).json({
       success: false,
       message:
-        "Please provide either email or phone number, along with the password.",
+        "Please provide email or phone number, signup method, and password.",
     });
   }
   const t = await sequelize.transaction();
@@ -127,24 +126,33 @@ exports.login = async (req, res) => {
     const user = await User.findOne({
       where: {
         [identifierField]: emailOrPhone,
-        include: [{ model: TwoFA, as: "twoFA" }],
-        transaction: t,
       },
+      include: [{ model: TwoFA, as: "twoFA" }],
+      transaction: t,
     });
 
     if (!user) {
       await t.rollback();
       return res
         .status(404)
-        .json({ success: false, message: "No account found with this email." });
+        .json({ success: false, message: "No account found." });
     }
-    if (!user.email_verified_at) {
+    if (signupMethod === "email" && !user.email_verified_at) {
       await t.rollback();
       return res.status(400).json({
         success: false,
         message: "Email not confirmed. Please check your inbox.",
       });
     }
+
+    if (signupMethod === "phone" && !user.phone_verified_at) {
+      await t.rollback();
+      return res.status(400).json({
+        success: false,
+        message: "Phone number not confirmed. Please verify first.",
+      });
+    }
+
     if (user.isLocked()) {
       const remainingMs = new Date(user.locked_until) - new Date();
       const remainingMinutes = Math.floor(remainingMs / 60000);
@@ -216,6 +224,7 @@ exports.login = async (req, res) => {
     await t.commit();
     return sendTokenResponse(user, 200, res, req.originalUrl);
   } catch (error) {
+    await t.rollback();
     console.error("Signin Error:", error);
     return res.status(500).json({
       success: false,
@@ -298,11 +307,16 @@ exports.resendCode = async (req, res) => {
 
   try {
     const identifierField = signupMethod === "email" ? "email" : "phone";
+    const value =
+      typeof emailOrPhone === "string" && signupMethod === "email"
+        ? emailOrPhone.toLowerCase()
+        : emailOrPhone;
 
     const user = await User.findOne({
       where: {
-        [identifierField]: emailOrPhone.toLowerCase?.() || emailOrPhone,
+        [identifierField]: value,
       },
+      transaction: t,
     });
 
     if (!user) {
@@ -323,12 +337,15 @@ exports.resendCode = async (req, res) => {
       });
     }
 
-    const newCode = crypto.randomInt(100000, 999999).toString();
+    const newCode = Math.floor(100000 + Math.random() * 900000).toString();
 
-    await user.update({
-      confirmation_code: newCode,
-      confirmation_code_expires: new Date(Date.now() + 10 * 60 * 1000),
-    });
+    await user.update(
+      {
+        confirmation_code: newCode,
+        confirmation_code_expires: new Date(Date.now() + 10 * 60 * 1000),
+      },
+      { transaction: t }
+    );
 
     if (signupMethod === "email") {
       await sendConfirmationEmail(
@@ -345,6 +362,7 @@ exports.resendCode = async (req, res) => {
     await t.commit();
     return res.status(200).json({ success: true, message: "New code sent" });
   } catch (err) {
+    await t.rollback();
     console.error("Resend error:", err);
     return res
       .status(500)
@@ -364,7 +382,7 @@ exports.forgotPassword = async (req, res) => {
 
   const t = await sequelize.transaction();
   try {
-    const identifierField = signupMethod === "email" ? "email" : "phone_number";
+    const identifierField = signupMethod === "email" ? "email" : "phone";
 
     const user = await User.findOne({
       where: {
@@ -394,7 +412,7 @@ exports.forgotPassword = async (req, res) => {
       });
     }
 
-    const resetCode = crypto.randomInt(100000, 1000000).toString();
+    const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
 
     await user.update(
       {
@@ -444,7 +462,7 @@ exports.resetPassword = async (req, res) => {
 
   const t = await sequelize.transaction();
   try {
-    const identifierField = signupMethod === "email" ? "email" : "phone_number";
+    const identifierField = signupMethod === "email" ? "email" : "phone";
 
     const user = await User.findOne({
       where: {
@@ -501,15 +519,13 @@ exports.logout = async (req, res) => {
 
     return res.status(200).json({
       success: true,
-      message: "Successfully logged out",
+      message: "Logged out successfully.",
     });
-  } catch (err) {
-    console.error("Logout Error:", err);
-    return res.status(500).json({
-      success: false,
-      message: "Error logging out",
-      error: process.env.NODE_ENV === "development" ? err.message : undefined,
-    });
+  } catch (error) {
+    console.error("Logout error:", error);
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
   }
 };
 
@@ -568,14 +584,6 @@ exports.googleLogin = async (req, res) => {
           success: false,
           message:
             "Account exists with different login method. Please use email/password.",
-        });
-      }
-
-      if (user.social_provider === "google" && req.path === "/login") {
-        await t.rollback();
-        return res.status(401).json({
-          success: false,
-          message: "Google-authenticated users must login via Google",
         });
       }
 
