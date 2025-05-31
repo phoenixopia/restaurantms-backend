@@ -7,6 +7,7 @@ const {
   User,
   Subscription,
   Plan,
+  sequelize,
 } = require("../../models");
 const { validateManagerByEmail } = require("../../utils/validateManager");
 
@@ -75,19 +76,24 @@ exports.getAdminBranches = async (req, res) => {
     const userId = req.user.id;
     const restaurantId = req.params.restaurantId;
     const search = req.query.search || "";
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
 
     const restaurant = await Restaurant.findOne({
       where: { id: restaurantId, created_by: userId },
     });
 
     if (!restaurant) {
+      await transaction.rollback();
       return res.status(404).json({
         success: false,
         message: "Restaurant not found or access denied",
       });
     }
 
-    const branches = await Branch.findAll({
+    const { data: branches, meta } = await Branch.paginate({
+      page,
+      limit,
       where: {
         restaurant_id: restaurantId,
         ...(search && {
@@ -101,6 +107,7 @@ exports.getAdminBranches = async (req, res) => {
     return res.status(200).json({
       success: true,
       data: branches,
+      meta,
     });
   } catch (error) {
     console.error("Error fetching admin branches:", error);
@@ -161,6 +168,7 @@ exports.getBranchById = async (req, res) => {
     });
 
     if (!branch) {
+      transaction.rollback();
       return res.status(404).json({
         success: false,
         message: "Branch not found or access denied",
@@ -172,6 +180,7 @@ exports.getBranchById = async (req, res) => {
       data: branch,
     });
   } catch (error) {
+    transaction.rollback();
     console.error("Error fetching branch:", error);
     return res.status(500).json({
       success: false,

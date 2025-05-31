@@ -72,6 +72,36 @@ module.exports = (sequelize, DataTypes) => {
     return currentTime >= this.opening_time && currentTime < this.closing_time;
   };
 
+  Branch.paginate = async function ({
+    page = 1,
+    limit = 10,
+    where = {},
+    order = [["created_at", "DESC"]],
+    include = [],
+  } = {}) {
+    const offset = (page - 1) * limit;
+
+    const { count, rows } = await this.findAndCountAll({
+      where,
+      limit,
+      offset,
+      order,
+      include,
+    });
+
+    const totalPages = Math.ceil(count / limit);
+
+    return {
+      data: rows,
+      meta: {
+        totalItems: count,
+        totalPages,
+        currentPage: page,
+        pageSize: limit,
+      },
+    };
+  };
+
   Branch.associate = (models) => {
     Branch.belongsTo(models.Restaurant, {
       foreignKey: "restaurant_id",

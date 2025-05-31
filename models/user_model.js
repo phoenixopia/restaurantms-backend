@@ -1,6 +1,7 @@
 "use strict";
 const jwt = require("jsonwebtoken");
 const bcryptjs = require("bcryptjs");
+const { where } = require("sequelize");
 
 module.exports = (sequelize, DataTypes) => {
   const User = sequelize.define(
@@ -167,28 +168,46 @@ module.exports = (sequelize, DataTypes) => {
     return await bcryptjs.compare(candidatePassword, this.password);
   };
 
-  User.prototype.getJwtToken = function () {
-    return jwt.sign(
-      {
-        id: this.id,
-        role_id: this.role_id,
-      },
-      process.env.JWT_SECRET,
-      { expiresIn: "6h" }
-    );
+  User.prototype._buildTokenPayload = async function () {
+    const tokenPayload = {
+      id: this.id,
+      role_id: this.role_id,
+    };
+
+    try {
+      if (this.created_by) {
+        const restaurant = await sequelize.models.Restaurant.findOne({
+          where: { created_by: this.created_by },
+        });
+        if (restaurant) {
+          tokenPayload.restaurant_id = restaurant.id;
+        }
+      } else {
+        const role = await this.getRole();
+        if (role && role.name === "restaurant_admin") {
+          const restaurant = await sequelize.models.Restaurant.findOne({
+            where: { created_by: this.id },
+          });
+          if (restaurant) {
+            tokenPayload.restaurant_id = restaurant.id;
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error adding restaurant_id to token payload:", error);
+    }
+
+    return tokenPayload;
+  };
+
+  User.prototype.getJwtToken = async function () {
+    const tokenPayload = await this._buildTokenPayload();
+    return jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: "6h" });
   };
 
   User.prototype.getResetPasswordToken = async function () {
-    return jwt.sign(
-      {
-        id: this.id,
-        role_id: this.role_id,
-      },
-      process.env.JWT_SECRET,
-      {
-        expiresIn: "10m",
-      }
-    );
+    const tokenPayload = await this._buildTokenPayload();
+    return jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: "10m" });
   };
 
   User.prototype.markSuccessfulLogin = async function (ipAddress, deviceType) {
@@ -237,6 +256,11 @@ module.exports = (sequelize, DataTypes) => {
     User.belongsTo(models.Role, {
       foreignKey: "role_id",
     });
+    User.belongsToMany(models.Permission, {
+      through: models.UserPermission,
+      foreignKey: "user_id",
+      otherKey: "permission_id",
+    });
     User.hasOne(models.TwoFA, {
       foreignKey: "user_id",
       as: "twoFA",
@@ -255,24 +279,3 @@ module.exports = (sequelize, DataTypes) => {
   };
   return User;
 };
-
-// User.hasOne(models.TwoFA, {
-//   foreignKey: "user_id",
-//   as: "twoFA",
-//   onDelete: "CASCADE",
-//   onUpdate: "CASCADE",
-// });
-// User.hasMany(models.Branch, {
-//   foreignKey: "manager_id",
-// });
-// User.belongsTo(models.Role, {
-//   foreignKey: "role_id",
-//   onDelete: "SET NULL",
-// });
-// User.hasMany(models.Order, { foreignKey: "user_id" });
-// User.hasMany(models.Feedback, { foreignKey: "user_id" });
-// User.hasMany(models.Reservation, { foreignKey: "customer_id" });
-// User.hasMany(models.StaffSchedule, { foreignKey: "staff_id" });
-// User.hasMany(models.SupportTicket, { foreignKey: "user_id" });
-// User.hasMany(models.SupportTicket, { foreignKey: "assigned_to" });
-// User.hasOne(models.LoyaltyPoint, { foreignKey: "customer_id" });

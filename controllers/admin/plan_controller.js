@@ -2,14 +2,23 @@ const { Plan, sequelize } = require("../../models");
 const { capitalizeFirstLetter } = require("../../utils/capitalizeFirstLetter");
 const { Op } = require("sequelize");
 
+
 exports.listPlans = async (req, res) => {
   try {
-    const plans = await Plan.findAll();
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
+
+    const paginatedPlans = await Plan.paginate({
+      page,
+      limit,
+      order: [["name", "ASC"]],
+    });
 
     return res.status(200).json({
       success: true,
       message: "Plans fetched successfully",
-      data: plans,
+      data: paginatedPlans.data,
+      meta: paginatedPlans.meta,
     });
   } catch (error) {
     console.error("Error fetching plans:", error);
@@ -19,6 +28,7 @@ exports.listPlans = async (req, res) => {
     });
   }
 };
+
 exports.getPlanByName = async (req, res) => {
   try {
     const { name } = req.params;
