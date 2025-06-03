@@ -1,7 +1,11 @@
 const { Op } = require("sequelize");
-const { Restaurant, Subscription, Branch, Plan } = require("../models");
-
-const { Branch, Location } = require("../models");
+const {
+  Restaurant,
+  Subscription,
+  Branch,
+  Plan,
+  Location,
+} = require("../models");
 
 exports.filterActiveBranches = async (req, res, next) => {
   try {
@@ -45,7 +49,7 @@ exports.filterActiveBranches = async (req, res, next) => {
 };
 
 // this is for to check branch limit
-exports.banchLimit = async (req, res, next) => {
+exports.branchLimit = async (req, res, next) => {
   const transaction = await sequelize.transaction();
   try {
     const userId = req.user.id;

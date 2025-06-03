@@ -84,7 +84,6 @@ exports.getAdminBranches = async (req, res) => {
     });
 
     if (!restaurant) {
-      await transaction.rollback();
       return res.status(404).json({
         success: false,
         message: "Restaurant not found or access denied",
@@ -168,7 +167,6 @@ exports.getBranchById = async (req, res) => {
     });
 
     if (!branch) {
-      transaction.rollback();
       return res.status(404).json({
         success: false,
         message: "Branch not found or access denied",
@@ -180,7 +178,6 @@ exports.getBranchById = async (req, res) => {
       data: branch,
     });
   } catch (error) {
-    transaction.rollback();
     console.error("Error fetching branch:", error);
     return res.status(500).json({
       success: false,
@@ -353,3 +350,12 @@ exports.deleteBranch = async (req, res) => {
     });
   }
 };
+
+/*
+create_branch
+view_admin_branches
+view_customer_branches
+view_branch_by_id
+update_branch
+delete_branch
+*/

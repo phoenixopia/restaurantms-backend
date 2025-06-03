@@ -93,7 +93,7 @@ router.post(
   protect,
   authorize("restaurant_admin", "super_admin"),
   permissionCheck("grant_user_permission"),
-  PermissionController.grantPermissionToUser
+  PermissionController.grantUserPermission
 );
 
 // Revoke permission directly from a user
@@ -102,7 +102,7 @@ router.post(
   protect,
   authorize("super_admin", "restaurant_admin"),
   permissionCheck("revoke_user_permission"),
-  PermissionController.revokePermissionFromUser
+  PermissionController.revokeUserPermission
 );
 
 module.exports = router;

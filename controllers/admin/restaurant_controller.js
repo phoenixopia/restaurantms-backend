@@ -147,7 +147,6 @@ exports.registerRestaurant = async (req, res) => {
     const { body, files } = req;
     const userId = req.user.id;
 
-    // Validate required fields
     const requiredFields = ["restaurant_name", "location_name", "address"];
     const missingFields = requiredFields.filter((field) => !body[field]);
 
@@ -498,6 +497,7 @@ exports.deleteRestaurant = async (req, res) => {
     });
   }
 };
+
 exports.getNearbyRestaurants = async (req, res) => {
   try {
     const { latitude, longitude } = req.body;
@@ -542,3 +542,108 @@ exports.getNearbyRestaurants = async (req, res) => {
     });
   }
 };
+
+exports.getAllRestaurantsRegistered = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    const { count, rows: restaurants } = await Restaurant.findAndCountAll({
+      offset,
+      limit,
+      order: [["createdAt", "DESC"]],
+      include: [
+        {
+          model: Subscription,
+          attributes: ["plan_id", "expires_at", "status"],
+          include: {
+            model: Plan,
+            attributes: ["name", "price", "billing_cycle"],
+          },
+        },
+        {
+          model: Location,
+          attributes: ["name", "address"],
+        },
+      ],
+    });
+
+    const totalPages = Math.ceil(count / limit);
+
+    return res.status(200).json({
+      success: true,
+      message: "Restaurants fetched successfully",
+      data: {
+        restaurants,
+        pagination: {
+          totalItems: count,
+          totalPages,
+          currentPage: page,
+          pageSize: limit,
+        },
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching all restaurants for super admin:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch restaurants",
+    });
+  }
+};
+
+exports.changeRestaurantStatus = async (req, res) => {
+  const allowedStatuses = ["active", "trial", "cancelled", "expired"];
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: "Restaurant ID is required",
+      });
+    }
+
+    if (!status || !allowedStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: `Status is required and must be one of: ${allowedStatuses.join(
+          ", "
+        )}`,
+      });
+    }
+    const restaurant = await Restaurant.findByPk(id);
+    if (!restaurant) {
+      return res.status(404).json({
+        success: false,
+        message: "Restaurant not found",
+      });
+    }
+
+    restaurant.status = status;
+    await restaurant.save();
+
+    return res.status(200).json({
+      success: true,
+      message: `Restaurant status updated to ${status}`,
+      data: restaurant,
+    });
+  } catch (error) {
+    console.error("Error updating restaurant status:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to update restaurant status",
+      error: error.message,
+    });
+  }
+};
+
+/*
+getRestaurant
+getAllRestaurants
+getRestaurantByName
+registerRestaurant
+updateRestaurant
+*/

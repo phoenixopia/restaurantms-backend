@@ -1,39 +1,26 @@
 const express = require("express");
 const PlanController = require("../../controllers/admin/plan_controller");
-const checkPermission = require("../../middlewares/check_permission");
-const { protect } = require("../../middlewares/protect");
+const { permissionCheck } = require("../../middleware/permissionCheck");
+const { protect } = require("../../middleware/protect");
+const { authorize } = require("../../middleware/authorize");
 
 const router = express.Router();
 
 // List plans
-router.get(
-  "/",
-  protect,
-  checkPermission("view_plans"),
-  PlanController.listPlans
-);
+router.get("/", protect, PlanController.listPlans);
 
 // Get plan by ID
-router.get(
-  "/id/:id",
-  protect,
-  checkPermission("view_plans"),
-  PlanController.getPlanById
-);
+router.get("/id/:id", protect, PlanController.getPlanById);
 
 // Get plan by name
-router.get(
-  "/name/:name",
-  protect,
-  checkPermission("view_plans"),
-  PlanController.getPlanByName
-);
+router.get("/name/:name", protect, PlanController.getPlanByName);
 
 // Update plan
 router.put(
   "/update/:id",
   protect,
-  checkPermission("update_plan"),
+  authorize("super_admin"),
+  permissionCheck("update_plan"),
   PlanController.updatePlan
 );
 
@@ -41,8 +28,14 @@ router.put(
 router.delete(
   "/delete/:id",
   protect,
-  checkPermission("delete_plan"),
+  authorize("super_admin"),
+  permissionCheck("delete_plan"),
   PlanController.deletePlan
 );
 
 module.exports = router;
+
+/*
+update_plan
+delete_plan
+ */
