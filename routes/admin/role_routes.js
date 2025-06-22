@@ -7,14 +7,32 @@ const { protect } = require("../../middleware/protect");
 const router = express.Router();
 
 // Create a new role
-router.post("/", protect, authorize("super_admin"), RoleController.createRole);
+router.post(
+  "/create-role",
+  protect,
+  authorize("super_admin"),
+  RoleController.createRole
+);
 
 // Get all roles
-router.get("/", protect, authorize("super_admin"), RoleController.listRoles);
+router.get(
+  "/list-all-roles",
+  protect,
+  authorize("super_admin"),
+  RoleController.listRoles
+);
+
+// Get a specific role by ID with granted permissions
+router.get(
+  "/get-role/:id",
+  protect,
+  authorize("super_admin", "restaurant_admin"),
+  RoleController.getRole
+);
 
 // Update a role
 router.put(
-  "/:id",
+  "update/:id",
   protect,
   authorize("super_admin"),
   RoleController.updateRole
@@ -22,7 +40,7 @@ router.put(
 
 // Delete a role
 router.delete(
-  "/:id",
+  "delete/:id",
   protect,
   authorize("super_admin"),
   RoleController.deleteRole
@@ -42,6 +60,21 @@ router.post(
   protect,
   authorize("super_admin"),
   RoleController.removePermissionFromRole
+);
+// Assign role to user
+router.post(
+  "/assign-role",
+  protect,
+  authorize("super_admin"),
+  RoleController.assignRoleToUser
+);
+
+// Remove role from user
+router.post(
+  "/remove-role",
+  protect,
+  authorize("super_admin"),
+  RoleController.removeRoleFromUser
 );
 
 module.exports = router;

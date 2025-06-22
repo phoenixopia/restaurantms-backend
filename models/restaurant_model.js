@@ -118,6 +118,11 @@ module.exports = (sequelize) => {
       foreignKey: "restaurant_id",
       otherKey: "user_id",
     });
+    Restaurant.hasMany(models.Menu, {
+      foreignKey: "restaurant_id",
+      onDelete: "CASCADE",
+      onUpdate: "CASCADE",
+    });
   };
 
   Restaurant.paginate = async function (page = 1, limit = 10, filter = {}) {

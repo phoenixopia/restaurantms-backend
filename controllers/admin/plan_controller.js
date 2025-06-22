@@ -2,7 +2,6 @@ const { Plan, sequelize } = require("../../models");
 const { capitalizeFirstLetter } = require("../../utils/capitalizeFirstLetter");
 const { Op } = require("sequelize");
 
-
 exports.listPlans = async (req, res) => {
   try {
     const page = parseInt(req.query.page, 10) || 1;
@@ -79,6 +78,74 @@ exports.getPlanById = async (req, res) => {
     return res.status(500).json({
       success: false,
       message: "Failed to fetch plan",
+    });
+  }
+};
+// for feature use
+exports.createPlan = async (req, res) => {
+  const t = await sequelize.transaction();
+  try {
+    const {
+      name,
+      max_branches,
+      max_locations,
+      max_staff,
+      max_users,
+      max_kds,
+      kds_enabled,
+      price,
+    } = req.body;
+
+    if (!name || price === undefined) {
+      await t.rollback();
+      return res.status(400).json({
+        success: false,
+        message: "Name and price are required",
+      });
+    }
+
+    const formattedName = capitalizeFirstLetter(name);
+
+    const existingPlan = await Plan.findOne({
+      where: { name: formattedName },
+      transaction: t,
+    });
+
+    if (existingPlan) {
+      await t.rollback();
+      return res.status(400).json({
+        success: false,
+        message: "A plan with this name already exists",
+      });
+    }
+
+    const newPlan = await Plan.create(
+      {
+        name: formattedName,
+        max_branches,
+        max_locations,
+        max_staff,
+        max_users,
+        max_kds,
+        kds_enabled,
+        price,
+      },
+      { transaction: t }
+    );
+
+    await t.commit();
+
+    return res.status(201).json({
+      success: true,
+      message: "Plan created successfully",
+      data: newPlan,
+    });
+  } catch (error) {
+    await t.rollback();
+    console.error("Error creating plan:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to create plan",
     });
   }
 };

@@ -7,8 +7,6 @@ const {
   Subscription,
   sequelize,
 } = require("../../models");
-// const { capitalizeFirstLetter } = require("../../utils/capitalizeFirstLetter");
-// const uploadRestaurantFiles = require("../../config/cloudinaryRestaurant");
 const fs = require("fs");
 const path = require("path");
 

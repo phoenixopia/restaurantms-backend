@@ -1,4 +1,4 @@
-const { Role, sequelize } = require("../../models");
+const { User, Role, sequelize } = require("../../models");
 const { Op } = require("sequelize");
 
 // for feature use
@@ -293,5 +293,85 @@ exports.removePermissionFromRole = async (req, res) => {
     return res
       .status(500)
       .json({ success: false, message: "Failed to remove permission" });
+  }
+};
+
+// assign role to users
+exports.assignRoleToUser = async (req, res) => {
+  const t = await sequelize.transaction();
+  try {
+    const { userId, roleName } = req.body;
+    if (!userId || !roleName) {
+      return res.status(400).json({
+        success: false,
+        message: "userId and role are required",
+      });
+    }
+
+    const user = await UserActivation.findByPk(userId, { transaction: t });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+    const role = await Role.findOne({
+      where: { name: roleName },
+      transaction: t,
+    });
+
+    if (!role) {
+      return res.status(404).json({
+        success: false,
+        message: "Role not found",
+      });
+    }
+    await user.setRole(role, { transaction: t });
+    await t.commit();
+    return res.status(200).json({
+      success: true,
+      message: `Role assigned to user successfully`,
+    });
+  } catch (error) {
+    await t.rollback();
+    console.error("Error assigning role to user:", error);
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to assign role." });
+  }
+};
+
+// remove a role from a user
+exports.removeRoleFromUser = async (req, res) => {
+  const t = await sequelize.transaction();
+  try {
+    const { userId } = req.body;
+
+    if (!userId) {
+      return res
+        .status(400)
+        .json({ success: false, message: "userId is required." });
+    }
+
+    const user = await User.findByPk(userId, { transaction: t });
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found." });
+    }
+
+    await user.setRole(null, { transaction: t });
+
+    await t.commit();
+    return res
+      .status(200)
+      .json({ success: true, message: "Role removed from user successfully." });
+  } catch (error) {
+    await t.rollback();
+    console.error("Error removing role from user:", error);
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to remove role." });
   }
 };

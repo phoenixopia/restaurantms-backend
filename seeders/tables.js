@@ -7,7 +7,7 @@ const {
   Plan,
   Restaurant,
   Subscription,
-} = require("../models/index");
+} = require("../models");
 const image =
   "https://drive.google.com/uc?id=1pMGXklJAHoz9YkE1udmLOLCofJhh9SPW";
 
@@ -21,10 +21,8 @@ const image =
     await Role.sync({ force: true });
     await Restaurant.sync({ force: true });
     await User.sync({ force: true });
-    await RestaurantUser.sync({ force: true });
     await Permission.sync({ force: true });
     await RolePermission.sync({ force: true });
-    await RestaurantUser.sync({ force: true });
 
     // Create Plans
     const plans = await Plan.bulkCreate([
@@ -63,25 +61,25 @@ const image =
     plans.forEach((plan) => (planMap[plan.name] = plan.id));
 
     // Create Subscription
-    const subscription = await Subscription.create({
-      plan_id: planMap["Basic"],
-      start_date: new Date(),
-      end_date: new Date(new Date().setMonth(new Date().getMonth() + 1)),
-      billing_provider: "cash",
-      billing_cycle: "monthly",
-      status: "active",
-    });
+    // const subscription = await Subscription.create({
+    //   plan_id: planMap["Basic"],
+    //   start_date: new Date(),
+    //   end_date: new Date(new Date().setMonth(new Date().getMonth() + 1)),
+    //   billing_provider: "cash",
+    //   billing_cycle: "monthly",
+    //   status: "active",
+    // });
 
     // Create Restaurant
-    const restaurant = await Restaurant.create({
-      subscription_id: subscription.id,
-      name: "Phoenixopia",
-      logo_url: image,
-      primary_color: "#FF5733",
-      language: "en",
-      rtl_enabled: false,
-      status: "active",
-    });
+    // const restaurant = await Restaurant.create({
+    //   subscription_id: subscription.id,
+    //   name: "Phoenixopia",
+    //   logo_url: image,
+    //   primary_color: "#FF5733",
+    //   language: "en",
+    //   rtl_enabled: false,
+    //   status: "active",
+    // });
 
     // Create Roles
     const roles = await Role.bulkCreate([
