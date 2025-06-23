@@ -10,9 +10,6 @@ const { uploadCategoryImage } = require("../../middleware/uploads");
 
 const router = express.Router();
 
-// for user side
-router.get("/public/:menuId", MenuCategoryController.listActiveMenuCategories);
-
 // admin side
 router.post(
   "/",

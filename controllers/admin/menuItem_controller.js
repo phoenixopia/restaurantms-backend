@@ -2,13 +2,7 @@
 
 const path = require("path");
 const fs = require("fs");
-const {
-  MenuItem,
-  MenuCategory,
-  Menu,
-  Branch,
-  sequelize,
-} = require("../../models");
+const { MenuItem, MenuCategory, sequelize } = require("../../models");
 const { Op } = require("sequelize");
 
 const SERVER_URL = process.env.SERVER_URL || "http://127.0.0.1:8000";
@@ -21,6 +15,34 @@ const getFileUrl = (filename) =>
 
 const getFilePath = (filename) => path.join(UPLOADS_DIR, filename);
 
+// user side
+exports.listActiveMenuItems = async (req, res) => {
+  try {
+    const { categoryId, seasonal } = req.query;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+
+    const filters = {
+      is_active: true,
+      ...(categoryId && { menu_category_id: categoryId }),
+      ...(seasonal !== undefined && { seasonal: seasonal === "true" }),
+    };
+
+    const items = await MenuItem.paginate({
+      page,
+      paginate: limit,
+      where: filters,
+      order: [["created_at", "DESC"]],
+    });
+
+    return res.status(200).json({ success: true, data: items });
+  } catch (error) {
+    console.error("User menu items error:", error);
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to list active menu items" });
+  }
+};
 exports.createMenuItem = async (req, res) => {
   const t = await sequelize.transaction();
   try {
@@ -49,6 +71,7 @@ exports.createMenuItem = async (req, res) => {
           required: true,
         },
       ],
+      required: true,
     });
 
     if (!category) {
@@ -136,35 +159,6 @@ exports.listMenuItems = async (req, res) => {
   }
 };
 
-// user side
-exports.listActiveMenuItems = async (req, res) => {
-  try {
-    const { categoryId, seasonal } = req.query;
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-
-    const filters = {
-      is_active: true,
-      ...(categoryId && { menu_category_id: categoryId }),
-      ...(seasonal !== undefined && { seasonal: seasonal === "true" }),
-    };
-
-    const items = await MenuItem.paginate({
-      page,
-      paginate: limit,
-      where: filters,
-      order: [["created_at", "DESC"]],
-    });
-
-    return res.status(200).json({ success: true, data: items });
-  } catch (error) {
-    console.error("User menu items error:", error);
-    return res
-      .status(500)
-      .json({ success: false, message: "Failed to list active menu items" });
-  }
-};
-
 exports.updateMenuItem = async (req, res) => {
   const t = await sequelize.transaction();
   try {
@@ -174,8 +168,10 @@ exports.updateMenuItem = async (req, res) => {
     const item = await MenuItem.findByPk(id, {
       include: {
         association: "MenuCategory",
+        required: true,
         include: {
           association: "Menu",
+          required: true,
           where: { restaurant_id: req.restaurant.id },
         },
       },
@@ -225,8 +221,10 @@ exports.deleteMenuItem = async (req, res) => {
     const item = await MenuItem.findByPk(id, {
       include: {
         association: "MenuCategory",
+        required: true,
         include: {
           association: "Menu",
+          required: true,
           where: { restaurant_id: req.restaurant.id },
         },
       },
@@ -263,8 +261,10 @@ exports.toggleSeasonal = async (req, res) => {
     const item = await MenuItem.findByPk(id, {
       include: {
         association: "MenuCategory",
+        required: true,
         include: {
           association: "Menu",
+          required: true,
           where: { restaurant_id: req.restaurant.id },
         },
       },
@@ -319,8 +319,10 @@ exports.searchMenuItems = async (req, res) => {
       include: [
         {
           association: "MenuCategory",
+          required: true,
           include: {
             association: "Menu",
+            required: true,
             where: { restaurant_id: req.restaurant.id },
           },
         },
@@ -344,8 +346,10 @@ exports.getSingleMenuItem = async (req, res) => {
     const item = await MenuItem.findByPk(id, {
       include: {
         association: "MenuCategory",
+        required: true,
         include: {
           association: "Menu",
+          required: true,
           where: { restaurant_id: req.restaurant.id },
         },
       },

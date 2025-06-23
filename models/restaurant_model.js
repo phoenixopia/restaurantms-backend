@@ -118,7 +118,7 @@ module.exports = (sequelize) => {
       foreignKey: "restaurant_id",
       otherKey: "user_id",
     });
-    Restaurant.hasMany(models.Menu, {
+    Restaurant.hasOne(models.Menu, {
       foreignKey: "restaurant_id",
       onDelete: "CASCADE",
       onUpdate: "CASCADE",

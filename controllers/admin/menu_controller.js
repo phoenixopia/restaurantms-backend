@@ -5,29 +5,31 @@ const { Op } = require("sequelize");
 exports.getActiveMenus = async (req, res) => {
   try {
     const { restaurantId } = req.params;
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
 
-    const menus = await Menu.paginate({
-      page,
-      paginate: limit,
+    const menu = await Menu.findOne({
       where: {
         restaurant_id: restaurantId,
         is_active: true,
       },
-      order: [["created_at", "DESC"]],
     });
+
+    if (!menu) {
+      return res.status(404).json({
+        success: false,
+        message: "No active menu found for this restaurant.",
+      });
+    }
 
     return res.status(200).json({
       success: true,
-      message: "Active menus retrieved successfully",
-      data: menus,
+      message: "Active menu retrieved successfully",
+      data: menu,
     });
   } catch (error) {
-    console.error("Error retrieving active menus:", error);
+    console.error("Error retrieving active menu:", error);
     return res.status(500).json({
       success: false,
-      message: "Failed to retrieve active menus",
+      message: "Failed to retrieve active menu",
     });
   }
 };
@@ -45,6 +47,17 @@ exports.createMenu = async (req, res) => {
       });
     }
 
+    const existingMenu = await Menu.findOne({
+      where: { restaurant_id: req.restaurant.id },
+    });
+
+    if (existingMenu) {
+      return res.status(400).json({
+        success: false,
+        message: "A menu already exists for this restaurant",
+      });
+    }
+
     const menu = await Menu.create(
       {
         name,
@@ -54,6 +67,7 @@ exports.createMenu = async (req, res) => {
       },
       { transaction: t }
     );
+
     await t.commit();
     return res.status(201).json({
       success: true,
@@ -73,38 +87,27 @@ exports.createMenu = async (req, res) => {
 // for admins and staffs
 exports.listMenus = async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const search = req.query.search || "";
-
-    const filters = {
-      restaurant_id: req.restaurant.id,
-    };
-
-    if (search) {
-      filters[Op.or] = [
-        { name: { [Op.iLike]: `%${search}%` } },
-        { description: { [Op.iLike]: `%${search}%` } },
-      ];
-    }
-
-    const menus = await Menu.paginate({
-      page,
-      paginate: limit,
-      where: filters,
-      order: [["created_at", "DESC"]],
+    const menu = await Menu.findOne({
+      where: { restaurant_id: req.restaurant.id },
     });
+
+    if (!menu) {
+      return res.status(404).json({
+        success: false,
+        message: "No menu found for this restaurant.",
+      });
+    }
 
     return res.status(200).json({
       success: true,
-      message: "Menus fetched successfully.",
-      data: menus,
+      message: "Menu retrieved successfully.",
+      data: menu,
     });
   } catch (error) {
-    console.error("List menus error:", error);
+    console.error("List menu error:", error);
     return res.status(500).json({
       success: false,
-      message: "Failed to list menus",
+      message: "Failed to retrieve menu",
     });
   }
 };

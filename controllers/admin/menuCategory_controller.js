@@ -23,19 +23,17 @@ const getFilePath = (filename) => path.join(UPLOADS_DIR, filename);
 exports.createMenuCategory = async (req, res) => {
   const t = await sequelize.transaction();
   try {
-    const { menu_name, branch_name, name, description, sort_order, is_active } =
-      req.body;
+    const { branch_name, name, description, sort_order, is_active } = req.body;
 
-    if (!menu_name || !name) {
+    if (!name) {
       return res.status(400).json({
         success: false,
-        message: "menu_name and name are required",
+        message: "Name is required",
       });
     }
 
     const menu = await Menu.findOne({
       where: {
-        name: menu_name,
         restaurant_id: req.restaurant.id,
       },
     });
@@ -43,7 +41,7 @@ exports.createMenuCategory = async (req, res) => {
     if (!menu) {
       return res.status(404).json({
         success: false,
-        message: "Menu not found under your restaurant",
+        message: "Menu not found for your restaurant",
       });
     }
 
@@ -101,14 +99,27 @@ exports.createMenuCategory = async (req, res) => {
 // user side
 exports.listActiveMenuCategories = async (req, res) => {
   try {
-    const { menuId } = req.params;
     const { branchId } = req.query;
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
 
+    const menu = await Menu.findOne({
+      where: {
+        restaurant_id: req.restaurant.id,
+        is_active: true,
+      },
+    });
+
+    if (!menu) {
+      return res.status(404).json({
+        success: false,
+        message: "Menu not found for your restaurant",
+      });
+    }
+
     const filters = {
       is_active: true,
-      menu_id: menuId,
+      menu_id: menu.id,
     };
 
     if (branchId) {
@@ -118,9 +129,7 @@ exports.listActiveMenuCategories = async (req, res) => {
     const categories = await MenuCategory.paginate({
       page,
       paginate: limit,
-      where: {
-        ...filters,
-      },
+      where: filters,
       order: [["sort_order", "ASC"]],
     });
 
@@ -141,15 +150,26 @@ exports.listActiveMenuCategories = async (req, res) => {
 // for admin and staff side
 exports.listMenuCategories = async (req, res) => {
   try {
-    const { menuId, branchId } = req.query;
+    const { branchId } = req.query;
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
 
-    const filters = {};
+    const menu = await Menu.findOne({
+      where: {
+        restaurant_id: req.restaurant.id,
+      },
+    });
 
-    if (menuId) {
-      filters.menu_id = menuId;
+    if (!menu) {
+      return res.status(404).json({
+        success: false,
+        message: "Menu not found for your restaurant",
+      });
     }
+
+    const filters = {
+      menu_id: menu.id,
+    };
 
     if (branchId) {
       filters.branch_id = branchId;

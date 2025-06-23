@@ -8,8 +8,6 @@ const RestaurantStatus = require("../../middleware/checkRestaurantStatus");
 
 const router = express.Router();
 
-// for app users
-router.get("/:restaurantId", MenuController.getActiveMenus);
 
 // for restaurant admin and staff
 router.get(
