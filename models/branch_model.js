@@ -117,6 +117,7 @@ module.exports = (sequelize, DataTypes) => {
       foreignKey: "manager_id",
       as: "manager",
     });
+    Branch.hasMany(models.MenuCategory, { foreignKey: "branch_id" });
   };
 
   return Branch;

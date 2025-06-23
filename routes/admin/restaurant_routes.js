@@ -1,7 +1,7 @@
 const express = require("express");
 const RestaurantController = require("../../controllers/admin/restaurant_controller");
-const validateFiles = require("../../middleware/uploadMiddleware");
-const uploadRestaurantFiles = require("../../config/cloudinaryRestaurant");
+const validateUploadedFiles = require("../../middleware/validateUploadedFiles");
+const {uploadRestaurantFiles} = require("../../middleware/uploads");
 const RestaurantStatus = require("../../middleware/checkRestaurantStatus");
 const { protect } = require("../../middleware/protect");
 const { authorize } = require("../../middleware/authorize");
@@ -29,7 +29,7 @@ router.post(
   authorize("restaurant_admin"),
   // permissionCheck("register_restaurant"),
   uploadRestaurantFiles,
-  validateFiles,
+  validateUploadedFiles("restaurant"),
   RestaurantController.registerRestaurant
 );
 
@@ -41,7 +41,7 @@ router.put(
   // permissionCheck("update_restaurant"),
   RestaurantStatus.checkStatusofRestaurant,
   uploadRestaurantFiles,
-  validateFiles,
+  validateUploadedFiles("restaurant"),
   RestaurantController.updateRestaurant
 );
 

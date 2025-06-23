@@ -52,7 +52,7 @@ router.delete(
 );
 
 router.patch(
-  "/:id/toggle-activation",
+  "/toggle-activation/:id",
   protect,
   permissionCheck("toggle_menu_activation"),
   RestaurantStatus.checkStatusofRestaurant,
