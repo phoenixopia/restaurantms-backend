@@ -174,7 +174,7 @@ exports.deleteRole = async (req, res) => {
   }
 };
 
-// both for granting and denying
+// both for grant and revoke
 exports.assignPermissionsToRole = async (req, res) => {
   const t = await sequelize.transaction();
   try {

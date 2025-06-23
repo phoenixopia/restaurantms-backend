@@ -8,6 +8,7 @@ router.use("/restaurant", require("./restaurant_routes"));
 router.use("/branch", require("./branch_routes"));
 router.use("/permission", require("./permission_routes"));
 router.use("/role", require("./role_routes"));
+router.use("/user", require("./userManage_routes"));
 router.use("/menu", require("./menu_routes"));
 router.use("/menu-category", require("./menuCategory_routes"));
 router.use("/menu-item", require("./menuItem_routes"));

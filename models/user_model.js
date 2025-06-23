@@ -109,11 +109,11 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: true,
       },
       created_by: {
-        type: DataTypes.STRING,
+        type: DataTypes.UUID,
         allowNull: true,
       },
       updated_by: {
-        type: DataTypes.STRING,
+        type: DataTypes.UUID,
         allowNull: true,
       },
       failed_login_attempts: {
@@ -139,8 +139,9 @@ module.exports = (sequelize, DataTypes) => {
       timestamps: true,
       underscored: true,
 
-      getterMethods: {
-        full_name() {
+      full_name: {
+        type: DataTypes.VIRTUAL,
+        get() {
           return `${this.first_name} ${this.last_name}`;
         },
       },

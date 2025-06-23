@@ -19,18 +19,12 @@ program
       {
         type: "input",
         name: "email",
-        message: "Enter Email Address:",
-        validate: (input) =>
-          /\S+@\S+\.\S+/.test(input) ? true : "Valid email is required",
+        message: "Enter Email Address (optional):",
       },
       {
         type: "input",
         name: "phone_number",
-        message: "Enter Phone Number:",
-        validate: (input) =>
-          /^\+?[0-9]\d{1,14}$/.test(input)
-            ? true
-            : "Valid phone number is required",
+        message: "Enter Phone Number (optional):",
       },
       {
         type: "password",

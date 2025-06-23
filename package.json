@@ -17,11 +17,12 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "nodemon server.js",
-    "create-super-admin": "node config/init/command.js"
+    "create-super-admin": "node config/init/command.js create-super-admin"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",
     "cloudinary": "^1.41.3",
+    "commander": "^14.0.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
