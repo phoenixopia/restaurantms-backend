@@ -619,3 +619,62 @@ exports.googleLogin = async (req, res) => {
     });
   }
 };
+
+exports.refreshOrValidateToken = async (req, res) => {
+  const token =
+    req.cookies?.token ||
+    req.headers?.authorization?.split(" ")[1] ||
+    req.headers?.token;
+
+  if (!token) {
+    return res.status(401).json({
+      success: false,
+      message: "No token provided.",
+    });
+  }
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findByPk(decoded.id);
+
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found." });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Token is valid.",
+      user,
+    });
+  } catch (err) {
+    if (err.name === "TokenExpiredError") {
+      try {
+        const decoded = jwt.decode(token);
+
+        if (!decoded || !decoded.id) {
+          return res
+            .status(401)
+            .json({ success: false, message: "Invalid token payload." });
+        }
+
+        const user = await User.findByPk(decoded.id);
+
+        if (!user) {
+          return res
+            .status(404)
+            .json({ success: false, message: "User not found." });
+        }
+
+        return sendTokenResponse(user, 200, res, req.originalUrl);
+      } catch (decodeErr) {
+        return res
+          .status(401)
+          .json({ success: false, message: "Failed to decode expired token." });
+      }
+    }
+
+    console.error("Token verification failed:", err);
+    return res.status(401).json({ success: false, message: "Invalid token." });
+  }
+};

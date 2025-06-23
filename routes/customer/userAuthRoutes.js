@@ -12,6 +12,7 @@ router.post("/forgot-password", authController.forgotPassword);
 router.post("/reset-password", authController.resetPassword);
 router.post("/logout", authController.logout);
 router.post("/google-login", authController.googleLogin);
+router.post("/verify-token", authController.refreshOrValidateToken);
 
 // router.post("/logout", authController.logout);
 // router.post("/google-login", authController.googleLogin);
