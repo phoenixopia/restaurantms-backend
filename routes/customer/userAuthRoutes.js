@@ -1,23 +1,71 @@
 const express = require("express");
 const authController = require("../../controllers/authController");
-// const { setRole } = require("../../middleware/setRole");
+const validateRequest = require("../../middleware/validateRequest");
+
+const {
+  registerValidator,
+  loginValidator,
+  verifyCodeValidator,
+  resendCodeValidator,
+  forgotPasswordValidator,
+  resetPasswordValidator,
+  googleLoginValidator,
+} = require("../../validators/auth_validator");
 
 const router = express.Router();
 
-router.post("/register", authController.register);
-router.post("/login", authController.login);
-router.post("/verify-code", authController.verifyCode);
-router.post("/resend-code", authController.resendCode);
-router.post("/forgot-password", authController.forgotPassword);
-router.post("/reset-password", authController.resetPassword);
-router.post("/logout", authController.logout);
-router.post("/google-login", authController.googleLogin);
-router.post("/verify-token", authController.refreshOrValidateToken);
+router.post(
+  "/register",
+  registerValidator,
+  validateRequest,
+  authController.register
+);
 
-// router.post("/logout", authController.logout);
-// router.post("/google-login", authController.googleLogin);
-// router.post("/confirm-email/:confirmationCode", authController.confirmEmail);
-// router.post("/forgot-password", authController.forgotPassword);
-// router.post("/reset-password/:resetToken", authController.reset);
+router.post("/login", loginValidator, validateRequest, authController.login);
+
+router.post(
+  "/verify-code",
+  verifyCodeValidator,
+  validateRequest,
+  authController.verifyCode
+);
+
+router.post(
+  "/resend-code",
+  resendCodeValidator,
+  validateRequest,
+  authController.resendCode
+);
+
+router.post(
+  "/forgot-password",
+  forgotPasswordValidator,
+  validateRequest,
+  authController.forgotPassword
+);
+
+router.post(
+  "/reset-password",
+  resetPasswordValidator,
+  validateRequest,
+  authController.resetPassword
+);
+
+router.post(
+  "/logout",
+  authController.logout // no validation needed here
+);
+
+router.post(
+  "/google-login",
+  googleLoginValidator,
+  validateRequest,
+  authController.googleLogin
+);
+
+router.post(
+  "/verify-token",
+  authController.refreshOrValidateToken // no validation needed here
+);
 
 module.exports = router;

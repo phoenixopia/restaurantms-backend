@@ -89,6 +89,7 @@ exports.sendTokenResponse = async (user, statusCode, res, reqUrl) => {
       .cookie("token", token, cookieOptions)
       .json({
         success: true,
+        token,
         data: {
           id: user.id,
           role: role?.name || null,

@@ -262,6 +262,9 @@ module.exports = (sequelize, DataTypes) => {
       foreignKey: "user_id",
       otherKey: "permission_id",
     });
+    User.hasMany(models.UserPermission, {
+      foreignKey: "user_id", // for eager loading
+    });
     User.hasOne(models.TwoFA, {
       foreignKey: "user_id",
       as: "twoFA",

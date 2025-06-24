@@ -6,6 +6,8 @@ const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const rateLimit = require("express-rate-limit");
 
+const errorHandler = require("./middleware/errorHandler");
+
 const app = express();
 
 app.use(morgan("dev"));
@@ -45,5 +47,6 @@ app.options("*", cors(corsOptions));
 app.use(cors(corsOptions));
 
 app.use("/api/v1", require("./routes"));
+app.use(errorHandler);
 
 module.exports = app;

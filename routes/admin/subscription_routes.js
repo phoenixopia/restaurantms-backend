@@ -1,14 +1,20 @@
 const express = require("express");
 const router = express.Router();
-const subscriptionController = require("../../controllers/admin/subscription_controller");
-const { authorize } = require("../../middleware/authorize");
 const { protect } = require("../../middleware/protect");
+const { authorize } = require("../../middleware/authorize");
+const validateRequest = require("../../middleware/validateRequest");
+const SubscriptionController = require("../../controllers/admin/subscription_controller");
+const {
+  createSubscriptionValidator,
+} = require("../../validators/subscription_validator");
 
 router.post(
-  "/",
+  "/create",
   protect,
   authorize("restaurant_admin"),
-  subscriptionController.createSubscription
+  createSubscriptionValidator,
+  validateRequest,
+  SubscriptionController.subscribe
 );
 
 module.exports = router;
