@@ -52,6 +52,7 @@ const AuthService = {
       }
 
       const newUser = await User.create(userData, { transaction: t });
+      await assignRoleToUser(newUser.id, urlPath, t);
       await newUser.reload({ transaction: t });
 
       if (signupMethod === "email") {
@@ -62,7 +63,6 @@ const AuthService = {
           confirmationCode
         );
       }
-      await assignRoleToUser(newUser.id, urlPath, t);
 
       await t.commit();
       return {
@@ -132,7 +132,10 @@ const AuthService = {
         });
         if (!isVerified) throwError("Invalid 2FA code.", 401);
       }
-
+      if (req.originalUrl.includes("/customer")) {
+        await assignRoleToUser(user.id, req.originalUrl, t);
+        await user.reload({ transaction: t });
+      }
       await t.commit();
       return { user };
     } catch (err) {

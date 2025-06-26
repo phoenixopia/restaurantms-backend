@@ -27,7 +27,6 @@ exports.protect = async (req, res, next) => {
       include: [
         {
           model: Role,
-          as: "Role",
           include: [
             {
               model: RolePermission,

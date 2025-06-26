@@ -17,10 +17,9 @@ const RbacService = {
     const t = await sequelize.transaction();
     try {
       const exists = await Role.findOne({
-        where: sequelize.where(
-          sequelize.fn("lower", sequelize.col("name")),
-          data.name.toLowerCase()
-        ),
+        where: {
+          name: data.name.toLowerCase(),
+        },
         transaction: t,
       });
       if (exists) {
