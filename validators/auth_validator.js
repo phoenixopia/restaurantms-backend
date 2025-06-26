@@ -143,3 +143,9 @@ exports.resetPasswordValidator = [
 exports.googleLoginValidator = [
   body("idToken").notEmpty().withMessage("Google ID token is required."),
 ];
+
+exports.facebookLoginValidator = [
+  body("accessToken")
+    .notEmpty()
+    .withMessage("Facebook access token is required."),
+];

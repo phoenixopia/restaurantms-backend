@@ -12,11 +12,6 @@ exports.getPlanById = asyncHandler(async (req, res) => {
   return success(res, "Plan fetched successfully", plan);
 });
 
-exports.getPlanByName = asyncHandler(async (req, res) => {
-  const plan = await PlanService.getByName(req.params.name);
-  return success(res, "Plan fetched successfully", plan);
-});
-
 exports.createPlan = asyncHandler(async (req, res) => {
   const newPlan = await PlanService.create(req.body);
   return success(res, "Plan created successfully", newPlan, 201);

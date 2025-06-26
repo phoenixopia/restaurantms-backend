@@ -11,7 +11,6 @@ const validateRequest = require("../../middleware/validateRequest");
 const router = express.Router();
 
 router.get("/", protect, PlanController.listPlans);
-router.get("/name/:name", protect, PlanController.getPlanByName);
 router.get("/:id", protect, PlanController.getPlanById);
 
 // create a new plan . . . . maybe for the feature
@@ -24,8 +23,9 @@ router.post(
   PlanController.createPlan
 );
 
+// update a plan
 router.put(
-  "/update/:id",
+  "/:id",
   protect,
   authorize("super_admin"),
   updatePlanValidator,
@@ -33,6 +33,7 @@ router.put(
   PlanController.updatePlan
 );
 
+// delete a plan
 router.delete(
   "/delete/:id",
   protect,

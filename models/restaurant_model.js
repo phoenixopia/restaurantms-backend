@@ -78,17 +78,6 @@ module.exports = (sequelize) => {
       tableName: "restaurants",
       timestamps: true,
       underscored: true,
-      defaultScope: {
-        attributes: {
-          exclude: [
-            "created_by",
-            "primary_color",
-            "rtl_enabled",
-            "created_at",
-            "updated_at",
-          ],
-        },
-      },
     }
   );
 
@@ -100,13 +89,9 @@ module.exports = (sequelize) => {
     });
     Restaurant.belongsTo(models.User, {
       foreignKey: "created_by",
-      onDelete: "CASCADE",
-      onUpdate: "CASCADE",
     });
     Restaurant.belongsTo(models.Location, {
       foreignKey: "location_id",
-      onDelete: "CASCADE",
-      onUpdate: "CASCADE",
     });
     Restaurant.hasMany(models.Branch, {
       foreignKey: "restaurant_id",
@@ -133,15 +118,6 @@ module.exports = (sequelize) => {
       offset,
       limit,
       order: [["created_at", "DESC"]],
-      attributes: {
-        exclude: [
-          "created_by",
-          "primary_color",
-          "rtl_enabled",
-          "created_at",
-          "updated_at",
-        ],
-      },
       include: [
         {
           model: sequelize.models.Location,

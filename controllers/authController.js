@@ -4,7 +4,7 @@ const { success } = require("../utils/apiResponse");
 const { sendTokenResponse } = require("../utils/sendTokenResponse");
 
 exports.register = asyncHandler(async (req, res) => {
-  const result = await AuthService.register(req.body);
+  const result = await AuthService.register(req.body, req.originalUrl);
   return success(res, result.message, null, 201);
 });
 
@@ -46,6 +46,13 @@ exports.logout = asyncHandler(async (req, res) => {
 
 exports.googleLogin = asyncHandler(async (req, res) => {
   const { user } = await AuthService.googleLogin(req.body.idToken, req);
+  return sendTokenResponse(user, 200, res, req.originalUrl);
+});
+
+exports.facebookLogin = asyncHandler(async (req, res) => {
+  const { accessToken } = req.body;
+
+  const { user } = await AuthService.facebookLogin(accessToken, req);
   return sendTokenResponse(user, 200, res, req.originalUrl);
 });
 

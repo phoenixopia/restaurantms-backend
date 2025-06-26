@@ -62,9 +62,7 @@ const createSuperAdmin = async (adminData) => {
       );
     });
 
-    const token = await newUser.getJwtToken();
     console.log("Super Admin created successfully.");
-    console.log("JWT Token:", token);
     process.exit(0);
   } catch (error) {
     console.error("Error creating Super Admin:", error);

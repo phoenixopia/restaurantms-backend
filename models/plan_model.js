@@ -38,30 +38,5 @@ module.exports = (sequelize, DataTypes) => {
     Plan.hasMany(models.Subscription, { foreignKey: "plan_id" });
   };
 
-  // Plan.paginate = async function ({
-  //   page = 1,
-  //   limit = 10,
-  //   where = {},
-  //   order = [["name", "ASC"]],
-  // }) {
-  //   const offset = (page - 1) * limit;
-
-  //   const { count, rows } = await this.findAndCountAll({
-  //     where,
-  //     limit,
-  //     offset,
-  //     order,
-  //   });
-
-  //   return {
-  //     data: rows,
-  //     meta: {
-  //       total: count,
-  //       page,
-  //       pageCount: Math.ceil(count / limit),
-  //     },
-  //   };
-  // };
-
   return Plan;
 };

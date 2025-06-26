@@ -10,6 +10,7 @@ const {
   forgotPasswordValidator,
   resetPasswordValidator,
   googleLoginValidator,
+  facebookLoginValidator,
 } = require("../../validators/auth_validator");
 
 const router = express.Router();
@@ -61,6 +62,13 @@ router.post(
   googleLoginValidator,
   validateRequest,
   authController.googleLogin
+);
+
+router.post(
+  "/facebook-login",
+  facebookLoginValidator,
+  validateRequest,
+  authController.facebookLogin
 );
 
 router.post(

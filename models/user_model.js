@@ -254,6 +254,9 @@ module.exports = (sequelize, DataTypes) => {
     User.hasOne(models.Restaurant, {
       foreignKey: "created_by",
     });
+    User.hasOne(models.Subscription, {
+      foreignKey: "user_id",
+    });
     User.belongsTo(models.Role, {
       foreignKey: "role_id",
     });

@@ -1,3 +1,4 @@
+const axios = require("axios");
 const { Op } = require("sequelize");
 const speakeasy = require("speakeasy");
 const { User, TwoFA, sequelize } = require("../models");
@@ -10,17 +11,15 @@ const getClientIp = require("../utils/getClientIp");
 const throwError = require("../utils/throwError");
 const { OAuth2Client } = require("google-auth-library");
 const { sendTokenResponse } = require("../utils/sendTokenResponse");
+const { assignRoleToUser } = require("../utils/roleUtils");
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 const AuthService = {
-  async register({
-    firstName,
-    lastName,
-    emailOrPhone,
-    password,
-    signupMethod,
-  }) {
+  async register(
+    { firstName, lastName, emailOrPhone, password, signupMethod },
+    urlPath
+  ) {
     const t = await sequelize.transaction();
     try {
       const identifierField = signupMethod === "email" ? "email" : "phone";
@@ -53,6 +52,7 @@ const AuthService = {
       }
 
       const newUser = await User.create(userData, { transaction: t });
+      await newUser.reload({ transaction: t });
 
       if (signupMethod === "email") {
         await sendConfirmationEmail(
@@ -62,6 +62,7 @@ const AuthService = {
           confirmationCode
         );
       }
+      await assignRoleToUser(newUser.id, urlPath, t);
 
       await t.commit();
       return {
@@ -73,6 +74,7 @@ const AuthService = {
       throw err;
     }
   },
+
   async login({
     emailOrPhone,
     password,
@@ -138,6 +140,7 @@ const AuthService = {
       throw err;
     }
   },
+
   async verifyCode({ emailOrPhone, signupMethod, code }, url, res) {
     const t = await sequelize.transaction();
     try {
@@ -174,6 +177,7 @@ const AuthService = {
       throw err;
     }
   },
+
   async resendCode({ emailOrPhone, signupMethod }) {
     const t = await sequelize.transaction();
     try {
@@ -212,6 +216,7 @@ const AuthService = {
       throw err;
     }
   },
+
   async forgotPassword({ emailOrPhone, signupMethod }) {
     const t = await sequelize.transaction();
     try {
@@ -256,6 +261,7 @@ const AuthService = {
       throw err;
     }
   },
+
   async resetPassword({ code, newPassword, signupMethod, emailOrPhone }) {
     const t = await sequelize.transaction();
     try {
@@ -289,6 +295,7 @@ const AuthService = {
       throw err;
     }
   },
+
   async googleLogin(idToken, req) {
     const ticket = await googleClient.verifyIdToken({
       idToken,
@@ -326,6 +333,9 @@ const AuthService = {
         throwError("Account exists with different method.", 400);
       }
 
+      await assignRoleToUser(user.id, req.originalUrl, t);
+      await user.reload({ transaction: t });
+
       if (!created) {
         await user.update(
           {
@@ -346,6 +356,85 @@ const AuthService = {
       throw err;
     }
   },
+
+  async facebookLogin(accessToken, req) {
+    const t = await sequelize.transaction();
+
+    try {
+      const fbResponse = await axios.get(
+        `https://graph.facebook.com/me?fields=id,first_name,last_name,email,picture&access_token=${accessToken}`
+      );
+
+      const {
+        id: fbId,
+        first_name,
+        last_name,
+        email,
+        picture,
+      } = fbResponse.data;
+
+      if (!fbId) {
+        await t.rollback();
+        throwError("Invalid Facebook access token", 401);
+      }
+
+      const [user, created] = await User.findOrCreate({
+        where: {
+          [Op.or]: [
+            { social_provider_id: fbId },
+            email ? { email: email.toLowerCase() } : null,
+          ].filter(Boolean),
+        },
+        defaults: {
+          first_name,
+          last_name,
+          email: email ? email.toLowerCase() : null,
+          social_provider: "facebook",
+          social_provider_id: fbId,
+          profile_picture: picture?.data?.url || null,
+          email_verified_at: new Date(),
+          is_active: true,
+        },
+        transaction: t,
+      });
+
+      if (!created && user.social_provider !== "facebook") {
+        await t.rollback();
+        throwError("Account exists with different method.", 400);
+      }
+      await assignRoleToUser(user.id, req.originalUrl, t);
+      await user.reload({ transaction: t });
+
+      if (!created) {
+        await user.update(
+          {
+            first_name,
+            last_name,
+            profile_picture: picture?.data?.url || null,
+          },
+          { transaction: t }
+        );
+      }
+
+      await user.markSuccessfulLogin(getClientIp(req), "web");
+
+      await t.commit();
+
+      return { user };
+    } catch (error) {
+      await t.rollback();
+      if (error.response && error.response.data && error.response.data.error) {
+        const fbError = error.response.data.error;
+        throwError(
+          `Facebook API error: ${fbError.message || "Unknown error"}`,
+          fbError.code || 500
+        );
+      }
+
+      throwError(error.message || "Facebook login failed", 500);
+    }
+  },
+
   async refreshOrValidateToken(req) {
     const jwt = require("jsonwebtoken");
     const token =

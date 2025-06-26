@@ -14,16 +14,6 @@ const PlanService = {
     return plan;
   },
 
-  async getByName(name) {
-    const plan = await Plan.findOne({
-      where: {
-        name: { [Op.iLike]: `%${name}%` },
-      },
-    });
-    if (!plan) throwError("Plan not found", 404);
-    return plan;
-  },
-
   async create(data) {
     const t = await sequelize.transaction();
     try {

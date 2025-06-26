@@ -38,6 +38,13 @@ module.exports = (sequelize, DataTypes) => {
         "CBE"
       ),
       status: DataTypes.ENUM("active", "cancelled", "expired"),
+      subscribed_by: {
+        type: DataTypes.UUID,
+        references: {
+          model: "users",
+          key: "id",
+        },
+      },
     },
     {
       tableName: "subscriptions",
@@ -50,12 +57,13 @@ module.exports = (sequelize, DataTypes) => {
     Subscription.belongsTo(models.Restaurant, {
       foreignKey: "restaurant_id",
       onDelete: "CASCADE",
-      hooks: true,
     });
     Subscription.belongsTo(models.Plan, {
       foreignKey: "plan_id",
       onDelete: "CASCADE",
-      hooks: true,
+    });
+    Subscription.belongsTo(models.User, {
+      foreignKey: "user_id",
     });
   };
 

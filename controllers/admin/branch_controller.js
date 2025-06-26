@@ -137,7 +137,7 @@ exports.getAllBranchesUnderRestaurant = async (req, res) => {
   }
 };
 
-// searching for branches by name for admin,staff .... managers
+//  for admin,staff .... managers
 exports.getBranchById = async (req, res) => {
   try {
     const { branchId } = req.params;

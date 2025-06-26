@@ -10,24 +10,6 @@ const SubscriptionService = {
       const { restaurant_name, plan_name, billing_cycle, billing_provider } =
         data;
 
-      if (!restaurant_name || !plan_name || !billing_cycle) {
-        throwError("Missing required fields", 400);
-      }
-
-      const validBillingCycles = ["monthly", "yearly"];
-      if (!validBillingCycles.includes(billing_cycle.toLowerCase())) {
-        throwError("Invalid billing cycle. Use 'monthly' or 'yearly'.", 400);
-      }
-
-      const validProviders = ["stripe", "paypal", "telebirr", "cash", "CBE"];
-      if (
-        billing_provider &&
-        !validProviders.includes(billing_provider.toLowerCase())
-      ) {
-        throwError("Invalid billing provider.", 400);
-      }
-
-      // 🔍 Find restaurant by name (case-insensitive)
       const restaurant = await Restaurant.findOne({
         where: sequelize.where(
           sequelize.fn("LOWER", sequelize.col("name")),
@@ -68,7 +50,7 @@ const SubscriptionService = {
           start_date: formatDate(now),
           end_date: formatDate(end),
           billing_provider: billing_provider?.toLowerCase() || null,
-          created_by_user_id: user_id,
+          subscribed_by: user_id,
           status: "active",
         },
         { transaction: t }

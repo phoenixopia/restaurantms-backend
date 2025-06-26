@@ -3,9 +3,7 @@ const RestaurantController = require("../../controllers/admin/restaurant_control
 
 const router = express.Router();
 
-// Public access
-router.get("/all-restaurants", RestaurantController.getAllRestaurants);
-router.get("/name/:name", RestaurantController.getRestaurantByName);
-router.get("/nearby", RestaurantController.getNearbyRestaurants);
+router.get("/restaurants", RestaurantController.getAllRestaurants);
+router.get("/search", RestaurantController.searchRestaurants);
 
 module.exports = router;
