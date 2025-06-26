@@ -23,28 +23,12 @@ router.delete(
   UserController.deleteUser
 );
 
-// Edit a user by ID
-router.put(
-  "/update/:id",
-  protect,
-  authorize("restaurant_admin"),
-  UserController.editUser
-);
-
 // Get all created users by the current user
 router.get(
   "/",
   protect,
   authorize("restaurant_admin"),
   UserController.getCreatedUsers
-);
-
-// Search created users by name with pagination
-router.get(
-  "/search",
-  protect,
-  authorize("restaurant_admin"),
-  UserController.searchCreatedUsers
 );
 
 // Get one created user by ID (only if created by current user)
