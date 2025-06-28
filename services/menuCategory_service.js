@@ -164,7 +164,7 @@ const MenuCategoryService = {
     }
   },
 
-  async listMenuCategoriesByRestaurant(
+  async listMenuCategoriesUnderRestaurant(
     restaurantId,
     branchId = null,
     page = 1,

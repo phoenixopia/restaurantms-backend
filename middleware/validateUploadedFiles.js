@@ -1,4 +1,4 @@
-const validateUploadedFiles = (type) => {
+exports.validateUploadedFiles = (type) => {
   return (req, res, next) => {
     if (!req.files && !req.file) {
       return next();
@@ -68,5 +68,3 @@ const validateUploadedFiles = (type) => {
     next();
   };
 };
-
-module.exports = validateUploadedFiles;

@@ -2,10 +2,11 @@
 
 const asyncHandler = require("../../middleware/asyncHandler");
 const MenuService = require("../../services/menu_service");
-const MenuCategoryService = require("../../services/menu_category_service");
-const MenuItemService = require("../../services/menu_item_service");
+const MenuCategoryService = require("../../services/menuCategory_service");
+const MenuItemService = require("../../services/menuItem_service");
 const { success } = require("../../utils/apiResponse");
 
+// ====================== Menu
 exports.createMenu = asyncHandler(async (req, res) => {
   const restaurantId = req.restaurant.id;
   const menu = await MenuService.createMenu(req.body, restaurantId);
@@ -42,6 +43,8 @@ exports.toggleMenuActivation = asyncHandler(async (req, res) => {
     menu
   );
 });
+
+// ====================== Menu Category
 
 exports.createMenuCategory = asyncHandler(async (req, res) => {
   const { restaurantId } = req.restaurantData;
@@ -82,7 +85,7 @@ exports.toggleMenuCategoryActivation = asyncHandler(async (req, res) => {
 exports.listMenuCategories = asyncHandler(async (req, res) => {
   const { restaurantId } = req.restaurantData;
   const { branchId, page = 1, limit = 10 } = req.query;
-  const result = await MenuCategoryService.listMenuCategoriesByRestaurant(
+  const result = await MenuCategoryService.listMenuCategoriesUnderRestaurant(
     restaurantId,
     branchId,
     parseInt(page),
@@ -109,10 +112,7 @@ exports.listCategoryTags = asyncHandler(async (req, res) => {
   return success(res, "Category tags fetched", tags);
 });
 
-exports.listMenuItems = asyncHandler(async (req, res) => {
-  const items = await MenuItemService.listMenuItems(req.query);
-  return success(res, "Menu items listed successfully", items);
-});
+// ===================== Menu Items
 
 exports.createMenuItem = asyncHandler(async (req, res) => {
   const restaurantId = req.restaurant.id;
@@ -161,12 +161,6 @@ exports.toggleSeasonal = asyncHandler(async (req, res) => {
     `Menu item is now ${item.seasonal ? "seasonal" : "non-seasonal"}`,
     item
   );
-});
-
-exports.searchMenuItems = asyncHandler(async (req, res) => {
-  const restaurantId = req.restaurant.id;
-  const items = await MenuItemService.searchMenuItems(req.query, restaurantId);
-  return success(res, "Search results", items);
 });
 
 exports.getSingleMenuItem = asyncHandler(async (req, res) => {

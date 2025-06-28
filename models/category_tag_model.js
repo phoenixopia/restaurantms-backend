@@ -1,6 +1,4 @@
-const { DataTypes } = require("sequelize");
-const { sequelize } = require(".");
-const { all } = require("axios");
+"use strict";
 
 module.exports = (sequelize, DataTypes) => {
   const CategoryTag = sequelize.define(
@@ -30,4 +28,6 @@ module.exports = (sequelize, DataTypes) => {
       otherKey: "menu_category_id",
     });
   };
+
+  return CategoryTag;
 };

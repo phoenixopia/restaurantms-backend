@@ -1,7 +1,7 @@
 const express = require("express");
 const RestaurantController = require("../../controllers/admin/restaurant_controller");
-const validateUploadedFiles = require("../../middleware/validateUploadedFiles");
-const { uploadRestaurantFiles } = require("../../middleware/uploads");
+const ValidateUploadedFiles = require("../../middleware/validateUploadedFiles");
+const Upload = require("../../middleware/uploads");
 const RestaurantStatus = require("../../middleware/checkRestaurantStatus");
 const { protect } = require("../../middleware/protect");
 const { authorize } = require("../../middleware/authorize");
@@ -29,8 +29,8 @@ router.post(
   "restaurants/register",
   protect,
   authorize("restaurant_admin"),
-  uploadRestaurantFiles,
-  validateUploadedFiles("restaurant"),
+  ValidateUploadedFiles.validateUploadedFiles("restaurant"),
+  Upload.uploadRestaurantFiles,
   createRestaurantValidator,
   validateRequest,
   RestaurantController.registerRestaurant
@@ -41,8 +41,8 @@ router.put(
   protect,
   authorize("restaurant_admin"),
   RestaurantStatus.checkStatusofRestaurant,
-  uploadRestaurantFiles,
-  validateUploadedFiles("restaurant"),
+  ValidateUploadedFiles.validateUploadedFiles("restaurant"),
+  Upload.uploadRestaurantFiles,
   updateRestaurantValidator,
   validateRequest,
   RestaurantController.updateRestaurant

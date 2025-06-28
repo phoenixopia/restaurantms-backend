@@ -2,9 +2,9 @@
 
 const path = require("path");
 const fs = require("fs");
-const { MenuItem, MenuCategory, sequelize } = require("../../models");
+const { MenuItem, MenuCategory, sequelize } = require("../models");
 const { Op } = require("sequelize");
-const throwError = require("../../utils/throwError");
+const throwError = require("../utils/throwError");
 
 const SERVER_URL = process.env.SERVER_URL || "http://127.0.0.1:8000";
 const UPLOADS_DIR = path.join(__dirname, "..", "..", "uploads", "menu-items");
@@ -17,22 +17,6 @@ const getFileUrl = (filename) =>
 const getFilePath = (filename) => path.join(UPLOADS_DIR, filename);
 
 const MenuItemService = {
-  async listMenuItems(query) {
-    const { categoryId, seasonal, page = 1, limit = 10 } = query;
-
-    const filters = {
-      ...(categoryId && { menu_category_id: categoryId }),
-      ...(seasonal !== undefined && { seasonal: seasonal === "true" }),
-    };
-
-    return await MenuItem.paginate({
-      page,
-      paginate: limit,
-      where: filters,
-      order: [["created_at", "DESC"]],
-    });
-  },
-
   async createMenuItem(data, imageFile, restaurantId) {
     const {
       menu_category_name,
@@ -213,34 +197,6 @@ const MenuItemService = {
       await t.rollback();
       throw error;
     }
-  },
-
-  async searchMenuItems(query, restaurantId) {
-    const { page = 1, limit = 10, query: q } = query;
-    if (!q || q.trim() === "") throwError("Search query is required", 400);
-
-    return await MenuItem.paginate({
-      page,
-      paginate: limit,
-      where: {
-        [Op.or]: [
-          { name: { [Op.iLike]: `%${q}%` } },
-          { description: { [Op.iLike]: `%${q}%` } },
-        ],
-      },
-      include: [
-        {
-          association: "MenuCategory",
-          required: true,
-          include: {
-            association: "Menu",
-            required: true,
-            where: { restaurant_id: restaurantId },
-          },
-        },
-      ],
-      order: [["created_at", "DESC"]],
-    });
   },
 
   async getSingleMenuItem(id, restaurantId) {

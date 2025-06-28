@@ -1,32 +1,25 @@
 const express = require("express");
-const MenuController = require("../../controllers/admin/menu_controller");
 
+const MenuController = require("../../controllers/admin/menu_controller");
 const { protect } = require("../../middleware/protect");
 const { authorize } = require("../../middleware/authorize");
 const { permissionCheck } = require("../../middleware/permissionCheck");
 const RestaurantStatus = require("../../middleware/checkRestaurantStatus");
+const ValidateUploadedFiles = require("../../middleware/validateUploadedFiles");
+const Upload = require("../../middleware/uploads");
 
 const router = express.Router();
 
-
-// for restaurant admin and staff
 router.get(
-  "/",
+  "/menu/list",
   protect,
-  authorize("restaurant_admin", "staff"),
+  permissionCheck("view_menu"),
   RestaurantStatus.checkRestaurantStatus,
-  MenuController.listMenus
-);
-router.get(
-  "/:id",
-  protect,
-  authorize("restaurant_admin", "staff"),
-  RestaurantStatus.checkRestaurantStatus,
-  MenuController.getMenuById
+  MenuController.getMenu
 );
 
 router.post(
-  "/create-menu",
+  "/menu/create",
   protect,
   authorize("restaurant_admin"),
   RestaurantStatus.checkRestaurantStatus,
@@ -34,27 +27,137 @@ router.post(
 );
 
 router.put(
-  "/update-menu/:id",
+  "/menu/update/:id",
   protect,
   permissionCheck("update_menu"),
-  RestaurantStatus.checkStatusofRestaurant,
+  RestaurantStatus.checkRestaurantStatus,
   MenuController.updateMenu
 );
 
 router.delete(
-  "/delete-menu/:id",
+  "/menu/delete/:id",
   protect,
   permissionCheck("delete_menu"),
-  RestaurantStatus.checkStatusofRestaurant,
+  RestaurantStatus.checkRestaurantStatus,
   MenuController.deleteMenu
 );
 
 router.patch(
-  "/toggle-activation/:id",
+  "/menu/toggle-activation/:id",
   protect,
   permissionCheck("toggle_menu_activation"),
-  RestaurantStatus.checkStatusofRestaurant,
+  RestaurantStatus.checkRestaurantStatus,
   MenuController.toggleMenuActivation
+);
+
+// ======================== Menu Category
+
+router.post(
+  "/menu-category/list",
+  protect,
+  permissionCheck("view_menu_categories"),
+  RestaurantStatus.checkRestaurantStatus,
+  MenuController.listMenuCategories
+);
+
+router.get(
+  "/menu-category/byID/:id",
+  protect,
+  permissionCheck("view_menu_categories"),
+  RestaurantStatus.checkRestaurantStatus,
+  MenuController.getMenuCategory
+);
+
+router.get("menu-category-tags/list", protect, MenuController.listCategoryTags);
+
+router.post(
+  "/menu-category/create",
+  protect,
+  permissionCheck("create_menu_category"),
+  RestaurantStatus.checkRestaurantStatus,
+  ValidateUploadedFiles.validateUploadedFiles("category"),
+  Upload.uploadCategoryImage,
+  MenuController.createMenuCategory
+);
+
+router.put(
+  "/menu-category/update/:id",
+  protect,
+  permissionCheck("update_menu_category"),
+  RestaurantStatus.checkRestaurantStatus,
+  ValidateUploadedFiles.validateUploadedFiles("category"),
+  Upload.uploadCategoryImage,
+  MenuController.updateMenuCategory
+);
+
+router.delete(
+  "/menu-category/delete/:id",
+  protect,
+  permissionCheck("delete_menu_category"),
+  RestaurantStatus.checkRestaurantStatus,
+  MenuController.deleteMenuCategory
+);
+
+router.patch(
+  "/menu-category/toggle-activation/:id",
+  protect,
+  permissionCheck("activate_menu_category"),
+  RestaurantStatus.checkRestaurantStatus,
+  MenuController.toggleMenuCategoryActivation
+);
+
+// ========================= Menu Items
+
+router.post(
+  "/menu-item/create",
+  protect,
+  permissionCheck("create_menu_item"),
+  RestaurantStatus.checkRestaurantStatus,
+  ValidateUploadedFiles.validateUploadedFiles("menuItem"),
+  Upload.uploadMenuItemImage,
+  MenuController.createMenuItem
+);
+
+router.put(
+  "/menu-item/update/:id",
+  protect,
+  permissionCheck("update_menu_item"),
+  RestaurantStatus.checkRestaurantStatus,
+  ValidateUploadedFiles.validateUploadedFiles("menuItem"),
+  Upload.uploadMenuItemImage,
+  MenuController.updateMenuItem
+);
+
+router.delete(
+  "/menu-item/delete/:id",
+  protect,
+  permissionCheck("delete_menu_item"),
+  RestaurantStatus.checkRestaurantStatus,
+  MenuController.deleteMenuItem
+);
+
+router.patch(
+  "/menu-item/toggle-seasonal/:id",
+  protect,
+  permissionCheck("toggle_seasonal"),
+  RestaurantStatus.checkRestaurantStatus,
+  MenuController.toggleSeasonal
+);
+
+router.get(
+  "/menu-item/byID/:id",
+  protect,
+  permissionCheck("view_menu_item"),
+  RestaurantStatus.checkRestaurantStatus,
+  MenuController.getSingleMenuItem
+);
+
+router.get(
+  "/menu-item/list/:id",
+  protect,
+  permissionCheck("view_menu_item"),
+  RestaurantStatus.checkRestaurantStatus,
+  MenuController.listMenuItemsWithRestaurant
 );
 
 module.exports = router;

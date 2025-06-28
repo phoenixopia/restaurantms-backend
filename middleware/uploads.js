@@ -18,7 +18,7 @@ const restaurantStorage = multer.diskStorage({
   },
 });
 
-const uploadRestaurantFiles = multer({
+exports.uploadRestaurantFiles = multer({
   storage: restaurantStorage,
   fileFilter,
   limits: {
@@ -46,7 +46,7 @@ const categoryStorage = multer.diskStorage({
   },
 });
 
-const uploadCategoryImage = multer({
+exports.uploadCategoryImage = multer({
   storage: categoryStorage,
   fileFilter,
   limits: { fileSize: 5 * 1024 * 1024 },
@@ -62,14 +62,8 @@ const menuItemStorage = multer.diskStorage({
   },
 });
 
-const uploadMenuItemImage = multer({
+exports.uploadMenuItemImage = multer({
   storage: menuItemStorage,
   fileFilter,
   limits: { fileSize: 5 * 1024 * 1024 },
 }).single("image");
-
-module.exports = {
-  uploadRestaurantFiles,
-  uploadCategoryImage,
-  uploadMenuItemImage,
-};
