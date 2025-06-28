@@ -1,5 +1,4 @@
 "use strict";
-const sequelizePaginate = require("sequelize-paginate");
 
 module.exports = (sequelize, DataTypes) => {
   const MenuCategory = sequelize.define(
@@ -51,9 +50,12 @@ module.exports = (sequelize, DataTypes) => {
     MenuCategory.belongsTo(models.Menu, { foreignKey: "menu_id" });
     MenuCategory.belongsTo(models.Branch, { foreignKey: "branch_id" });
     MenuCategory.hasMany(models.MenuItem, { foreignKey: "menu_category_id" });
+    MenuCategory.belongsToMany(models.CategoryTag, {
+      through: "MenuCategoryTags",
+      foreignKey: "menu_category_id",
+      otherKey: "category_tag_id",
+    });
   };
-
-  sequelizePaginate.paginate(MenuCategory);
 
   return MenuCategory;
 };

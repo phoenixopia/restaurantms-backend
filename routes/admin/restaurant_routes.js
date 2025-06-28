@@ -6,6 +6,7 @@ const RestaurantStatus = require("../../middleware/checkRestaurantStatus");
 const { protect } = require("../../middleware/protect");
 const { authorize } = require("../../middleware/authorize");
 const { permissionCheck } = require("../../middleware/permissionCheck");
+const { branchLimit } = require("../../middleware/branchMiddleware");
 const validateRequest = require("../../middleware/validateRequest");
 const {
   createRestaurantValidator,
@@ -16,23 +17,18 @@ const {
 
 const router = express.Router();
 
-// GET /owned-restaurants - restaurant_admin's owned restaurant
+// ================= restaurant related routes
 router.get(
-  "/owned-restaurants",
+  "restaurants/owned",
   protect,
   authorize("restaurant_admin"),
   RestaurantController.getRestaurant
 );
 
-// GET /search - public-facing unified search (by name, nearby, etc.)
-router.get("/search", RestaurantController.searchRestaurants);
-
-// POST /register - register new restaurant
 router.post(
-  "/register",
+  "restaurants/register",
   protect,
   authorize("restaurant_admin"),
-  // permissionCheck("register_restaurant"),
   uploadRestaurantFiles,
   validateUploadedFiles("restaurant"),
   createRestaurantValidator,
@@ -40,12 +36,10 @@ router.post(
   RestaurantController.registerRestaurant
 );
 
-// PUT /update/:id - update restaurant
 router.put(
-  "/update/:id",
+  "restaurants/update/:id",
   protect,
   authorize("restaurant_admin"),
-  // permissionCheck("update_restaurant"),
   RestaurantStatus.checkStatusofRestaurant,
   uploadRestaurantFiles,
   validateUploadedFiles("restaurant"),
@@ -54,9 +48,8 @@ router.put(
   RestaurantController.updateRestaurant
 );
 
-// DELETE /delete/:id - delete restaurant
 router.delete(
-  "/delete/:id",
+  "restaurants/delete/:id",
   protect,
   authorize("restaurant_admin"),
   permissionCheck("delete_restaurant"),
@@ -65,18 +58,31 @@ router.delete(
   RestaurantController.deleteRestaurant
 );
 
-// GET all restaurants
-router.get("/restaurants", RestaurantController.getAllRestaurants);
+// ================= branch related routes
+router.post(
+  "branches/create-branch",
+  protect,
+  authorize("restaurant_admin"),
+  RestaurantStatus.checkRestaurantStatus,
+  branchLimit,
+  RestaurantController.createBranch
+);
 
-// PUT /change-status/:id - super_admin: change restaurant status
 router.put(
-  "/change-status/:id",
+  "branches/change-status/:id",
   protect,
   authorize("super_admin"),
-  // permissionCheck("change_restaurant_status"),
+  RestaurantStatus.checkStatusofRestaurant,
   changeStatusValidator,
   validateRequest,
   RestaurantController.changeRestaurantStatus
+);
+
+router.patch(
+  "branches/toggle-active-status/:id",
+  protect,
+  authorize("restaurant_admin"),
+  RestaurantController.toggleRestaurantActiveStatus
 );
 
 module.exports = router;

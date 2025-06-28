@@ -73,6 +73,14 @@ module.exports = (sequelize) => {
         type: DataTypes.ENUM("active", "trial", "cancelled", "expired"),
         defaultValue: "trial",
       },
+      has_branch: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
+      },
+      is_active: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: true,
+      },
     },
     {
       tableName: "restaurants",

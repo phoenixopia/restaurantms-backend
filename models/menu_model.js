@@ -11,6 +11,14 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
       },
+      restaurant_id: {
+        type: DataTypes.UUID,
+        allowNull: false,
+        references: {
+          model: "restaurants",
+          key: "id",
+        },
+      },
       name: DataTypes.STRING(255),
       description: DataTypes.TEXT,
       is_active: DataTypes.BOOLEAN,
