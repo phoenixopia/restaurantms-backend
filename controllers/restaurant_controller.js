@@ -1,6 +1,7 @@
-const asyncHandler = require("../../middleware/asyncHandler");
-const RestaurantService = require("../../services/restaurant_service");
-const { success } = require("../../utils/apiResponse");
+const asyncHandler = require("../middleware/asyncHandler");
+const RestaurantService = require("../services/restaurant_service");
+const { success } = require("../utils/apiResponse");
+const throwError = require("../utils/throwError");
 
 exports.getRestaurant = asyncHandler(async (req, res) => {
   const userId = req.user.id;
@@ -42,6 +43,51 @@ exports.getAllRestaurants = asyncHandler(async (req, res) => {
   return success(res, "All registered restaurants fetched", result);
 });
 
+exports.getRestaurantById = asyncHandler(async (req, res) => {
+  const { page = 1, limit = 10 } = req.query;
+
+  const restaurant = await RestaurantService.getRestaurantById(
+    req.params.id,
+    parseInt(page),
+    parseInt(limit)
+  );
+
+  return success(res, "Restaurant fetched successfully", restaurant);
+});
+
+exports.getAllRestaurantWithCheapestItems = asyncHandler(async (req, res) => {
+  const result =
+    await RestaurantService.getAllRestaurantsWithMenusAndCheapestItems(
+      req.query
+    );
+  return success(
+    res,
+    "All registered restaurants with cheapest items fetched",
+    result
+  );
+});
+
+exports.getRestaurantsByCategoryTagId = asyncHandler(async (req, res) => {
+  const { categoryTagId, page = 1, limit = 10 } = req.query;
+
+  if (!categoryTagId) {
+    throwError("Category tag ID is required", 400);
+  }
+
+  const result = await MenuCategoryService.getRestaurantsByCategoryTagId(
+    categoryTagId,
+    parseInt(page),
+    parseInt(limit)
+  );
+
+  return success(
+    res,
+    "Restaurants with the specified category tag fetched",
+    result
+  );
+});
+
+// this for super admin
 exports.changeRestaurantStatus = asyncHandler(async (req, res) => {
   const restaurant = await RestaurantService.changeRestaurantStatus(
     req.params.id,

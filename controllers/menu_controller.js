@@ -1,10 +1,10 @@
 "use strict";
 
-const asyncHandler = require("../../middleware/asyncHandler");
-const MenuService = require("../../services/menu_service");
-const MenuCategoryService = require("../../services/menuCategory_service");
-const MenuItemService = require("../../services/menuItem_service");
-const { success } = require("../../utils/apiResponse");
+const asyncHandler = require("../middleware/asyncHandler");
+const MenuService = require("../services/menu_service");
+const MenuCategoryService = require("../services/menuCategory_service");
+const MenuItemService = require("../services/menuItem_service");
+const { success } = require("../utils/apiResponse");
 
 // ====================== Menu
 exports.createMenu = asyncHandler(async (req, res) => {

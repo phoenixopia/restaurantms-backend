@@ -1,6 +1,6 @@
 const express = require("express");
 
-const MenuController = require("../../controllers/admin/menu_controller");
+const MenuController = require("../../controllers/menu_controller");
 const { protect } = require("../../middleware/protect");
 const { authorize } = require("../../middleware/authorize");
 const { permissionCheck } = require("../../middleware/permissionCheck");
@@ -10,8 +10,9 @@ const Upload = require("../../middleware/uploads");
 
 const router = express.Router();
 
+// ======================== Menu
 router.get(
-  "/menu/list",
+  "/list",
   protect,
   permissionCheck("view_menu"),
   RestaurantStatus.checkRestaurantStatus,
@@ -19,7 +20,7 @@ router.get(
 );
 
 router.post(
-  "/menu/create",
+  "/create",
   protect,
   authorize("restaurant_admin"),
   RestaurantStatus.checkRestaurantStatus,
@@ -27,7 +28,7 @@ router.post(
 );
 
 router.put(
-  "/menu/update/:id",
+  "/update/:id",
   protect,
   permissionCheck("update_menu"),
   RestaurantStatus.checkRestaurantStatus,
@@ -35,7 +36,7 @@ router.put(
 );
 
 router.delete(
-  "/menu/delete/:id",
+  "/delete/:id",
   protect,
   permissionCheck("delete_menu"),
   RestaurantStatus.checkRestaurantStatus,
@@ -43,7 +44,7 @@ router.delete(
 );
 
 router.patch(
-  "/menu/toggle-activation/:id",
+  "/toggle-activation/:id",
   protect,
   permissionCheck("toggle_menu_activation"),
   RestaurantStatus.checkRestaurantStatus,

@@ -8,6 +8,7 @@ const {
   Menu,
   Branch,
   Restaurant,
+  CategoryTag,
   sequelize,
 } = require("../models");
 const throwError = require("../utils/throwError");
@@ -23,7 +24,6 @@ const getFileUrl = (filename) =>
 const getFilePath = (filename) => path.join(UPLOADS_DIR, filename);
 
 const MenuCategoryService = {
-  // creating menu category
   async createMenuCategory({
     restaurantId,
     branchName,
@@ -40,6 +40,7 @@ const MenuCategoryService = {
 
       const menu = await Menu.findOne({
         where: { restaurant_id: restaurantId },
+        transaction: t,
       });
       if (!menu) throwError("Menu not found for this restaurant", 404);
 
@@ -50,6 +51,7 @@ const MenuCategoryService = {
             name: branchName,
             restaurant_id: restaurantId,
           },
+          transaction: t,
         });
         if (!branch) throwError("Branch not found under this restaurant", 404);
 
@@ -90,6 +92,7 @@ const MenuCategoryService = {
           required: true,
           where: { restaurant_id: restaurantId },
         },
+        transaction: t,
       });
 
       if (!category) throwError("Menu category not found or unauthorized", 404);
@@ -128,10 +131,12 @@ const MenuCategoryService = {
           required: true,
           where: { restaurant_id: restaurantId },
         },
+        transaction: t,
       });
 
       if (!category) throwError("Menu category not found or unauthorized", 404);
 
+      // Soft delete by setting is_active = false
       category.is_active = false;
       await category.save({ transaction: t });
       await t.commit();
@@ -150,6 +155,7 @@ const MenuCategoryService = {
           required: true,
           where: { restaurant_id: restaurantId },
         },
+        transaction: t,
       });
 
       if (!category) throwError("Menu category not found or unauthorized", 404);
@@ -215,6 +221,51 @@ const MenuCategoryService = {
       totalItems: count,
       currentPage: page,
       totalPages: Math.ceil(count / limit),
+      data: rows,
+    };
+  },
+
+  async getRestaurantsByCategoryTagId(categoryTagId, page = 1, limit = 10) {
+    const offset = (page - 1) * limit;
+
+    const { count, rows } = await Restaurant.findAndCountAll({
+      distinct: true,
+      attributes: ["id", "restaurant_name", "logo_url"],
+      include: [
+        {
+          model: Menu,
+          attributes: ["id", "name"],
+          include: [
+            {
+              model: MenuCategory,
+              attributes: ["id", "name"],
+              include: [
+                {
+                  association: "CategoryTag",
+                  where: { id: categoryTagId },
+                  attributes: ["id", "name"],
+                  required: true,
+                },
+              ],
+              required: true,
+            },
+          ],
+          required: true,
+        },
+      ],
+      where: {
+        status: {
+          [Op.or]: ["active", "trial"],
+        },
+      },
+      offset,
+      limit,
+    });
+
+    return {
+      totalItems: count,
+      totalPages: Math.ceil(count / limit),
+      currentPage: page,
       data: rows,
     };
   },

@@ -33,6 +33,7 @@
     "i": "^0.3.7",
     "inquirer": "^8.2.6",
     "jsonwebtoken": "^9.0.2",
+    "moment-timezone": "^0.6.0",
     "morgan": "^1.10.0",
     "multer": "^2.0.0",
     "multer-storage-cloudinary": "^4.0.0",

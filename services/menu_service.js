@@ -11,6 +11,7 @@ const MenuService = {
 
       const existing = await Menu.findOne({
         where: { restaurant_id: restaurantId },
+        transaction: t,
       });
       if (existing)
         throwError("A menu already exists for this restaurant", 400);
@@ -44,6 +45,7 @@ const MenuService = {
     try {
       const menu = await Menu.findOne({
         where: { id, restaurant_id: restaurantId },
+        transaction: t,
       });
       if (!menu) throwError("Menu not found", 404);
 
@@ -66,6 +68,7 @@ const MenuService = {
     try {
       const menu = await Menu.findOne({
         where: { id, restaurant_id: restaurantId },
+        transaction: t,
       });
 
       if (!menu) throwError("Menu not found", 404);
@@ -83,6 +86,7 @@ const MenuService = {
     try {
       const menu = await Menu.findOne({
         where: { id, restaurant_id: restaurantId },
+        transaction: t,
       });
       if (!menu) throwError("Menu not found", 404);
 

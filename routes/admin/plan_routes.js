@@ -1,5 +1,5 @@
 const express = require("express");
-const PlanController = require("../../controllers/admin/plan_controller");
+const PlanController = require("../../controllers/plan_controller");
 const { protect } = require("../../middleware/protect");
 const { authorize } = require("../../middleware/authorize");
 const {

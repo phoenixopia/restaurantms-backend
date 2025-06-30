@@ -1,3 +1,5 @@
+"use strict";
+
 const { User, Role, sequelize } = require("../models");
 const throwError = require("../utils/throwError");
 
@@ -70,6 +72,7 @@ const UserService = {
     try {
       const user = await User.findByPk(id, { transaction: t });
       if (!user) throwError("User not found", 404);
+
       await user.destroy({ transaction: t });
       await t.commit();
     } catch (err) {
@@ -93,11 +96,13 @@ const UserService = {
       ],
       include: [{ model: Role, attributes: ["id", "name"] }],
     });
+
     if (!user)
       throwError(
         "User not found or you are not authorized to view this user",
         404
       );
+
     return user;
   },
 };

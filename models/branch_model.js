@@ -1,4 +1,5 @@
 "use strict";
+const moment = require("moment-timezone");
 module.exports = (sequelize, DataTypes) => {
   const Branch = sequelize.define(
     "Branch",
@@ -66,10 +67,24 @@ module.exports = (sequelize, DataTypes) => {
   );
 
   Branch.prototype.isCurrentlyOpen = function () {
-    const now = new Date();
-    const currentTime = now.toTimeString().split(" ")[0];
+    const now = moment().tz("Africa/Addis_Ababa");
+    const currentTime = now.format("hh:mm A");
 
-    return currentTime >= this.opening_time && currentTime < this.closing_time;
+    const openingTime = moment(this.opening_time, "hh:mm A");
+    const closingTime = moment(this.closing_time, "hh:mm A");
+    const currentMoment = moment(currentTime, "hh:mm A");
+
+    if (closingTime.isBefore(openingTime)) {
+      return (
+        currentMoment.isSameOrAfter(openingTime) ||
+        currentMoment.isBefore(closingTime)
+      );
+    }
+
+    return (
+      currentMoment.isSameOrAfter(openingTime) &&
+      currentMoment.isBefore(closingTime)
+    );
   };
 
   Branch.paginate = async function ({

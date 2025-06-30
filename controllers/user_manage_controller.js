@@ -1,7 +1,7 @@
-const UserService = require("../../services/manageUser_service");
-const RbacService = require("../../services/rbac_service");
-const asyncHandler = require("../../middleware/asyncHandler");
-const { success } = require("../../utils/apiResponse");
+const UserService = require("../services/manageUser_service");
+const RbacService = require("../services/rbac_service");
+const asyncHandler = require("../middleware/asyncHandler");
+const { success } = require("../utils/apiResponse");
 
 exports.createUser = asyncHandler(async (req, res) => {
   const user = await UserService.createUser(req.user.id, req.body);

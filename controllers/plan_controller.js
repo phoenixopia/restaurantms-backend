@@ -1,6 +1,6 @@
-const PlanService = require("../../services/plan_service");
-const asyncHandler = require("../../middleware/asyncHandler");
-const { success } = require("../../utils/apiResponse");
+const PlanService = require("../services/plan_service");
+const asyncHandler = require("../middleware/asyncHandler");
+const { success } = require("../utils/apiResponse");
 
 exports.listPlans = asyncHandler(async (req, res) => {
   const plans = await PlanService.listPlans();

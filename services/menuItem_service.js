@@ -47,6 +47,7 @@ const MenuItemService = {
           },
         ],
         required: true,
+        transaction: t,
       });
 
       if (!category)
@@ -123,6 +124,7 @@ const MenuItemService = {
             where: { restaurant_id: restaurantId },
           },
         },
+        transaction: t,
       });
 
       if (!item) throwError("Menu item not found or unauthorized", 404);
@@ -159,6 +161,7 @@ const MenuItemService = {
             where: { restaurant_id: restaurantId },
           },
         },
+        transaction: t,
       });
 
       if (!item) throwError("Menu item not found or unauthorized", 404);
@@ -185,6 +188,7 @@ const MenuItemService = {
             where: { restaurant_id: restaurantId },
           },
         },
+        transaction: t,
       });
 
       if (!item) throwError("Menu item not found or unauthorized", 404);

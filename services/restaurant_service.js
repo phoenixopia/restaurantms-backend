@@ -1,9 +1,10 @@
 "use strict";
 
-const { Op, QueryTypes } = require("sequelize");
+const { Op, QueryTypes, where } = require("sequelize");
 const validator = require("validator");
 const fs = require("fs");
 const path = require("path");
+const throwError = require("../utils/throwError");
 
 const { buildPagination } = require("../utils/pagination");
 const {
@@ -31,14 +32,13 @@ const getFileUrl = (filename) => {
 const getFilePath = (filename) => path.join(UPLOADS_DIR, filename);
 
 const RestaurantService = {
-  // for the owner
   async getUserRestaurants(userId) {
     const restaurant = await Restaurant.findOne({
       where: { created_by: userId },
       attributes: ["id", "has_branch"],
     });
 
-    if (!restaurant) throw new Error("Restaurant not found");
+    if (!restaurant) throwError("Restaurant not found", 404);
 
     const includes = [
       {
@@ -61,17 +61,17 @@ const RestaurantService = {
         required: false,
       });
     }
+
     return await Restaurant.findByPk(restaurant.id, { include: includes });
   },
 
-  // register restaurant
   async createRestaurant(body, files, userId) {
     const transaction = await sequelize.transaction();
     try {
       const requiredFields = ["restaurant_name", "location_name", "address"];
       const missingFields = requiredFields.filter((f) => !body[f]);
       if (missingFields.length)
-        throw new Error(`Missing fields: ${missingFields.join(", ")}`);
+        throwError(`Missing fields: ${missingFields.join(", ")}`, 400);
 
       const location = await Location.create(
         {
@@ -113,18 +113,17 @@ const RestaurantService = {
     }
   },
 
-  // update restaurant
   async updateRestaurant(id, body, files, userId) {
     const transaction = await sequelize.transaction();
     try {
-      if (!validator.isUUID(id)) throw new Error("Invalid restaurant ID");
+      if (!validator.isUUID(id)) throwError("Invalid restaurant ID", 400);
 
       const restaurant = await Restaurant.findOne({
         where: { id, created_by: userId },
         include: [Location],
         transaction,
       });
-      if (!restaurant) throw new Error("Restaurant not found");
+      if (!restaurant) throwError("Restaurant not found", 404);
 
       const updates = {};
       const filesToCleanup = [];
@@ -195,7 +194,6 @@ const RestaurantService = {
     }
   },
 
-  // delete restaurant
   async deleteRestaurant(id, userId) {
     const transaction = await sequelize.transaction();
     try {
@@ -203,7 +201,7 @@ const RestaurantService = {
         where: { id, created_by: userId },
         transaction,
       });
-      if (!restaurant) throw new Error("Restaurant not found");
+      if (!restaurant) throwError("Restaurant not found", 404);
 
       if (restaurant.logo_url)
         fs.unlinkSync(getFilePath(restaurant.logo_url.split("/").pop()));
@@ -258,12 +256,14 @@ const RestaurantService = {
     };
   },
 
-  async getRestaurantById(id) {
+  async getRestaurantById(id, page = 1, limit = 10) {
+    const offset = (page - 1) * limit;
+
     const restaurant = await Restaurant.findByPk(id, {
       attributes: ["id", "has_branch"],
     });
 
-    if (!restaurant) throw new Error("Restaurant not found");
+    if (!restaurant) throwError("Restaurant not found", 404);
 
     const baseIncludes = [
       {
@@ -279,7 +279,17 @@ const RestaurantService = {
         include: [
           {
             model: MenuCategory,
-            include: [MenuItem],
+            required: false,
+            offset,
+            limit,
+            include: [
+              {
+                model: MenuItem,
+                required: false,
+                separate: true,
+                limit,
+              },
+            ],
           },
         ],
       });
@@ -290,7 +300,17 @@ const RestaurantService = {
         include: [
           {
             model: MenuCategory,
-            include: [MenuItem],
+            required: false,
+            offset,
+            limit,
+            include: [
+              {
+                model: MenuItem,
+                required: false,
+                separate: true,
+                limit,
+              },
+            ],
           },
         ],
       });
@@ -303,12 +323,61 @@ const RestaurantService = {
     return fullRestaurant;
   },
 
+  async getAllRestaurantsWithMenusAndCheapestItems({ page = 1, limit = 10 }) {
+    const offset = (page - 1) * limit;
+
+    const { count, rows: restaurants } = await Restaurant.findAndCountAll({
+      attributes: ["id", "restaurant_name", "logo_url"],
+      where: {
+        status: { [Op.in]: ["active", "trial"] },
+      },
+      offset,
+      limit,
+      distinct: true,
+      include: [
+        {
+          model: Menu,
+          attributes: ["id", "name"],
+          include: [
+            {
+              model: MenuCategory,
+              attributes: ["id", "name"],
+              include: [
+                {
+                  model: MenuItem,
+                  attributes: ["id", "name", "unit_price"],
+                  separate: true,
+                  order: [["unit_price", "ASC"]],
+                  limit: 1,
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    const totalPages = Math.ceil(count / limit);
+
+    return {
+      data: restaurants,
+      meta: {
+        totalItems: count,
+        totalPages,
+        currentPage: page,
+        pageSize: limit,
+      },
+    };
+  },
+
   async changeRestaurantStatus(id, status) {
     const allowedStatuses = ["active", "trial", "cancelled", "expired"];
-    if (!allowedStatuses.includes(status)) throw new Error("Invalid status");
+    if (!allowedStatuses.includes(status)) {
+      throwError("Invalid status", 400);
+    }
 
     const restaurant = await Restaurant.findByPk(id);
-    if (!restaurant) throw new Error("Restaurant not found");
+    if (!restaurant) throwError("Restaurant not found", 404);
 
     restaurant.status = status;
     await restaurant.save();
@@ -317,10 +386,9 @@ const RestaurantService = {
 
   async toggleRestaurantActiveStatus(id) {
     const restaurant = await Restaurant.findByPk(id);
-    if (!restaurant) throw new Error("Restaurant not found");
+    if (!restaurant) throwError("Restaurant not found", 404);
 
     restaurant.is_active = !restaurant.is_active;
-
     await restaurant.save();
 
     return restaurant;
@@ -348,11 +416,7 @@ const RestaurantService = {
     }
 
     if (typeof is_active !== "undefined") {
-      if (is_active === "true") {
-        filterCondition.is_active = true;
-      } else if (is_active === "false") {
-        filterCondition.is_active = false;
-      }
+      filterCondition.is_active = is_active === "true";
     }
 
     let data, totalItems;
@@ -375,23 +439,23 @@ const RestaurantService = {
 
       data = await sequelize.query(
         `
-      SELECT r.*, l.name AS location_name, l.address,
-        (
-          6371 * acos(
-            cos(radians(:latitude)) * cos(radians(l.latitude)) *
-            cos(radians(l.longitude) - radians(:longitude)) +
-            sin(radians(:latitude)) * sin(radians(l.latitude))
-          )
-        ) AS distance
-      FROM restaurants r
-      JOIN locations l ON r.location_id = l.id
-      WHERE 1=1
-      ${statusCondition}
-      ${query ? "AND r.restaurant_name ILIKE :query" : ""}
-      HAVING distance <= :maxDistance
-      ORDER BY distance ASC
-      LIMIT :limit OFFSET :offset
-      `,
+        SELECT r.*, l.name AS location_name, l.address,
+          (
+            6371 * acos(
+              cos(radians(:latitude)) * cos(radians(l.latitude)) *
+              cos(radians(l.longitude) - radians(:longitude)) +
+              sin(radians(:latitude)) * sin(radians(l.latitude))
+            )
+          ) AS distance
+        FROM restaurants r
+        JOIN locations l ON r.location_id = l.id
+        WHERE 1=1
+        ${statusCondition}
+        ${query ? "AND r.restaurant_name ILIKE :query" : ""}
+        HAVING distance <= :maxDistance
+        ORDER BY distance ASC
+        LIMIT :limit OFFSET :offset
+        `,
         {
           replacements: {
             ...replacements,
@@ -403,22 +467,22 @@ const RestaurantService = {
 
       const countResult = await sequelize.query(
         `
-      SELECT COUNT(*) FROM (
-        SELECT 1
-        FROM restaurants r
-        JOIN locations l ON r.location_id = l.id
-        WHERE 1=1
-        ${statusCondition}
-        ${query ? "AND r.restaurant_name ILIKE :query" : ""}
-        HAVING (
-          6371 * acos(
-            cos(radians(:latitude)) * cos(radians(l.latitude)) *
-            cos(radians(l.longitude) - radians(:longitude)) +
-            sin(radians(:latitude)) * sin(radians(l.latitude))
-          )
-        ) <= :maxDistance
-      ) AS subquery
-      `,
+        SELECT COUNT(*) FROM (
+          SELECT 1
+          FROM restaurants r
+          JOIN locations l ON r.location_id = l.id
+          WHERE 1=1
+          ${statusCondition}
+          ${query ? "AND r.restaurant_name ILIKE :query" : ""}
+          HAVING (
+            6371 * acos(
+              cos(radians(:latitude)) * cos(radians(l.latitude)) *
+              cos(radians(l.longitude) - radians(:longitude)) +
+              sin(radians(:latitude)) * sin(radians(l.latitude))
+            )
+          ) <= :maxDistance
+        ) AS subquery
+        `,
         {
           replacements: {
             ...replacements,
@@ -481,13 +545,13 @@ const RestaurantService = {
       });
 
       if (currentCount >= branchLimit) {
-        throw new Error("Branch limit reached");
+        throwError("Branch limit reached", 403);
       }
 
       let managerId = null;
       if (manager_email) {
         if (!validator.isEmail(manager_email)) {
-          throw new Error("Invalid manager email format");
+          throwError("Invalid manager email format");
         }
 
         const manager = await validateManagerByEmail(
@@ -544,7 +608,7 @@ const RestaurantService = {
       });
 
       if (!branch) {
-        throw new Error("Branch not found or access denied");
+        throwError("Branch not found or access denied", 404);
       }
 
       const allowedUpdates = [
@@ -563,7 +627,7 @@ const RestaurantService = {
       );
 
       if (invalidFields.length > 0) {
-        throw new Error(`Invalid fields: ${invalidFields.join(", ")}`);
+        throwError(`Invalid fields: ${invalidFields.join(", ")}`);
       }
 
       if (updates.location_id) {
@@ -571,24 +635,24 @@ const RestaurantService = {
           transaction,
         });
         if (!locationExists) {
-          throw new Error("Specified location not found");
+          throwError("Specified location not found", 404);
         }
       }
 
       if (updates.email && !validator.isEmail(updates.email)) {
-        throw new Error("Invalid email format");
+        throwError("Invalid email format");
       }
 
       if (
         updates.phone_number &&
         !validator.isMobilePhone(updates.phone_number)
       ) {
-        throw new Error("Invalid phone number format");
+        throwError("Invalid phone number format");
       }
 
       if (updates.manager_email) {
         if (!validator.isEmail(updates.manager_email)) {
-          throw new Error("Invalid manager email format");
+          throwError("Invalid manager email format");
         }
 
         const manager = await validateManagerByEmail(
@@ -631,7 +695,7 @@ const RestaurantService = {
       });
 
       if (!branch) {
-        throw new Error("Branch not found or access denied");
+        throwError("Branch not found or access denied", 404);
       }
 
       await branch.destroy({ transaction });

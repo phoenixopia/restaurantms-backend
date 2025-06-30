@@ -1,5 +1,5 @@
 const express = require("express");
-const RestaurantController = require("../../controllers/admin/restaurant_controller");
+const RestaurantController = require("../../controllers/restaurant_controller");
 const ValidateUploadedFiles = require("../../middleware/validateUploadedFiles");
 const Upload = require("../../middleware/uploads");
 const RestaurantStatus = require("../../middleware/checkRestaurantStatus");

@@ -1,5 +1,5 @@
 const express = require("express");
-const rbacController = require("../../controllers/admin/rbac_controller");
+const rbacController = require("../../controllers/rbac_controller");
 const validateRequest = require("../../middleware/validateRequest");
 const { protect } = require("../../middleware/protect");
 const { authorize } = require("../../middleware/authorize");

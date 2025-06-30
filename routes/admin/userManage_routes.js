@@ -1,6 +1,6 @@
 const express = require("express");
 
-const UserController = require("../../controllers/admin/user_manage_controller");
+const UserController = require("../../controllers/user_manage_controller");
 const { protect } = require("../../middleware/protect");
 const { authorize } = require("../../middleware/authorize");
 // const { permissionCheck } = require("../../middleware/permissionCheck");
