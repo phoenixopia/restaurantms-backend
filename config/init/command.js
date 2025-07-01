@@ -5,7 +5,7 @@ const { createSuperAdmin } = require("./index");
 const program = new Command();
 
 program
-  .command("create-super-admin")
+  .command("create-super_admin")
   .alias("csa")
   .description("Create a super admin user")
   .action(async () => {

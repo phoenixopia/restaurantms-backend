@@ -15,5 +15,12 @@ cloudinary.config({
     secure: true
   });
 
-  
-  module.exports = cloudinary;
+// Helper to extract public_id from full Cloudinary URL
+function getPublicIdFromUrl(url) {
+  const parts = url.split('/');
+  const fileNameWithExtension = parts[parts.length - 1]; // image.jpg
+  const publicIdWithFolder = parts.slice(parts.indexOf('upload') + 1).join('/'); // folder/image.jpg
+  return publicIdWithFolder.replace(/\.[^/.]+$/, ""); // remove .jpg or .png
+}
+
+module.exports = { cloudinary, getPublicIdFromUrl };

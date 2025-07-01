@@ -1,15 +1,18 @@
 "use strict";
+const { getGeneratedId } = require('../utils/idGenerator');
+
 module.exports = (sequelize, DataTypes) => {
   const OrderItem = sequelize.define(
     "OrderItem",
     {
       id: {
-        type: DataTypes.UUID,
-        defaultValue: DataTypes.UUIDV4,
+        type: DataTypes.STRING,
+        defaultValue: getGeneratedId,
         primaryKey: true,
+        allowNull: false,
       },
       order_id: {
-        type: DataTypes.UUID,
+        type: DataTypes.STRING,
         allowNull: false,
         references: {
           model: "orders",
@@ -17,7 +20,7 @@ module.exports = (sequelize, DataTypes) => {
         },
       },
       menu_item_id: {
-        type: DataTypes.UUID,
+        type: DataTypes.STRING,
         allowNull: false,
         references: {
           model: "menu_items",

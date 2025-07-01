@@ -1,16 +1,18 @@
 "use strict";
+const { getGeneratedId } = require('../utils/idGenerator');
 
 module.exports = (sequelize, DataTypes) => {
   const TwoFA = sequelize.define(
     "TwoFA",
     {
       id: {
-        type: DataTypes.UUID,
-        defaultValue: DataTypes.UUIDV4,
+        type: DataTypes.STRING,
+        defaultValue: getGeneratedId,
         primaryKey: true,
-      },
+        allowNull: false,
+    },
       user_id: {
-        type: DataTypes.UUID,
+        type: DataTypes.STRING,
         allowNull: false,
         references: {
           model: "users",
@@ -41,7 +43,7 @@ module.exports = (sequelize, DataTypes) => {
     TwoFA.belongsTo(models.User, {
       foreignKey: "user_id",
       as: "user",
-      onDelete: "CASCADE",
+      // onDelete: "CASCADE",
     });
   };
 

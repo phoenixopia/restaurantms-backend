@@ -1,15 +1,18 @@
 "use strict";
+const { getGeneratedId } = require('../utils/idGenerator');
+
 module.exports = (sequelize, DataTypes) => {
   const LoyaltyPoint = sequelize.define(
     "LoyaltyPoint",
     {
       id: {
-        type: DataTypes.UUID,
-        defaultValue: DataTypes.UUIDV4,
+        type: DataTypes.STRING,
+        defaultValue: getGeneratedId,
         primaryKey: true,
+        allowNull: false,
       },
       customer_id: {
-        type: DataTypes.UUID,
+        type: DataTypes.STRING,
         allowNull: false,
         references: {
           model: "users",

@@ -7,6 +7,8 @@ const { capitalizeFirstLetter } = require('../utils/capitalizeFirstLetter');
 const { OAuth2Client } = require('google-auth-library');
 const speakeasy = require('speakeasy');
 const { getClientIp } = require('../utils/getClientIp');
+const { comparePassword } = require('../utils/hash');
+const { logActivity } = require('./activityController');
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 
@@ -91,6 +93,17 @@ exports.googleLogin = async (req, res) => {
         await sendConfirmationEmail(newUser.email, newUser.first_name, newUser.last_name, confirmationLink);
     
         await t.commit();
+
+        await logActivity({
+          user_id: newUser.id,
+          action: 'signup_user',
+          entity_type: 'User',
+          entity_id: newUser.id,
+          // metadata: { changed_fields: ['email', 'role_id', 'pass'] },
+          ip_address: req.ip,
+          user_agent: req.headers['user-agent']
+        });    
+
         return res.status(201).json({
           success: true,
           message: 'Please check your email for confirmation to verify your account.',
@@ -122,15 +135,18 @@ exports.googleLogin = async (req, res) => {
             isConfirmed: false
           },
           include: [
-            {
-                model: Role,
-                include: [
+            {                    
+              model: Role,
+              as: "role",
+              include: [
                   {
                       model: Permission,
-                  },
-              ],
-            },
-        ],
+                      through: { attributes: ['granted'] },
+                      as: "permissions"
+                  }
+              ]
+            }
+          ],
           lock: t.LOCK.UPDATE,
           transaction: t
         });
@@ -171,22 +187,21 @@ exports.googleLogin = async (req, res) => {
       const t = await sequelize.transaction();
       try {
     
+        // const user = await User.scope('assword').findOne({
         const user = await User.findOne({
           where: { email: { [Op.iLike]: email } },
           include: [
-            {
-                model: Role,
-                attributes: { exclude: ['createdAt', 'updatedAt'] },
-                as: 'roles',
-                include: [
+            {                    
+              model: Role,
+              as: "role",
+              include: [
                   {
-                      model: Permission,
-                      through: { attributes: ["granted"] },
-                      attributes: { exclude: ['createdAt', 'updatedAt'] },
-                      as: "permissions"
-                  },
-              ],
-            },
+                    model: Permission,
+                    through: {where: {granted: true}, attributes: ['granted'] },
+                    as: "permissions"
+                  }
+              ]
+            }
           ],
           attributes: { include: ['password'] },
           // lock: t.LOCK.UPDATE,
@@ -198,7 +213,6 @@ exports.googleLogin = async (req, res) => {
           return res.status(404).json({ success: false, message: 'No account found with this email.' });
         }
 
-        console.log('\n\nUser found:', user.roles);
     
         if (!user.isConfirmed) {
           await t.rollback();
@@ -210,10 +224,9 @@ exports.googleLogin = async (req, res) => {
           return res.status(403).json({ success: false, message: `Your account is locked until ${user.locked_until}. Please try again later.`});
         }
 
-        const isMatched = await user.comparePassword(password);
-
-        // const isMatched = await comparePassword(password, user.password)
-        if (!isMatched) {
+        const isMatch = await user.comparePassword(password);
+        // const isMatch = await comparePassword(password, user.password)
+        if (!isMatch) {
           await t.rollback();
           user.markFailedLoginAttempt();
           return res.status(400).json({ success: false, message: `Invalid credentials. Your remaining atemts are ${5-user.failed_login_attempts}` });
@@ -242,12 +255,22 @@ exports.googleLogin = async (req, res) => {
         }
   
         await t.commit();
+        await logActivity({
+          user_id: user.id,
+          action: 'login_user',
+          entity_type: 'User',
+          entity_id: user.id,
+          // metadata: { changed_fields: ['email', 'role_id', 'pass'] },
+          ip_address: req.ip,
+          user_agent: req.headers['user-agent']
+        });    
+        
         return sendTokenResponse(user, 200, res);
       } catch (error) {
         console.error('Signin Error:', error);
         return res.status(500).json({ success: false, message: 'Internal Server Error.', error: error.message });
       }
-    };
+  };
   
   
   //logout
@@ -329,6 +352,17 @@ exports.googleLogin = async (req, res) => {
           await user.save({ transaction: t });
   
           await t.commit();
+
+          await logActivity({
+            user_id: user.id,
+            action: 'reset_user_password',
+            entity_type: 'User',
+            entity_id: user.id,
+            metadata: { changed_fields: ['password'] },
+            ip_address: req.ip,
+            user_agent: req.headers['user-agent']
+          }); 
+
           return res.status(200).json({ success: true, message: "Password reset successfully. You can now log in." });
   
       } catch (error) {

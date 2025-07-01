@@ -1,23 +1,26 @@
 "use strict";
 
+const { getGeneratedId } = require('../utils/idGenerator');
+
 module.exports = (sequelize, DataTypes) => {
   const RestaurantMenu = sequelize.define(
     "RestaurantMenu",
     {
       id: {
-        type: DataTypes.UUID,
-        defaultValue: DataTypes.UUIDV4,
+        type: DataTypes.STRING,
+        defaultValue: getGeneratedId,
         primaryKey: true,
+        allowNull: false,
       },
       restaurant_id: {
-        type: DataTypes.UUID,
+        type: DataTypes.STRING,
         allowNull: false,
         references: {
           model: "restaurants",
         },
       },
       menu_id: {
-        type: DataTypes.UUID,
+        type: DataTypes.STRING,
         allowNull: false,
         references: {
           model: "menus",

@@ -1,16 +1,19 @@
 "use strict";
 
+const { getGeneratedId } = require('../utils/idGenerator');
+
 module.exports = (sequelize, DataTypes) => {
   const RestaurantUser = sequelize.define(
     "RestaurantUser",
     {
       id: {
-        type: DataTypes.UUID,
-        defaultValue: DataTypes.UUIDV4,
+        type: DataTypes.STRING,
+        defaultValue: getGeneratedId,
         primaryKey: true,
+        allowNull: false,
       },
       user_id: {
-        type: DataTypes.UUID,
+        type: DataTypes.STRING,
         references: {
           model: "users",
           key: "id",
@@ -18,13 +21,13 @@ module.exports = (sequelize, DataTypes) => {
         onDelete: "CASCADE",
       },
       restaurant_id: {
-        type: DataTypes.UUID,
+        type: DataTypes.STRING,
         allowNull: false,
         references: {
           model: "restaurants",
           key: "id",
         },
-        onDelete: "CASCADE",
+        onDelete: 'CASCADE'
       },
     },
     {

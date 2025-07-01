@@ -7,8 +7,8 @@ module.exports = (sequelize, DataTypes) => {
     "Plan",
     {
       id: {
-        type: DataTypes.UUID,
-        defaultValue: DataTypes.UUIDV4,
+        type: DataTypes.STRING,
+        defaultValue: getGeneratedId,
         primaryKey: true,
         allowNull: false,
       },

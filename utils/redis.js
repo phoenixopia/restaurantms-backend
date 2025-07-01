@@ -5,6 +5,6 @@ const redisClient = redis.createClient({
   legacyMode: true,
 });
 
-redisClient.connect().catch(console.error);
+// redisClient.connect().catch(console.error);
 
 module.exports = redisClient;

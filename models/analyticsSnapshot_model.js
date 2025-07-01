@@ -1,20 +1,24 @@
 "use strict";
+const { getGeneratedId } = require('../utils/idGenerator');
+
 module.exports = (sequelize, DataTypes) => {
   const AnalyticsSnapshot = sequelize.define(
     "AnalyticsSnapshot",
     {
       id: {
-        type: DataTypes.UUID,
-        defaultValue: DataTypes.UUIDV4,
+        type: DataTypes.STRING,
+        defaultValue: getGeneratedId,
         primaryKey: true,
+        allowNull: false,
       },
       restaurant_id: {
-        type: DataTypes.UUID,
+        type: DataTypes.STRING,
         allowNull: false,
-        references: {
+         references: {
           model: "restaurants",
           key: "id",
         },
+        onDelete: 'CASCADE'
       },
       snapshot_date: DataTypes.DATEONLY,
       total_orders: DataTypes.INTEGER,
@@ -24,7 +28,7 @@ module.exports = (sequelize, DataTypes) => {
       reservation_count: DataTypes.INTEGER,
       avg_order_value: DataTypes.DECIMAL(10, 2),
       top_item_id: {
-        type: DataTypes.UUID,
+        type: DataTypes.STRING,
         references: {
           model: "menu_items",
           key: "id",

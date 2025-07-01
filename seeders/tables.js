@@ -4,12 +4,18 @@ const {
   User,
   Role,
   Permission,
-  UserRole,
   RolePermission,
   Plan,
   Restaurant,
   RestaurantUser,
   Subscription,
+  Menu, MenuCategory, MenuItem, Review, Table, Order,
+  Branch,
+  SupportTicket,
+  SystemSetting,
+  TwoFA,
+  Location,
+  ActivityLog,
 } = require("../models/index");
 const { hashPassword } = require("../utils/hash");
 const image = "https://drive.google.com/uc?id=1pMGXklJAHoz9YkE1udmLOLCofJhh9SPW";
@@ -17,19 +23,8 @@ const image = "https://drive.google.com/uc?id=1pMGXklJAHoz9YkE1udmLOLCofJhh9SPW"
 
 (async () => {
   try {
-    // Sync all relevant tables
-    // await sequelize.sync({ force: true }); // WARNING: This drops all tables
-
-    await Plan.sync({ force: true });  
-    await Subscription.sync({ force: true });
-    await Role.sync({ force: true });
-    await Restaurant.sync({ force: true });
-    await User.sync({ force: true });
-    await RestaurantUser.sync({ force: true });
-    await Permission.sync({ force: true });
-    await RolePermission.sync({ force: true });
-    await RestaurantUser.sync({ force: true });
-    
+    // WARNING: This drops all tables
+    await sequelize.sync({ force: true });
 
     // Create Plans
     const plans = await Plan.bulkCreate([
@@ -221,6 +216,132 @@ const image = "https://drive.google.com/uc?id=1pMGXklJAHoz9YkE1udmLOLCofJhh9SPW"
         restaurant_id: restaurant.id,
       },
     ]);
+
+    // Menu
+    const menus = await Menu.bulkCreate([
+      {
+        restaurant_id: restaurant.id,
+        name: "Test Menu",
+        description: "test TEST",
+        is_active: true
+      },
+    ]);
+    const menuMap = {};
+    menus.forEach(menu => menuMap[menu.name] = menu.id);
+
+
+    // Menu category
+    const menuCategory = await MenuCategory.bulkCreate([
+      {
+        restaurant_id: restaurant.id,
+        menu_id: menuMap['Test Menu'],
+        name: "Test Category",
+        description: "test TEST",
+        is_active: true,
+      },
+      {
+        restaurant_id: restaurant.id,
+        menu_id: menuMap['Test Menu'],
+        name: "Test Two Category",
+        description: "test two",
+        is_active: true,
+      },
+    ]);
+    const menuCategoryMap = {};
+    menuCategory.forEach(menuCat => menuCategoryMap[menuCat.name] = menuCat.id);
+
+
+    // menu item
+    const menuItems = await MenuItem.bulkCreate([
+      {
+        restaurant_id: restaurant.id,
+        menu_id: menuMap["Test Menu"],
+        menu_category_id: menuCategoryMap['Test Category'],
+        name: 'Shekla Tibs',
+        description: 'test',
+        unit_price: 200,
+        image_url: image
+      },
+    ]);
+    const menuItemMap = {};
+    menuItems.forEach(menuItem => menuItemMap[menuItem.name] = menuItem.id);
+
+
+    // Review
+    await Review.create(
+      {
+        customer_id: userMap["super@admin.com"], 
+        menu_item_id: menuItemMap["Shekla Tibs"],
+        detail: 'This is test review',
+        rate: '4'
+      },
+    );
+
+    // location
+    const location = await Location.create({
+      restaurant_id: restaurant.id,
+        latitude: 37.7749,
+        longitude: -122.4194,
+        timestamp: new Date("2024-06-23T10:00:00Z"),
+        accuracy: 10.0,
+        altitude: 50.0,
+        heading: 180.0,
+        speed: 20.0
+    })
+
+    // table 
+    const table = await Table.create({
+      location_id: location.id,
+      table_number: "A1",
+      capacity: 4,
+    })
+    
+    // orders
+    const orders = await Order.bulkCreate([
+      {
+        restaurant_id: restaurant.id,
+        user_id: userMap["admin@test.com"],
+        table_id: table.id,
+        date: new Date("2025-06-04"),
+        type: "dine-in",
+        total_amount: 200,
+        payment_status: "paid",
+      },
+      {
+        restaurant_id: restaurant.id,
+        user_id: userMap["admin@test.com"],
+        // table_id: table.id,
+        date: new Date("2025-06-23"),
+        type: "takeaway",
+        total_amount: 100,
+        payment_status: "un_paid",
+      },
+      {
+        restaurant_id: restaurant.id,
+        user_id: userMap["admin@test.com"],
+        table_id: table.id,
+        date: new Date("2025-06-24"),
+        type: "dine-in",
+        total_amount: 100,
+        payment_status: "un_paid",
+      },
+    ]);
+    const orderMap = {};
+    orders.forEach(order => orderMap[order.type] = order.id);
+
+    // // activity log
+    // await ActivityLog.create({
+    //   user_id: req.user.id,
+    //   action: "update_user",
+    //   entity_type: "User",
+    //   entity_id: updatedUser.id, // <-- this is the entity_id
+    //   metadata: {
+    //     changed_fields: ['email', 'role_id']
+    //   },
+    //   ip_address: req.ip,
+    //   user_agent: req.headers['user-agent']
+    // });
+    
 
 
     console.log("✅ Seed data added successfully.");

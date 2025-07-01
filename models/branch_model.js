@@ -1,23 +1,27 @@
 "use strict";
+const { getGeneratedId } = require('../utils/idGenerator');
+
 module.exports = (sequelize, DataTypes) => {
   const Branch = sequelize.define(
     "Branch",
     {
       id: {
-        type: DataTypes.UUID,
-        defaultValue: DataTypes.UUIDV4,
+        type: DataTypes.STRING,
+        defaultValue: getGeneratedId,
         primaryKey: true,
+        allowNull: false,
       },
       restaurant_id: {
-        type: DataTypes.UUID,
+        type: DataTypes.STRING,
         allowNull: false,
         references: {
           model: "restaurants",
           key: "id",
         },
+        onDelete: 'CASCADE'
       },
       location_id: {
-        type: DataTypes.UUID,
+        type: DataTypes.STRING,
         allowNull: false,
         references: {
           model: "locations",
@@ -29,7 +33,7 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
       },
       manager_id: {
-        type: DataTypes.UUID,
+        type: DataTypes.STRING,
         references: {
           model: "users",
           key: "id",
@@ -74,15 +78,15 @@ module.exports = (sequelize, DataTypes) => {
 
   Branch.associate = (models) => {
     Branch.belongsTo(models.Restaurant, {
-      foreignKey: "restaurant_id",
-      onDelete: "CASCADE",
+      foreignKey: "restaurant_id", onDelete: 'CASCADE',
+      // onDelete: "CASCADE",
       hooks: true,
       as: "restaurant",
     });
     Branch.belongsTo(models.Location, {
       foreignKey: "location_id",
       onUpdate: "CASCADE",
-      onDelete: "SET NULL",
+      // onDelete: "SET NULL",
       as: "location",
     });
     Branch.belongsTo(models.User, {

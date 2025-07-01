@@ -6,7 +6,7 @@ const { authorize } = require('../middleware/authorize');
 
 
 // auth routes
-router.get('/', protect, authorize('admin', 'super-admin'), twoFactorAuth.setup2FA);
+router.get('/', protect, authorize('admin', 'super_admin'), twoFactorAuth.setup2FA);
 
 module.exports = router;
 

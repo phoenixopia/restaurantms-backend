@@ -1,30 +1,30 @@
 const { Role } = require('../models/index');
 
-// Role-based authorization (e.g., 'admin', 'super-admin')
-exports.authorize = (...roles) => {
+exports.authorize = (...allowedRoles) => {
   return async (req, res, next) => {
     try {
-
-      // Await the role fetch
-      const roleRecord = await Role.findByPk(req.user.role_id);
-
-      // If role not found
-      if (!roleRecord) {
-        return res.status(403).json({ success: false, message: "Access Denied. Role not found.",});
+      // Check if user is authenticated
+      if (!req.user || !req.user.role_id) {
+        return res.status(401).json({ success: false, message: 'Unauthorized. User not logged in or role missing.' });
       }
 
-      // Compare role name (e.g., roleRecord.name or roleRecord.role)
-      if (!roles.includes(roleRecord.name)) {
-        return res.status(403).json({ success: false, message: `Access Denied. User role '${roleRecord.name}' is not authorized`,});
+      // Fetch role name using role_id
+      const role = await Role.findByPk(req.user.role_id);
+      if (!role) {
+        return res.status(403).json({ success: false, message: 'Unauthorized. User not logged in or role missing.' });
       }
 
-      // Add role info to request if needed
-      // req.user.role = roleRecord.name;
+      // Check if user's role name is allowed
+      if (!allowedRoles.includes(role.name)) {
+        return res.status(403).json({ success: false, message: 'Forbidden. You do not have permission to perform this action.' });
+      }
 
+      // All good — continue
       next();
     } catch (error) {
-      console.error("Authorization error:", error);
-      return res.status(500).json({ success: false, message: "Server Error", error: error.message });
+      console.error('Authorization Error:', error);
+      return res.status(500).json({ success: false, message: 'Internal Server Error', error: error.message });
     }
   };
 };
+

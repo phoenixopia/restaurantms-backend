@@ -6,13 +6,13 @@ module.exports = (sequelize, DataTypes) => {
   const RolePermission = sequelize.define("RolePermission",
     {
       id: {
-        type: DataTypes.UUID,
-        defaultValue: DataTypes.UUIDV4,
+        type: DataTypes.STRING,
+        defaultValue: getGeneratedId,
         primaryKey: true,
         allowNull: false,
       },
       role_id: {
-        type: DataTypes.UUID,
+        type: DataTypes.STRING,
         allowNull: false,
         references: {
           model: "roles",
@@ -20,23 +20,25 @@ module.exports = (sequelize, DataTypes) => {
         },
       },
       permission_id: {
-        type: DataTypes.UUID,
+        type: DataTypes.STRING,
         allowNull: false,
         references: {
           model: "permissions",
           key: "id",
         },
+        onDelete: 'CASCADE',
       },
-      restaurant_id: {
-        type: DataTypes.UUID,
-        references: {
-          model: "restaurants",
-          key: "id",
-        },
-      },
+      // restaurant_id: {
+      //   type: DataTypes.STRING,
+      //   references: {
+      //     model: "restaurants",
+      //     key: "id",
+      //   },
+      //   onDelete: 'CASCADE'
+      // },
       granted: {
         type: DataTypes.BOOLEAN,
-        allowNull: false,
+        allowNull: true,
       },
     },
     {

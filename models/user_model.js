@@ -2,26 +2,20 @@
 
 const bcryptjs = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-// const { getGeneratedId } = require('../utils/idGenerator');
-
-// let generateId;
-// (async () => {
-//   const { customAlphabet } = await import('nanoid');
-//   generateId = customAlphabet('1234567890abcdefghijklmnopqrstuvwxyz', 21);
-// })();
+const { getGeneratedId } = require('../utils/idGenerator');
 
 
 module.exports = (sequelize, DataTypes) => {
     const User = sequelize.define("User",
         {
             id: {
-                type: DataTypes.UUID,
-                defaultValue: DataTypes.UUIDV4,
+                type: DataTypes.STRING,
+                defaultValue: getGeneratedId,
                 primaryKey: true,
                 allowNull: false,
             },
             role_id: {
-                type: DataTypes.UUID,
+                type: DataTypes.STRING,
                 allowNull: false,
                 references: {
                     model: "roles",
@@ -164,8 +158,8 @@ module.exports = (sequelize, DataTypes) => {
         }
     );
 
-    // === Password Hash Hooks ===
-    const hashPassword = async (user, password) => {
+    // Hash password before creating or updating the user
+    const hashPassword = async (user) => {
         if (user.password) {
             try {
                 const salt = await bcryptjs.genSalt(10);
@@ -173,18 +167,15 @@ module.exports = (sequelize, DataTypes) => {
             } catch (error) {
                 throw new Error('Error hashing password.');
             }
-        } else if(password) {
-            const salt = await bcryptjs.genSalt(10);
-            password = await bcryptjs.hash(password, salt);
         }
     };
 
-    User.beforeCreate(hashPassword);
+    // Hash password before user is updated (if password is changed)
     User.beforeSave(async (user) => {
         if (user.changed('password')) {
             await hashPassword(user);
         }
-    });     
+    });  
 
     // === Instance Methods ===
     User.prototype.comparePassword = async function (enteredPassword) {
@@ -233,8 +224,7 @@ module.exports = (sequelize, DataTypes) => {
     };
 
     User.associate = models => {
-        User.belongsTo(models.Role, { foreignKey: "role_id", as: "roles" });
-        // User.belongsTo(models.Restaurant, { foreignKey: "restaurant_id",});
+        User.belongsTo(models.Role, { foreignKey: "role_id", as: "role" });
         User.belongsToMany(models.Restaurant, {
             through: models.RestaurantUser,
             foreignKey: "user_id",
@@ -247,6 +237,9 @@ module.exports = (sequelize, DataTypes) => {
         User.hasMany(models.SupportTicket, { foreignKey: "user_id", as: "support_tickets" });
         User.hasMany(models.SupportTicket, { foreignKey: "assigned_to", as: "assigned_tickets" });
         User.hasOne(models.LoyaltyPoint, { foreignKey: "customer_id", as: "loyalty_points" });
+        User.hasMany(models.Review, { foreignKey: "customer_id", as: "reviews" });
+        // User.hasMany(models.ActivityLog, { foreignKey: 'user_id', as: 'activity_logs'});
+          
     };
 
     return User;

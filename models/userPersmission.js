@@ -7,12 +7,13 @@ module.exports = (sequelize, DataTypes) => {
     "UserPermission",
     {
       id: {
-        type: DataTypes.UUID,
-        defaultValue: DataTypes.UUIDV4,
+        type: DataTypes.STRING,
+        defaultValue: getGeneratedId,
         primaryKey: true,
-      },
+        allowNull: false,
+    },
       user_id: {
-        type: DataTypes.UUID,
+        type: DataTypes.STRING,
         allowNull: false,
         references: {
           model: "users",
@@ -20,7 +21,7 @@ module.exports = (sequelize, DataTypes) => {
         },
       },
       permission_id: {
-        type: DataTypes.UUID,
+        type: DataTypes.STRING,
         allowNull: false,
         references: {
           model: "permissions",
@@ -28,11 +29,12 @@ module.exports = (sequelize, DataTypes) => {
         },
       },
       restaurant_id: {
-        type: DataTypes.UUID,
+        type: DataTypes.STRING,
         references: {
           model: "restaurants",
           key: "id",
         },
+        onDelete: 'CASCADE'
       },
       granted: {
         type: DataTypes.BOOLEAN,
@@ -52,7 +54,7 @@ module.exports = (sequelize, DataTypes) => {
   //     foreignKey: "permission_id",
   //   });
   //   UserPermission.belongsTo(models.Restaurant, {
-  //     foreignKey: "restaurant_id",
+  //     foreignKey: "restaurant_id", onDelete: 'CASCADE',
   //   });
   // };
 

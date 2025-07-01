@@ -1,16 +1,19 @@
 "use strict";
+const { getGeneratedId } = require('../utils/idGenerator');
+
 module.exports = (sequelize, DataTypes) => {
   const Table = sequelize.define(
     "Table",
     {
       id: {
-        type: DataTypes.UUID,
-        defaultValue: DataTypes.UUIDV4,
+        type: DataTypes.STRING,
+        defaultValue: getGeneratedId,
         primaryKey: true,
+        allowNull: false,
       },
       location_id: {
-        type: DataTypes.UUID,
-        allowNull: false,
+        type: DataTypes.STRING,
+        allowNull: true,
         references: {
           model: "locations",
           key: "id",
@@ -18,7 +21,11 @@ module.exports = (sequelize, DataTypes) => {
       },
       table_number: DataTypes.STRING(20),
       capacity: DataTypes.INTEGER,
-      is_active: DataTypes.BOOLEAN,
+      is_active: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: true
+      },
     },
     {
       tableName: "tables",
