@@ -1,5 +1,4 @@
 const UserService = require("../services/manageUser_service");
-const RbacService = require("../services/rbac_service");
 const asyncHandler = require("../middleware/asyncHandler");
 const { success } = require("../utils/apiResponse");
 
@@ -14,7 +13,7 @@ exports.deleteUser = asyncHandler(async (req, res) => {
 });
 
 exports.getCreatedUsers = asyncHandler(async (req, res) => {
-  const users = await RbacService.getCreatedUsers(req.user.id);
+  const users = await UserService.getAllCreatedUsers(req.user.id, req.query);
   return success(res, "Created users retrieved successfully", users);
 });
 

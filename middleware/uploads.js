@@ -30,28 +30,6 @@ exports.uploadRestaurantFiles = multer({
   { name: "images", maxCount: 5 },
 ]);
 
-const CATEGORY_DIR = path.join(
-  __dirname,
-  "..",
-  "..",
-  "uploads",
-  "menu-categories"
-);
-
-const categoryStorage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, CATEGORY_DIR),
-  filename: (req, file, cb) => {
-    const unique = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(null, `${file.fieldname}-${unique}${path.extname(file.originalname)}`);
-  },
-});
-
-exports.uploadCategoryImage = multer({
-  storage: categoryStorage,
-  fileFilter,
-  limits: { fileSize: 5 * 1024 * 1024 },
-}).single("image");
-
 const MENUITEM_DIR = path.join(__dirname, "..", "..", "uploads", "menu-items");
 
 const menuItemStorage = multer.diskStorage({

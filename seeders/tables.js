@@ -4,7 +4,9 @@ const {
   Role,
   Permission,
   RolePermission,
+  CategoryTag,
 } = require("../models");
+const { v4: uuidv4 } = require("uuid");
 
 (async () => {
   try {
@@ -13,9 +15,10 @@ const {
     await Role.sync({ force: true });
     await Permission.sync({ force: true });
     await RolePermission.sync({ force: true });
+    await CategoryTag.sync({ force: true });
 
     // Create Plans
-    const plans = await Plan.bulkCreate([
+    await Plan.bulkCreate([
       {
         name: "Basic",
         max_branches: 2,
@@ -47,41 +50,42 @@ const {
         price: 149.99,
       },
     ]);
-    console.log("✅ Plans created successfully");
+    console.log("✅ Plans created");
 
     // Create Roles
     const roles = await Role.bulkCreate([
       { name: "super_admin", description: "Super administrator role" },
-      { name: "admin", description: "Restaurant administrator role" },
+      {
+        name: "restaurant_admin",
+        description: "Restaurant administrator role",
+      },
       { name: "customer", description: "Customer role" },
       { name: "staff", description: "Staff member role" },
     ]);
     const roleMap = {};
     roles.forEach((role) => (roleMap[role.name] = role.id));
-    console.log("✅ Roles created successfully");
+    console.log("✅ Roles created");
 
     // Create Permissions
     const permissions = await Permission.bulkCreate([
-      // System permissions
       { name: "manage_users", description: "Can manage users" },
       { name: "manage_roles", description: "Can manage roles" },
       { name: "manage_permissions", description: "Can manage permissions" },
-
-      // Restaurant management permissions
+      { name: "assign_permissions", description: "Can assign permissions" },
       {
         name: "manage_restaurant",
         description: "Can manage restaurant settings",
       },
       { name: "manage_branches", description: "Can manage branches" },
       { name: "manage_subscription", description: "Can manage subscription" },
-
-      // Menu permissions
       { name: "view_menu", description: "Can view menu" },
       { name: "create_menu", description: "Can create menu" },
       { name: "edit_menu", description: "Can edit menu" },
       { name: "delete_menu", description: "Can delete menu" },
-
-      // Menu category permissions
+      {
+        name: "toggle_menu_activation",
+        description: "Can toggle menu activation",
+      },
       { name: "view_menu_category", description: "Can view menu categories" },
       {
         name: "create_menu_category",
@@ -92,160 +96,167 @@ const {
         name: "delete_menu_category",
         description: "Can delete menu categories",
       },
-
-      // Menu item permissions
+      {
+        name: "toggle_menu_category_activation",
+        description: "Can toggle menu category activation",
+      },
       { name: "view_menu_item", description: "Can view menu items" },
       { name: "create_menu_item", description: "Can create menu items" },
       { name: "edit_menu_item", description: "Can edit menu items" },
       { name: "delete_menu_item", description: "Can delete menu items" },
-
-      // Order permissions
-      { name: "view_orders", description: "Can view orders" },
-      { name: "create_order", description: "Can create orders" },
-      { name: "edit_order", description: "Can edit orders" },
-      { name: "delete_order", description: "Can delete orders" },
-
-      // Order item permissions
-      { name: "view_order_item", description: "Can view order items" },
-      { name: "create_order_item", description: "Can create order items" },
-      { name: "edit_order_item", description: "Can edit order items" },
-      { name: "delete_order_item", description: "Can delete order items" },
+      {
+        name: "toggle_menu_item_activation",
+        description: "Can toggle menu item activation",
+      },
     ]);
     const permissionMap = {};
     permissions.forEach((p) => (permissionMap[p.name] = p.id));
-    console.log("✅ Permissions created successfully");
+    console.log("✅ Permissions created");
 
     // Assign permissions to roles
     await RolePermission.bulkCreate([
-      // Super Admin gets all permissions
       ...Object.values(permissionMap).map((permissionId) => ({
         role_id: roleMap["super_admin"],
         permission_id: permissionId,
         granted: true,
       })),
-
-      // Restaurant Admin permissions
       {
-        role_id: roleMap["admin"],
+        role_id: roleMap["restaurant_admin"],
+        permission_id: permissionMap["manage_users"],
+        granted: true,
+      },
+      {
+        role_id: roleMap["restaurant_admin"],
+        permission_id: permissionMap["assign_permissions"],
+        granted: true,
+      },
+      {
+        role_id: roleMap["restaurant_admin"],
         permission_id: permissionMap["manage_restaurant"],
         granted: true,
       },
       {
-        role_id: roleMap["admin"],
+        role_id: roleMap["restaurant_admin"],
         permission_id: permissionMap["manage_branches"],
         granted: true,
       },
       {
-        role_id: roleMap["admin"],
+        role_id: roleMap["restaurant_admin"],
         permission_id: permissionMap["manage_subscription"],
         granted: true,
       },
       {
-        role_id: roleMap["admin"],
+        role_id: roleMap["restaurant_admin"],
         permission_id: permissionMap["view_menu"],
         granted: true,
       },
       {
-        role_id: roleMap["admin"],
+        role_id: roleMap["restaurant_admin"],
         permission_id: permissionMap["create_menu"],
         granted: true,
       },
       {
-        role_id: roleMap["admin"],
+        role_id: roleMap["restaurant_admin"],
         permission_id: permissionMap["edit_menu"],
         granted: true,
       },
       {
-        role_id: roleMap["admin"],
+        role_id: roleMap["restaurant_admin"],
         permission_id: permissionMap["delete_menu"],
         granted: true,
       },
       {
-        role_id: roleMap["admin"],
+        role_id: roleMap["restaurant_admin"],
+        permission_id: permissionMap["toggle_menu_activation"],
+        granted: true,
+      },
+      {
+        role_id: roleMap["restaurant_admin"],
         permission_id: permissionMap["view_menu_category"],
         granted: true,
       },
       {
-        role_id: roleMap["admin"],
+        role_id: roleMap["restaurant_admin"],
         permission_id: permissionMap["create_menu_category"],
         granted: true,
       },
       {
-        role_id: roleMap["admin"],
+        role_id: roleMap["restaurant_admin"],
         permission_id: permissionMap["edit_menu_category"],
         granted: true,
       },
       {
-        role_id: roleMap["admin"],
+        role_id: roleMap["restaurant_admin"],
         permission_id: permissionMap["delete_menu_category"],
         granted: true,
       },
       {
-        role_id: roleMap["admin"],
+        role_id: roleMap["restaurant_admin"],
+        permission_id: permissionMap["toggle_menu_category_activation"],
+        granted: true,
+      },
+      {
+        role_id: roleMap["restaurant_admin"],
         permission_id: permissionMap["view_menu_item"],
         granted: true,
       },
       {
-        role_id: roleMap["admin"],
+        role_id: roleMap["restaurant_admin"],
         permission_id: permissionMap["create_menu_item"],
         granted: true,
       },
       {
-        role_id: roleMap["admin"],
+        role_id: roleMap["restaurant_admin"],
         permission_id: permissionMap["edit_menu_item"],
         granted: true,
       },
       {
-        role_id: roleMap["admin"],
+        role_id: roleMap["restaurant_admin"],
         permission_id: permissionMap["delete_menu_item"],
         granted: true,
       },
       {
-        role_id: roleMap["admin"],
-        permission_id: permissionMap["view_orders"],
-        granted: true,
-      },
-      {
-        role_id: roleMap["admin"],
-        permission_id: permissionMap["create_order"],
-        granted: true,
-      },
-      {
-        role_id: roleMap["admin"],
-        permission_id: permissionMap["edit_order"],
-        granted: true,
-      },
-      {
-        role_id: roleMap["admin"],
-        permission_id: permissionMap["delete_order"],
-        granted: true,
-      },
-      {
-        role_id: roleMap["admin"],
-        permission_id: permissionMap["view_order_item"],
-        granted: true,
-      },
-      {
-        role_id: roleMap["admin"],
-        permission_id: permissionMap["create_order_item"],
-        granted: true,
-      },
-      {
-        role_id: roleMap["admin"],
-        permission_id: permissionMap["edit_order_item"],
-        granted: true,
-      },
-      {
-        role_id: roleMap["admin"],
-        permission_id: permissionMap["delete_order_item"],
+        role_id: roleMap["restaurant_admin"],
+        permission_id: permissionMap["toggle_menu_item_activation"],
         granted: true,
       },
     ]);
-    console.log("✅ Role permissions assigned successfully");
+    console.log("✅ Role permissions assigned");
 
-    console.log("✅ All seed data added successfully.");
+    // ✅ Add Category Tags
+    const categoryNames = [
+      "Drinks",
+      "Hot Drinks",
+      "Cold Drinks",
+      "Breakfast",
+      "Lunch",
+      "Dinner",
+      "Snacks",
+      "Fast Food",
+      "Burgers & Sandwiches",
+      "Pizza",
+      "Main Dishes",
+      "Sides",
+      "Salads",
+      "Soups",
+      "Desserts",
+      "Kids Meals",
+      "Specials",
+    ];
+
+    const categoryTags = categoryNames.map((name) => ({
+      id: uuidv4(),
+      name,
+    }));
+
+    await sequelize
+      .getQueryInterface()
+      .bulkInsert("category_tags", categoryTags);
+    console.log("✅ Category tags seeded");
+
+    console.log("🎉 All seed data inserted successfully.");
   } catch (error) {
-    console.error("❌ Error seeding data:", error);
+    console.error("❌ Error during seed:", error);
   } finally {
     await sequelize.close();
   }

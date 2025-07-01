@@ -78,3 +78,42 @@ exports.sendPasswordResetEmail = async (to, firstName, lastName, resetCode) => {
     throw new Error("Error sending password reset email.");
   }
 };
+
+exports.sendUserCredentialsEmail = async (
+  to,
+  firstName,
+  lastName,
+  password
+) => {
+  const mailOptions = {
+    from: `"Phoenixopia Solutions" <${process.env.USER_1}>`,
+    to,
+    subject: "Your Account Credentials",
+    html: `
+      <html>
+        <body style="font-family: Arial, sans-serif; color: #555; line-height: 1.6;">
+          <p style="font-size: 16px;">Hey ${firstName} ${lastName},</p>
+          <p>Welcome to <strong>Phoenixopia</strong>!</p>
+          <p>Your login credentials are:</p>
+          <ul style="font-size: 16px;">
+            <li><strong>Email:</strong> ${to}</li>
+            <li><strong>Password:</strong> ${password}</li>
+          </ul>
+          <p>Please log in and change your password after your first login.</p>
+          <p>Thanks,</p>
+          <p><strong>Phoenixopia Team</strong></p>
+          <footer style="font-size: 14px; color: #888; text-align: center;">
+            <p>© ${new Date().getFullYear()} Phoenixopia Solutions. All rights reserved.</p>
+          </footer>
+        </body>
+      </html>`,
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log("Credentials email sent to:", to);
+  } catch (error) {
+    console.error("Error sending credentials email:", error);
+    throw new Error("Error sending credentials email.");
+  }
+};

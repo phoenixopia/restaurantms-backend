@@ -31,19 +31,6 @@ exports.validateUploadedFiles = (type) => {
       }
     }
 
-    if (type === "category") {
-      const image = req.file;
-      if (!image) return next();
-
-      if (!image.mimetype.startsWith("image/")) {
-        errors.push("Category image must be an image file");
-      }
-
-      if (image.size > 5 * 1024 * 1024) {
-        errors.push("Category image must be less than 5MB");
-      }
-    }
-
     if (type === "menuItem") {
       const image = req.file;
       if (!image) return next();

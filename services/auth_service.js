@@ -89,6 +89,7 @@ const AuthService = {
         transaction: t,
       });
       if (!user) throwError("No account found.", 404);
+
       if (signupMethod === "email" && !user.email_verified_at)
         throwError("Email not confirmed.", 403);
       if (signupMethod === "phone" && !user.phone_verified_at)

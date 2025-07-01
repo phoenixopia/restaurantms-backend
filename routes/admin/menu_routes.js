@@ -53,7 +53,7 @@ router.patch(
 
 // ======================== Menu Category
 
-router.post(
+router.get(
   "/menu-category/list",
   protect,
   permissionCheck("view_menu_categories"),
@@ -76,8 +76,6 @@ router.post(
   protect,
   permissionCheck("create_menu_category"),
   RestaurantStatus.checkRestaurantStatus,
-  ValidateUploadedFiles.validateUploadedFiles("category"),
-  Upload.uploadCategoryImage,
   MenuController.createMenuCategory
 );
 
@@ -86,8 +84,6 @@ router.put(
   protect,
   permissionCheck("update_menu_category"),
   RestaurantStatus.checkRestaurantStatus,
-  ValidateUploadedFiles.validateUploadedFiles("category"),
-  Upload.uploadCategoryImage,
   MenuController.updateMenuCategory
 );
 
@@ -102,7 +98,7 @@ router.delete(
 router.patch(
   "/menu-category/toggle-activation/:id",
   protect,
-  permissionCheck("activate_menu_category"),
+  permissionCheck("toggle_menu_category_activation"),
   RestaurantStatus.checkRestaurantStatus,
   MenuController.toggleMenuCategoryActivation
 );

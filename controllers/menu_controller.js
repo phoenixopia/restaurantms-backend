@@ -50,7 +50,6 @@ exports.createMenuCategory = asyncHandler(async (req, res) => {
   const { restaurantId } = req.restaurantData;
   const category = await MenuCategoryService.createMenuCategory({
     ...req.body,
-    imageFile: req.file?.filename,
     restaurantId,
   });
   return success(res, "Menu category created successfully", category, 201);
@@ -61,8 +60,7 @@ exports.updateMenuCategory = asyncHandler(async (req, res) => {
   const updated = await MenuCategoryService.updateMenuCategory(
     req.params.id,
     restaurantId,
-    req.body,
-    req.file?.filename
+    req.body
   );
   return success(res, "Menu category updated successfully", updated);
 });

@@ -2,6 +2,7 @@
 
 const { User, Role, sequelize } = require("../models");
 const throwError = require("../utils/throwError");
+const { sendUserCredentialsEmail } = require("../utils/sendEmail");
 
 const UserService = {
   async createUser(creatorId, data) {
@@ -39,6 +40,8 @@ const UserService = {
           409
         );
 
+      const now = new Date();
+
       const newUser = await User.create(
         {
           first_name,
@@ -48,11 +51,30 @@ const UserService = {
           password,
           role_id: role.id,
           created_by: creatorId,
+          email_verified_at: creatorMode === "email" ? now : null,
+          phone_verified_at: creatorMode === "phone" ? now : null,
         },
         { transaction: t }
       );
 
       await t.commit();
+
+      if (creatorMode === "email") {
+        try {
+          await sendUserCredentialsEmail(
+            email,
+            first_name,
+            last_name,
+            password
+          );
+        } catch (emailErr) {
+          console.error("User created, but failed to send email:", emailErr);
+          throwError(
+            "User created, but failed to send email notification",
+            500
+          );
+        }
+      }
 
       return {
         id: newUser.id,
@@ -84,16 +106,6 @@ const UserService = {
   async getCreatedUserById(creatorId, id) {
     const user = await User.findOne({
       where: { id, created_by: creatorId },
-      attributes: [
-        "id",
-        "first_name",
-        "last_name",
-        "email",
-        "phone_number",
-        "is_active",
-        "role_id",
-        "createdAt",
-      ],
       include: [{ model: Role, attributes: ["id", "name"] }],
     });
 
@@ -104,6 +116,95 @@ const UserService = {
       );
 
     return user;
+  },
+
+  async getAllCreatedUsers(adminId, query = {}) {
+    const { page, limit, offset, order } = buildPagination(query);
+
+    const { count, rows: users } = await User.findAndCountAll({
+      where: { created_by: adminId },
+      limit,
+      offset,
+      order,
+    });
+
+    return {
+      total: count,
+      page,
+      limit,
+      users,
+    };
+  },
+
+  async assignUserToBranch(userId, branchId, currentUser) {
+    const t = await sequelize.transaction();
+    try {
+      const user = await User.findByPk(userId, { transaction: t });
+      if (!user) throwError("User not found", 404);
+
+      const branch = await sequelize.models.Branch.findOne({
+        where: { id: branchId },
+        include: [
+          {
+            model: sequelize.models.Restaurant,
+            where: { created_by: currentUser.id },
+          },
+        ],
+        transaction: t,
+      });
+
+      if (!branch) {
+        throwError(
+          "Branch not found or does not belong to your restaurant",
+          403
+        );
+      }
+
+      branch.manager_id = user.id;
+      await branch.save({ transaction: t });
+
+      const manageBranchPermission = await sequelize.models.Permission.findOne({
+        where: { name: "manage_branch" },
+        transaction: t,
+      });
+
+      if (!manageBranchPermission) {
+        throwError("Permission 'manage_branch' not found", 404);
+      }
+
+      const existing = await sequelize.models.UserPermission.findOne({
+        where: {
+          user_id: userId,
+          permission_id: manageBranchPermission.id,
+          granted: true,
+        },
+        transaction: t,
+      });
+
+      if (!existing) {
+        // Grant the permission
+        await sequelize.models.UserPermission.create(
+          {
+            user_id: userId,
+            permission_id: manageBranchPermission.id,
+            granted: true,
+            granted_by: currentUser.id,
+          },
+          { transaction: t }
+        );
+      }
+
+      await t.commit();
+
+      return {
+        message: "User assigned as branch manager and permission granted",
+        userId: user.id,
+        branchId: branch.id,
+      };
+    } catch (err) {
+      await t.rollback();
+      throw err;
+    }
   },
 };
 

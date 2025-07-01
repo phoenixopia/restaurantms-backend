@@ -15,6 +15,7 @@ const {
 
 const router = express.Router();
 
+// ================= ROLE
 router.post(
   "/create-role",
   protect,
@@ -51,37 +52,21 @@ router.get(
 router.get(
   "/roles/:id/permissions",
   protect,
-  authorize("super_admin"),
+  authorize("super_admin", "restaurant_admin"),
   rbacController.getRoleWithPermissions
 );
 
-// returns only permissions granted to the role( only permissions)
-router.get(
-  "/roles/:roleId/only-permissions",
-  protect,
-  authorize("super_admin"),
-  rbacController.getRolePermissions
-);
-
+// grant or revoke permissions to role
 router.post(
-  "/roles/:roleId/permissions/grant",
+  "/roles/:roleId/permissions/toggle",
   protect,
   authorize("super_admin"),
   grantOrRevokePermissionToRoleValidator,
   validateRequest,
-  rbacController.grantPermissionToRole
+  rbacController.togglePermissionForRole
 );
 
-router.post(
-  "/roles/:roleId/permissions/revoke",
-  protect,
-  authorize("super_admin"),
-  grantOrRevokePermissionToRoleValidator,
-  validateRequest,
-  rbacController.revokePermissionFromRole
-);
-
-// PERMISSION
+// ================= PERMISSION
 router.post(
   "/create-permission",
   protect,
@@ -116,22 +101,14 @@ router.get(
 
 // USER-ROLE & PERMISSION
 
+// grant or revoke permissions to user by restaurant admins
 router.post(
-  "/users/:userId/permissions/grant",
+  "/users/:userId/permissions/toggle",
   protect,
   authorize("restaurant_admin"),
   grantOrRevokePermissionToUserValidator,
   validateRequest,
-  rbacController.grantPermissionToUser
-);
-
-router.post(
-  "/users/:userId/permissions/revoke",
-  protect,
-  authorize("restaurant_admin"),
-  grantOrRevokePermissionToUserValidator,
-  validateRequest,
-  rbacController.revokePermissionFromUser
+  rbacController.togglePermissionToUser
 );
 
 router.get(

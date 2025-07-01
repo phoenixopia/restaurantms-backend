@@ -39,6 +39,7 @@ const RbacService = {
     const t = await sequelize.transaction();
     try {
       const role = await Role.findByPk(id, { transaction: t });
+
       if (!role) throwError("Role not found", 404);
 
       if (updates.name) {
@@ -74,44 +75,6 @@ const RbacService = {
     if (!role) throwError("Role not found", 404);
     return role;
   },
-
-  async getRoleWithPermissions(roleId, query = {}) {
-    const role = await Role.findByPk(roleId);
-    if (!role) throwError("Role not found", 404);
-    const { page, limit, offset, order } = buildPagination(query);
-    const { count, rows: permissions } = await Permission.findAndCountAll({
-      include: [
-        {
-          model: Role,
-          where: { id: roleId },
-          through: {
-            where: { granted: true },
-          },
-          attributes: [],
-        },
-      ],
-      offset,
-      limit,
-      order,
-    });
-
-    return {
-      role,
-      permissions: {
-        total: count,
-        page,
-        limit,
-        items: permissions,
-      },
-    };
-  },
-
-  async getCreatedUsers(adminId) {
-    return await User.findAll({
-      where: { created_by: adminId },
-    });
-  },
-
   // ================== PERMISSION ==================
 
   async createPermission(data) {
@@ -191,139 +154,190 @@ const RbacService = {
 
   // ================== ROLE-PERMISSION ==================
 
-  async grantPermissionToRole(roleId, permissionIds) {
+  async togglePermissionForRole(roleId, permissionIds) {
+    if (!roleId) throwError("roleId is required", 400);
+    if (
+      !permissionIds ||
+      (Array.isArray(permissionIds) && permissionIds.length === 0)
+    ) {
+      throwError("At least one permissionId is required", 400);
+    }
+
     const t = await sequelize.transaction();
     try {
-      const existing = await RolePermission.findAll({
-        where: {
-          role_id: roleId,
-          permission_id: { [Op.in]: permissionIds },
-          granted: true,
-        },
-        transaction: t,
-      });
+      const ids = Array.isArray(permissionIds)
+        ? permissionIds
+        : [permissionIds];
+      const batchSize = 100;
+      const results = {
+        added: 0,
+        removed: 0,
+      };
 
-      const existingIds = new Set(existing.map((p) => p.permission_id));
-      const toInsert = permissionIds
-        .filter((id) => !existingIds.has(id))
-        .map((id) => ({
-          role_id: roleId,
-          permission_id: id,
-          granted: true,
-        }));
+      for (let i = 0; i < ids.length; i += batchSize) {
+        const batch = ids.slice(i, i + batchSize);
 
-      if (toInsert.length > 0) {
-        await RolePermission.bulkCreate(toInsert, { transaction: t });
+        const existing = await RolePermission.findAll({
+          where: {
+            role_id: roleId,
+            permission_id: { [Op.in]: batch },
+            granted: true,
+          },
+          transaction: t,
+        });
+
+        const existingIds = new Set(existing.map((p) => p.permission_id));
+
+        const toInsert = batch
+          .filter((id) => !existingIds.has(id))
+          .map((id) => ({
+            role_id: roleId,
+            permission_id: id,
+            granted: true,
+          }));
+
+        const toDelete = batch.filter((id) => existingIds.has(id));
+
+        if (toInsert.length > 0) {
+          await RolePermission.bulkCreate(toInsert, { transaction: t });
+          results.added += toInsert.length;
+        }
+
+        if (toDelete.length > 0) {
+          const deleted = await RolePermission.destroy({
+            where: {
+              role_id: roleId,
+              permission_id: { [Op.in]: toDelete },
+            },
+            transaction: t,
+          });
+          results.removed += deleted;
+        }
       }
 
       await t.commit();
+      return results;
     } catch (err) {
       await t.rollback();
       throw err;
     }
   },
 
-  async revokePermissionFromRole(roleId, permissionIds) {
-    const t = await sequelize.transaction();
-    try {
-      await RolePermission.destroy({
-        where: {
-          role_id: roleId,
-          permission_id: { [Op.in]: permissionIds },
-        },
-        transaction: t,
-      });
-      await t.commit();
-    } catch (err) {
-      await t.rollback();
-      throw err;
-    }
-  },
+  async getRoleWithPermissions(roleId, query = {}) {
+    const role = await Role.findByPk(roleId);
 
-  async getRolePermissions(roleId) {
-    const role = await Role.findByPk(roleId, {
-      include: {
-        model: Permission,
-        through: {
-          where: { granted: true },
-          attributes: ["granted"],
-        },
-      },
-    });
     if (!role) throwError("Role not found", 404);
-    return role.Permissions;
+
+    const { page, limit, offset, order } = buildPagination(query);
+    const { count, rows: permissions } = await Permission.findAndCountAll({
+      include: [
+        {
+          model: Role,
+          where: { id: roleId },
+          through: {
+            where: { granted: true },
+          },
+          attributes: [],
+        },
+      ],
+      offset,
+      limit,
+      order,
+    });
+
+    return {
+      role,
+      permissions: {
+        total: count,
+        page,
+        limit,
+        items: permissions,
+      },
+    };
   },
 
   // USER-PERMISSION
 
-  async grantPermissionToUser(userId, permissionIds, currentUser) {
+  async togglePermissionForUser(userId, permissionIds, currentUser) {
+    if (!userId) throwError("userId is required", 400);
+    if (
+      !permissionIds ||
+      (Array.isArray(permissionIds) && permissionIds.length === 0)
+    ) {
+      throwError("At least one permissionId is required", 400);
+    }
+
+    const ids = Array.isArray(permissionIds) ? permissionIds : [permissionIds];
+
     const t = await sequelize.transaction();
     try {
       const targetUser = await User.findByPk(userId, { transaction: t });
       if (!targetUser) throwError("User not found", 404);
+
       if (targetUser.created_by !== currentUser.id) {
-        throwError("You can only grant permissions to users you created", 403);
+        throwError(
+          "You can only manage permissions for users you created",
+          403
+        );
       }
 
       const currentPerms = await this.getUserEffectivePermissions(
         currentUser.id
       );
       const currentPermIds = new Set(currentPerms.map((p) => p.id));
-      const invalid = permissionIds.filter((id) => !currentPermIds.has(id));
-      if (invalid.length) {
-        throwError("You cannot grant permissions you don't own", 403);
+
+      const invalid = ids.filter((id) => !currentPermIds.has(id));
+      if (invalid.length > 0) {
+        throwError("You cannot toggle permissions you do not own", 403);
       }
 
-      const existing = await UserPermission.findAll({
-        where: {
-          user_id: userId,
-          permission_id: { [Op.in]: permissionIds },
-          granted: true,
-        },
-        transaction: t,
-      });
+      const batchSize = 100;
+      const results = { added: 0, removed: 0 };
 
-      const existingIds = new Set(existing.map((p) => p.permission_id));
-      const toInsert = permissionIds
-        .filter((id) => !existingIds.has(id))
-        .map((id) => ({
-          user_id: userId,
-          permission_id: id,
-          granted: true,
-          granted_by: currentUser.id,
-        }));
+      for (let i = 0; i < ids.length; i += batchSize) {
+        const batch = ids.slice(i, i + batchSize);
 
-      if (toInsert.length > 0) {
-        await UserPermission.bulkCreate(toInsert, { transaction: t });
+        const existing = await UserPermission.findAll({
+          where: {
+            user_id: userId,
+            permission_id: { [Op.in]: batch },
+            granted: true,
+          },
+          transaction: t,
+        });
+
+        const existingIds = new Set(existing.map((p) => p.permission_id));
+
+        const toInsert = batch
+          .filter((id) => !existingIds.has(id))
+          .map((id) => ({
+            user_id: userId,
+            permission_id: id,
+            granted: true,
+            granted_by: currentUser.id,
+          }));
+
+        const toDelete = batch.filter((id) => existingIds.has(id));
+
+        if (toInsert.length > 0) {
+          await UserPermission.bulkCreate(toInsert, { transaction: t });
+          results.added += toInsert.length;
+        }
+
+        if (toDelete.length > 0) {
+          const deletedCount = await UserPermission.destroy({
+            where: {
+              user_id: userId,
+              permission_id: { [Op.in]: toDelete },
+            },
+            transaction: t,
+          });
+          results.removed += deletedCount;
+        }
       }
 
       await t.commit();
-    } catch (err) {
-      await t.rollback();
-      throw err;
-    }
-  },
-
-  async revokePermissionFromUser(userId, permissionIds, currentUser) {
-    const t = await sequelize.transaction();
-    try {
-      const targetUser = await User.findByPk(userId, { transaction: t });
-      if (!targetUser) throwError("User not found", 404);
-      if (targetUser.created_by !== currentUser.id) {
-        throwError(
-          "You can only revoke permissions from users you created",
-          403
-        );
-      }
-
-      await UserPermission.destroy({
-        where: {
-          user_id: userId,
-          permission_id: { [Op.in]: permissionIds },
-        },
-        transaction: t,
-      });
-      await t.commit();
+      return results;
     } catch (err) {
       await t.rollback();
       throw err;
@@ -336,7 +350,6 @@ const RbacService = {
         model: Permission,
         through: {
           where: { granted: true },
-          attributes: ["granted"],
         },
       },
     });

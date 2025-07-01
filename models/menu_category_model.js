@@ -27,15 +27,6 @@ module.exports = (sequelize, DataTypes) => {
       },
       name: DataTypes.STRING(255),
       description: DataTypes.TEXT,
-      image: {
-        type: DataTypes.STRING(500),
-        allowNull: true,
-        validate: {
-          isUrl: {
-            msg: "Image must be a valid URL",
-          },
-        },
-      },
       sort_order: DataTypes.INTEGER,
       is_active: DataTypes.BOOLEAN,
     },

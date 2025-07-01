@@ -23,6 +23,14 @@ module.exports = (sequelize, DataTypes) => {
           key: "id",
         },
       },
+      scope_type: {
+        type: DataTypes.ENUM("restaurant", "branch"),
+        allowNull: false,
+      },
+      scope_id: {
+        type: DataTypes.UUID,
+        allowNull: false,
+      },
       granted: {
         type: DataTypes.BOOLEAN,
         allowNull: false,

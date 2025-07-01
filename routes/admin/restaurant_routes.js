@@ -52,7 +52,6 @@ router.delete(
   "restaurants/delete/:id",
   protect,
   authorize("restaurant_admin"),
-  permissionCheck("delete_restaurant"),
   deleteRestaurantValidator,
   validateRequest,
   RestaurantController.deleteRestaurant

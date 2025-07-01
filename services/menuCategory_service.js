@@ -13,16 +13,6 @@ const {
 } = require("../models");
 const throwError = require("../utils/throwError");
 
-const SERVER_URL = process.env.SERVER_URL || "http://localhost:8000";
-const UPLOADS_DIR = path.join(__dirname, "..", "uploads", "menu-categories");
-
-const getFileUrl = (filename) =>
-  filename
-    ? `${SERVER_URL}/uploads/menu-categories/${encodeURIComponent(filename)}`
-    : null;
-
-const getFilePath = (filename) => path.join(UPLOADS_DIR, filename);
-
 const MenuCategoryService = {
   async createMenuCategory({
     restaurantId,
@@ -31,7 +21,6 @@ const MenuCategoryService = {
     description,
     sort_order,
     is_active,
-    imageFile,
     categoryTagIds = [],
   }) {
     const t = await sequelize.transaction();
@@ -64,7 +53,6 @@ const MenuCategoryService = {
           branch_id: branchId,
           name,
           description,
-          image: getFileUrl(imageFile),
           sort_order,
           is_active: is_active !== undefined ? is_active : true,
         },
@@ -97,15 +85,6 @@ const MenuCategoryService = {
 
       if (!category) throwError("Menu category not found or unauthorized", 404);
 
-      if (imageFile) {
-        const oldImage = category.image?.split("/uploads/menu-categories/")[1];
-        if (oldImage) {
-          const oldPath = getFilePath(oldImage);
-          if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
-        }
-        category.image = getFileUrl(imageFile);
-      }
-
       const { categoryTagIds, ...restData } = data;
 
       Object.assign(category, restData);
@@ -136,9 +115,7 @@ const MenuCategoryService = {
 
       if (!category) throwError("Menu category not found or unauthorized", 404);
 
-      // Soft delete by setting is_active = false
-      category.is_active = false;
-      await category.save({ transaction: t });
+      await category.destroy({ transaction: t });
       await t.commit();
     } catch (error) {
       await t.rollback();

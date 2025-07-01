@@ -56,61 +56,30 @@ exports.getPermissionById = asyncHandler(async (req, res) => {
 
 // ROLE-PERMISSION
 
-exports.grantPermissionToRole = asyncHandler(async (req, res) => {
-  await RbacService.grantPermissionToRole(
-    req.params.roleId,
-    req.body.permissionIds
-  );
-  return success(res, "Permissions granted to role successfully");
-});
+exports.togglePermissionForRole = asyncHandler(async (req, res) => {
+  const { roleId } = req.params;
+  const { permissionIds } = req.body;
 
-exports.revokePermissionFromRole = asyncHandler(async (req, res) => {
-  await RbacService.revokePermissionFromRole(
-    req.params.roleId,
-    req.body.permissionIds
+  const result = await RbacService.togglePermissionForRole(
+    roleId,
+    permissionIds
   );
-  return success(res, "Permissions revoked from role successfully");
-});
 
-exports.getRolePermissions = asyncHandler(async (req, res) => {
-  const permissions = await RbacService.getRolePermissions(req.params.roleId);
-  return success(res, "Role permissions fetched successfully", permissions);
+  return success(res, "Permissions toggled for role successfully", result);
 });
 
 // USER-PERMISSION
 
-exports.grantPermissionToUser = asyncHandler(async (req, res) => {
-  await RbacService.grantPermissionToUser(
+exports.togglePermissionToUser = asyncHandler(async (req, res) => {
+  const result = await RbacService.togglePermissionForUser(
     req.params.userId,
     req.body.permissionIds,
     req.user
   );
-  return success(res, "Permissions granted to user successfully");
-});
-
-exports.revokePermissionFromUser = asyncHandler(async (req, res) => {
-  await RbacService.revokePermissionFromUser(
-    req.params.userId,
-    req.body.permissionIds,
-    req.user
-  );
-  return success(res, "Permissions revoked from user successfully");
+  return success(res, "Permissions toggled successfully", result);
 });
 
 exports.getUserPermissions = asyncHandler(async (req, res) => {
   const permissions = await RbacService.getUserPermissions(req.params.userId);
   return success(res, "User permissions fetched successfully", permissions);
-});
-
-// UTILS ==================
-
-exports.getUserEffectivePermissions = asyncHandler(async (req, res) => {
-  const permissions = await RbacService.getUserEffectivePermissions(
-    req.params.userId
-  );
-  return success(
-    res,
-    "User effective permissions fetched successfully",
-    permissions
-  );
 });
