@@ -182,19 +182,27 @@ exports.createModel = (Model) => async (req, res) => {
     // Check if item exists with other fields
     const existingItem = await Model.findOne({ where: rest });
     if (existingItem) {
-      // if (uploadedImage?.public_id) {
-      //   await cloudinary.uploader.destroy(uploadedImage.public_id);
-      // }
       return res.status(400).json({ success: false, message: "Item already exists." });
     }
 
     // Find the field key which has base64 string (data URL)
     const imageFields = {image,image_url,imageURL};
 
-    const fieldKey = Object.keys(imageFields).find((key) => {
+    let fieldKey = null;
+    let directUrl = null;
+
+    for (const key of Object.keys(imageFields)) {
       const val = imageFields[key];
-      return val && typeof val === "string" && val.trim().startsWith("data:");
-    });
+      if (val && typeof val === "string") {
+        if (val.startsWith("https://")) {
+          directUrl = { key, url: val };
+          break;
+        } else if (val.trim().startsWith("data:")) {
+          fieldKey = key;
+          break;
+        }
+      }
+    }
 
     if (fieldKey) {
       const base64Str = imageFields[fieldKey];
@@ -218,6 +226,10 @@ exports.createModel = (Model) => async (req, res) => {
     if (uploadedImage?.secure_url && fieldKey) {
       itemData[fieldKey] = uploadedImage.secure_url;
     }
+
+    if (directUrl) {
+      itemData[directUrl.key] = directUrl.url;
+    }  
 
     const item = await Model.create(itemData);
 
@@ -279,10 +291,21 @@ exports.updateModel = (Model) => async (req, res) => {
     // images
     const imageFields = {image,image_url,imageURL,};
 
-    const fieldKey = Object.keys(imageFields).find((key) => {
+    let fieldKey = null;
+    let directUrl = null;
+
+    for (const key of Object.keys(imageFields)) {
       const val = imageFields[key];
-      return val && typeof val === "string" && val.trim().startsWith("data:");
-    });
+      if (val && typeof val === "string") {
+        if (val.startsWith("https://")) {
+          directUrl = { key, url: val };
+          break;
+        } else if (val.trim().startsWith("data:")) {
+          fieldKey = key;
+          break;
+        }
+      }
+    }
 
     if (fieldKey) {
       const base64Str = imageFields[fieldKey];
@@ -304,16 +327,26 @@ exports.updateModel = (Model) => async (req, res) => {
       const oldImageUrl = record[fieldKey];
       if (oldImageUrl) {
         const publicId = oldImageUrl.split("/").slice(-1)[0].split(".")[0];
-        await cloudinary.uploader.destroy(`ImpactAcross/images/${publicId}`);
+        await cloudinary.uploader.destroy(publicId);
+        // await cloudinary.uploader.destroy(`ImpactAcross/images/${publicId}`);
       }
 
       rest[fieldKey] = uploadedImage.secure_url;
     }
 
-    await Model.update(rest, { where: { id }, transaction: t });
+    if (directUrl) {
+      rest[directUrl.key] = directUrl.url;
+    } 
+    
+    const [count, rows] = await Model.update(rest, {
+      where: { id }, transaction: t, returning: true
+    });
+
     await t.commit();
 
-    const updatedItem = await Model.findByPk(id);
+    if (count === 0 || !rows[0]) {
+      return res.status(409).json({ success: false, message: "No changes were applied."});
+    }
 
     await logActivity({
       user_id: req.user.id,
@@ -326,16 +359,16 @@ exports.updateModel = (Model) => async (req, res) => {
     }); 
 
     return res.status(200).json({
-      success: true,
-      message: "Successfully Updated.",
-      data: updatedItem,
+      success: true, message: "Successfully updated.", data: rows[0]
     });
+
   } catch (error) {
     await t.rollback();
     console.error("Error during update:", error);
 
     if (uploadedImage?.public_id) {
       await cloudinary.uploader.destroy(uploadedImage.public_id);
+      // await cloudinary.uploader.destroy(`ImpactAcross/images/${uploadedImage.public_id}`);
     }
 
     return res.status(500).json({ success: false, error: error.message });
@@ -359,13 +392,13 @@ exports.updateModel = (Model) => async (req, res) => {
         return res.status(404).json({success: false, error: 'Item not found' });
       }
 
+      await record.destroy({ where: { id }, transaction: t});
+
       const imageUrl = record.image_url || record.imageURL;
       if (imageUrl) {
         const publicId = getPublicIdFromUrl(imageUrl);
         await cloudinary.uploader.destroy(publicId);
       }
-
-      await Model.destroy({ where: { id }, transaction: t});
 
       await t.commit();
 
