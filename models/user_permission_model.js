@@ -7,6 +7,7 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
       },
+
       user_id: {
         type: DataTypes.UUID,
         allowNull: false,
@@ -15,6 +16,16 @@ module.exports = (sequelize, DataTypes) => {
           key: "id",
         },
       },
+
+      restaurant_id: {
+        type: DataTypes.UUID,
+        allowNull: false,
+        references: {
+          model: "restaurants",
+          key: "id",
+        },
+      },
+
       permission_id: {
         type: DataTypes.UUID,
         allowNull: false,
@@ -23,25 +34,10 @@ module.exports = (sequelize, DataTypes) => {
           key: "id",
         },
       },
-      scope_type: {
-        type: DataTypes.ENUM("restaurant", "branch"),
-        allowNull: false,
-      },
-      scope_id: {
-        type: DataTypes.UUID,
-        allowNull: false,
-      },
+
       granted: {
         type: DataTypes.BOOLEAN,
         allowNull: false,
-      },
-      granted_by: {
-        type: DataTypes.UUID,
-        allowNull: false,
-        references: {
-          model: "users",
-          key: "id",
-        },
       },
     },
     {
@@ -55,6 +51,9 @@ module.exports = (sequelize, DataTypes) => {
     UserPermission.belongsTo(models.User, { foreignKey: "user_id" });
     UserPermission.belongsTo(models.Permission, {
       foreignKey: "permission_id",
+    });
+    UserPermission.belongsTo(models.Restaurant, {
+      foreignKey: "restaurant_id",
     });
   };
 

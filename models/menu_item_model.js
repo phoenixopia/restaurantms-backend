@@ -22,13 +22,8 @@ module.exports = (sequelize, DataTypes) => {
       description: DataTypes.TEXT,
       unit_price: DataTypes.DECIMAL(10, 2),
       image: {
-        type: DataTypes.STRING(500),
+        type: DataTypes.STRING(2083),
         allowNull: true,
-        validate: {
-          isUrl: {
-            msg: "Image must be a valid URL",
-          },
-        },
       },
       is_active: DataTypes.BOOLEAN,
       seasonal: DataTypes.BOOLEAN,

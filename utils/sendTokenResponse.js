@@ -1,6 +1,11 @@
 const { Role, RolePermission, Permission } = require("../models");
 
-exports.sendTokenResponse = async (user, statusCode, res, reqUrl) => {
+exports.sendTokenResponse = async (
+  user,
+  statusCode,
+  res,
+  reqUrl = "/admin"
+) => {
   try {
     const isCustomer = reqUrl.includes("/customer");
     const token = await user.getJwtToken();
@@ -19,20 +24,21 @@ exports.sendTokenResponse = async (user, statusCode, res, reqUrl) => {
         last_name,
         email,
         phone_number,
-        address,
         profile_picture,
         email_verified_at,
         phone_verified_at,
         social_provider,
         social_provider_id,
         last_login_at,
-        last_login_ip,
-        login_count,
         is_active,
-        language,
-        timezone,
-        device_type,
         role_id,
+        office_address_id,
+        home_address_id,
+        dob,
+        notes,
+        visit_count,
+        last_visit_at,
+        two_factor_enabled,
       } = user;
 
       return res.status(statusCode).cookie("token", token, cookieOptions).json({
@@ -44,20 +50,21 @@ exports.sendTokenResponse = async (user, statusCode, res, reqUrl) => {
           last_name,
           email,
           phone_number,
-          address,
           profile_picture,
           email_verified_at,
           phone_verified_at,
           social_provider,
           social_provider_id,
           last_login_at,
-          last_login_ip,
-          login_count,
           is_active,
-          language,
-          timezone,
-          device_type,
           role_id,
+          office_address_id,
+          home_address_id,
+          dob,
+          notes,
+          visit_count,
+          last_visit_at,
+          two_factor_enabled,
         },
       });
     }
@@ -94,6 +101,8 @@ exports.sendTokenResponse = async (user, statusCode, res, reqUrl) => {
           id: user.id,
           role: role?.name || null,
           permissions,
+          restaurant_id: user.restaurant_id || null,
+          branch_id: user.branch_id || null,
         },
       });
   } catch (error) {

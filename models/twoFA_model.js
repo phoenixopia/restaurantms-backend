@@ -9,25 +9,24 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
       },
-      user_id: {
+
+      customer_id: {
         type: DataTypes.UUID,
         allowNull: false,
         references: {
-          model: "users",
+          model: "customers",
           key: "id",
         },
       },
+
       secret_key: {
         type: DataTypes.TEXT,
         allowNull: false,
       },
+
       qrCode_url: {
-        type: DataTypes.STRING,
+        type: DataTypes.TEXT,
         allowNull: true,
-      },
-      is_enabled: {
-        type: DataTypes.BOOLEAN,
-        defaultValue: false,
       },
     },
     {
@@ -38,10 +37,10 @@ module.exports = (sequelize, DataTypes) => {
   );
 
   TwoFA.associate = function (models) {
-    TwoFA.belongsTo(models.User, {
-      foreignKey: "user_id",
-      as: "twoFA",
+    TwoFA.belongsTo(models.Customer, {
+      foreignKey: "customer_id",
       onDelete: "CASCADE",
+      onUpdate: "CASCADE",
     });
   };
 

@@ -2,9 +2,9 @@
 
 const path = require("path");
 const fs = require("fs");
-const { MenuItem, MenuCategory, sequelize } = require("../models");
+const { MenuItem, MenuCategory, sequelize } = require("../../models");
 const { Op } = require("sequelize");
-const throwError = require("../utils/throwError");
+const throwError = require("../../utils/throwError");
 
 const SERVER_URL = process.env.SERVER_URL || "http://127.0.0.1:8000";
 const UPLOADS_DIR = path.join(__dirname, "..", "..", "uploads", "menu-items");

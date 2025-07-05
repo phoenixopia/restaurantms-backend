@@ -1,7 +1,7 @@
 "use strict";
 
-const { Menu, sequelize } = require("../models");
-const throwError = require("../utils/throwError");
+const { Menu, sequelize } = require("../../models");
+const throwError = require("../../utils/throwError");
 
 const MenuService = {
   async createMenu({ name, description, is_active = true }, restaurantId) {

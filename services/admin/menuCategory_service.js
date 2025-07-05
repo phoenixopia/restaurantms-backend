@@ -10,8 +10,8 @@ const {
   Restaurant,
   CategoryTag,
   sequelize,
-} = require("../models");
-const throwError = require("../utils/throwError");
+} = require("../../models");
+const throwError = require("../../utils/throwError");
 
 const MenuCategoryService = {
   async createMenuCategory({

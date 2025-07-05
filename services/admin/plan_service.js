@@ -1,7 +1,7 @@
-const { Plan, sequelize } = require("../models");
+const { Plan, sequelize } = require("../../models");
 const { Op } = require("sequelize");
-const { capitalizeFirstLetter } = require("../utils/capitalizeFirstLetter");
-const throwError = require("../utils/throwError");
+const { capitalizeFirstLetter } = require("../../utils/capitalizeFirstLetter");
+const throwError = require("../../utils/throwError");
 
 const PlanService = {
   async listPlans() {

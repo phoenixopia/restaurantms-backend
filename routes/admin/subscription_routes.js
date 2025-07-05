@@ -3,7 +3,7 @@ const router = express.Router();
 const { protect } = require("../../middleware/protect");
 const { authorize } = require("../../middleware/authorize");
 const validateRequest = require("../../middleware/validateRequest");
-const SubscriptionController = require("../../controllers/subscription_controller");
+const SubscriptionController = require("../../controllers/admin/subscription_controller");
 const {
   createSubscriptionValidator,
 } = require("../../validators/subscription_validator");
@@ -15,6 +15,8 @@ router.post(
   createSubscriptionValidator,
   validateRequest,
   SubscriptionController.subscribe
+
+  // see subscribed
 );
 
 module.exports = router;

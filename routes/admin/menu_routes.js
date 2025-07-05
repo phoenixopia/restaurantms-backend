@@ -1,6 +1,6 @@
 const express = require("express");
 
-const MenuController = require("../../controllers/menu_controller");
+const MenuController = require("../../controllers/admin/menu_controller");
 const { protect } = require("../../middleware/protect");
 const { authorize } = require("../../middleware/authorize");
 const { permissionCheck } = require("../../middleware/permissionCheck");

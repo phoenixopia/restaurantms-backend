@@ -149,3 +149,9 @@ exports.facebookLoginValidator = [
     .notEmpty()
     .withMessage("Facebook access token is required."),
 ];
+
+exports.verify2FAValidator = [
+  body("customerId").notEmpty().withMessage("customerID is required").bail(),
+
+  body("code").notEmpty().withMessage("2FA code is required"),
+];

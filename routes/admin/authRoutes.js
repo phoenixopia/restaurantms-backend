@@ -1,5 +1,5 @@
 const express = require("express");
-const authController = require("../../controllers/authController");
+const authController = require("../../controllers/admin/authController");
 const validateRequest = require("../../middleware/validateRequest");
 
 const {
@@ -15,12 +15,12 @@ const {
 
 const router = express.Router();
 
-router.post(
-  "/register",
-  registerValidator,
-  validateRequest,
-  authController.register
-);
+// router.post(
+//   "/signup",
+//   registerValidator,
+//   validateRequest,
+//   authController.register
+// );
 
 router.post("/login", loginValidator, validateRequest, authController.login);
 
@@ -57,19 +57,19 @@ router.post(
   authController.logout // no validation needed here
 );
 
-router.post(
-  "/google-login",
-  googleLoginValidator,
-  validateRequest,
-  authController.googleLogin
-);
+// router.post(
+//   "/google-login",
+//   googleLoginValidator,
+//   validateRequest,
+//   authController.googleLogin
+// );
 
-router.post(
-  "/facebook-login",
-  facebookLoginValidator,
-  validateRequest,
-  authController.facebookLogin
-);
+// router.post(
+//   "/facebook-login",
+//   facebookLoginValidator,
+//   validateRequest,
+//   authController.facebookLogin
+// );
 
 router.post(
   "/verify-token",

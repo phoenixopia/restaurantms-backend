@@ -1,8 +1,8 @@
 "use strict";
 
-const { User, Role, sequelize } = require("../models");
-const throwError = require("../utils/throwError");
-const { sendUserCredentialsEmail } = require("../utils/sendEmail");
+const { User, Role, sequelize } = require("../../models");
+const throwError = require("../../utils/throwError");
+const { sendUserCredentialsEmail } = require("../../utils/sendEmail");
 
 const UserService = {
   async createUser(creatorId, data) {

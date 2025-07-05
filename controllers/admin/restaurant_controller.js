@@ -1,7 +1,7 @@
-const asyncHandler = require("../middleware/asyncHandler");
-const RestaurantService = require("../services/restaurant_service");
-const { success } = require("../utils/apiResponse");
-const throwError = require("../utils/throwError");
+const asyncHandler = require("../../middleware/asyncHandler");
+const RestaurantService = require("../../services/admin/restaurant_service");
+const { success } = require("../../utils/apiResponse");
+const throwError = require("../../utils/throwError");
 
 exports.getRestaurant = asyncHandler(async (req, res) => {
   const userId = req.user.id;

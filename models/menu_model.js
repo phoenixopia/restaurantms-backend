@@ -21,7 +21,6 @@ module.exports = (sequelize, DataTypes) => {
       },
       name: DataTypes.STRING(255),
       description: DataTypes.TEXT,
-      is_active: DataTypes.BOOLEAN,
     },
     {
       tableName: "menus",
@@ -35,7 +34,6 @@ module.exports = (sequelize, DataTypes) => {
       foreignKey: "restaurant_id",
     });
     Menu.hasMany(models.MenuCategory, { foreignKey: "menu_id" });
-    // Menu.hasMany(models.MenuItem, { foreignKey: "menu_id" });
   };
 
   sequelizePaginate.paginate(Menu);

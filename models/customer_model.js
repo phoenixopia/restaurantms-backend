@@ -3,8 +3,8 @@ const jwt = require("jsonwebtoken");
 const bcryptjs = require("bcryptjs");
 
 module.exports = (sequelize, DataTypes) => {
-  const User = sequelize.define(
-    "User",
+  const Customer = sequelize.define(
+    "Customer",
     {
       id: {
         type: DataTypes.UUID,
@@ -12,19 +12,23 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         primaryKey: true,
       },
-      restaurant_id: {
+      two_factor_enabled: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
+      },
+      office_address_id: {
         type: DataTypes.UUID,
         allowNull: true,
         references: {
-          model: "restaurants",
+          model: "locations",
           key: "id",
         },
       },
-      branch_id: {
+      home_address_id: {
         type: DataTypes.UUID,
         allowNull: true,
         references: {
-          model: "branches",
+          model: "locations",
           key: "id",
         },
       },
@@ -52,6 +56,10 @@ module.exports = (sequelize, DataTypes) => {
       },
 
       profile_picture: DataTypes.STRING(2083),
+      dob: DataTypes.DATE,
+      notes: DataTypes.TEXT,
+      visit_count: DataTypes.INTEGER,
+      last_visit_at: DataTypes.DATE, // order date
 
       confirmation_code: {
         type: DataTypes.STRING(6),
@@ -87,10 +95,7 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.BOOLEAN,
         defaultValue: true,
       },
-      created_by: {
-        type: DataTypes.UUID,
-        allowNull: true,
-      },
+
       failed_login_attempts: {
         type: DataTypes.INTEGER,
         defaultValue: 0,
@@ -107,53 +112,50 @@ module.exports = (sequelize, DataTypes) => {
           key: "id",
         },
       },
-    },
-    {
-      tableName: "users",
-      timestamps: true,
-      underscored: true,
-
       full_name: {
         type: DataTypes.VIRTUAL,
         get() {
           return `${this.first_name} ${this.last_name}`;
         },
       },
+    },
+    {
+      tableName: "customers",
+      timestamps: true,
+      underscored: true,
     }
   );
 
-  const hashPassword = async (user) => {
-    if (user.password) {
+  const hashPassword = async (customer) => {
+    if (customer.password) {
       try {
         const salt = await bcryptjs.genSalt(10);
-        user.password = await bcryptjs.hash(user.password, salt);
+        customer.password = await bcryptjs.hash(customer.password, salt);
       } catch (error) {
         throw new Error("Error hashing password");
       }
     }
   };
 
-  User.beforeSave(async (user) => {
-    if (user.changed("password")) {
-      await hashPassword(user);
+  Customer.beforeSave(async (customer) => {
+    if (customer.changed("password")) {
+      await hashPassword(customer);
     }
   });
 
-  User.prototype.comparePassword = async function (candidatePassword) {
+  Customer.prototype.comparePassword = async function (candidatePassword) {
     return await bcryptjs.compare(candidatePassword, this.password);
   };
 
-  User.prototype.getJwtToken = async function () {
+  Customer.prototype.getJwtToken = async function () {
     const tokenPayload = {
       id: this.id,
       role_id: this.role_id,
-      restaurant_id: this.restaurant_id || null,
-      branch_id: this.branch_id || null,
     };
     return jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: "6h" });
   };
 
-  User.prototype.getResetPasswordToken = async function () {
+  Customer.prototype.getResetPasswordToken = async function () {
     const tokenPayload = {
       id: this.id,
       role_id: this.role_id,
@@ -161,67 +163,58 @@ module.exports = (sequelize, DataTypes) => {
     return jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: "10m" });
   };
 
-  User.prototype.markSuccessfulLogin = async function () {
+  Customer.prototype.markSuccessfulLogin = async function () {
     this.last_login_at = new Date();
+    this.login_count += 1;
     this.failed_login_attempts = 0;
     this.locked_until = null;
     await this.save();
   };
 
-  User.prototype.markFailedLoginAttempt = async function (
+  Customer.prototype.markFailedLoginAttempt = async function (
     lockThreshold = 5,
     lockMinutes = 5
   ) {
     this.failed_login_attempts += 1;
 
     if (this.failed_login_attempts >= lockThreshold) {
-      this.locked_until = new Date(Date.now() + lockMinutes * 60 * 1000); // lock for 5 min
+      this.locked_until = new Date(Date.now() + lockMinutes * 60 * 1000); // Lock for 5 min
     }
 
     await this.save({ silent: true });
   };
 
-  User.prototype.isLocked = function () {
+  Customer.prototype.isLocked = function () {
     if (!this.locked_until) return false;
     return new Date() < this.locked_until;
   };
 
-  User.associate = (models) => {
-    // to get created users
-    User.hasMany(models.User, {
-      foreignKey: "created_by",
-      as: "createdUsers",
-    });
-    // to get the restaurant admins who created the users
-    User.belongsTo(models.User, {
-      foreignKey: "created_by",
-      as: "creator",
+  Customer.associate = (models) => {
+    Customer.belongsTo(models.Location, {
+      foreignKey: "office_address_id",
     });
 
-    // staffs belongs to a branch
-    User.belongsTo(models.Branch, {
-      foreignKey: "branch_id",
-      as: "assigned_branch",
+    Customer.belongsTo(models.Location, {
+      foreignKey: "home_address_id",
     });
 
-    // manager of a branch
-    User.hasOne(models.Branch, {
-      foreignKey: "manager_id",
-    });
-
-    User.belongsTo(models.Role, {
+    Customer.belongsTo(models.Role, {
       foreignKey: "role_id",
     });
 
-    User.belongsToMany(models.Permission, {
-      through: models.UserPermission,
-      foreignKey: "user_id",
-      otherKey: "permission_id",
+    Customer.hasMany(models.LoyaltyPoint, {
+      foreignKey: "customer_id",
     });
 
-    User.hasMany(models.ActivityLog, {
-      foreignKey: "user_id",
+    Customer.hasMany(models.ActivityLog, {
+      foreignKey: "customer_id",
+    });
+
+    Customer.hasOne(models.TwoFA, {
+      foreignKey: "customer_id",
+      as: "twoFA",
     });
   };
-  return User;
+
+  return Customer;
 };

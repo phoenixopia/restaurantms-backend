@@ -14,13 +14,14 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         validate: { isIn: [["Basic", "Pro", "Enterprise"]] },
       },
-      max_branches: DataTypes.INTEGER,
-      max_locations: DataTypes.INTEGER,
-      max_staff: DataTypes.INTEGER,
-      max_users: DataTypes.INTEGER,
-      max_kds: DataTypes.INTEGER,
-      kds_enabled: DataTypes.BOOLEAN,
-      price: DataTypes.DECIMAL(10, 2),
+      price: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: false,
+      },
+      billing_cycle: {
+        type: DataTypes.ENUM("monthly", "yearly"),
+        allowNull: false,
+      },
     },
     {
       tableName: "plans",
@@ -36,6 +37,31 @@ module.exports = (sequelize, DataTypes) => {
 
   Plan.associate = (models) => {
     Plan.hasMany(models.Subscription, { foreignKey: "plan_id" });
+    Plan.hasMany(models.PlanLimit, {
+      foreignKey: "plan_id",
+      onDelete: "CASCADE",
+    });
+  };
+
+  Plan.getPlansWithPricing = async function () {
+    const plans = await this.findAll();
+    const groupedPlans = {};
+
+    plans.forEach((plan) => {
+      if (!groupedPlans[plan.name]) {
+        groupedPlans[plan.name] = {
+          id: plan.id,
+          name: plan.name,
+          pricing: [],
+        };
+      }
+      groupedPlans[plan.name].pricing.push({
+        cycle: plan.billing_cycle,
+        price: plan.price,
+      });
+    });
+
+    return Object.values(groupedPlans);
   };
 
   return Plan;

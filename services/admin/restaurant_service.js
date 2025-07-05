@@ -4,9 +4,10 @@ const { Op, QueryTypes, where } = require("sequelize");
 const validator = require("validator");
 const fs = require("fs");
 const path = require("path");
-const throwError = require("../utils/throwError");
+const throwError = require("../../utils/throwError");
+const cleanupUploadedFiles = require("../../utils/cleanUploadedFiles");
 
-const { buildPagination } = require("../utils/pagination");
+const { buildPagination } = require("../../utils/pagination");
 const {
   Restaurant,
   Plan,
@@ -17,7 +18,7 @@ const {
   MenuCategory,
   MenuItem,
   sequelize,
-} = require("../models");
+} = require("../../models");
 
 const UPLOADS_DIR = path.join(__dirname, "..", "uploads");
 const SERVER_URL = process.env.SERVER_URL || "http://127.0.0.1:8000";
@@ -67,7 +68,14 @@ const RestaurantService = {
 
   async createRestaurant(body, files, userId) {
     const transaction = await sequelize.transaction();
+    const uploadDir = path.join(__dirname, "..", "uploads", "restaurant");
     try {
+      const existingRestaurant = await Restaurant.findOne({
+        where: { created_by: userId },
+      });
+      if (existingRestaurant) {
+        throwError("You already have a restaurant registered", 400);
+      }
       const requiredFields = ["restaurant_name", "location_name", "address"];
       const missingFields = requiredFields.filter((f) => !body[f]);
       if (missingFields.length)
@@ -109,6 +117,7 @@ const RestaurantService = {
       return restaurant;
     } catch (err) {
       await transaction.rollback();
+
       throw err;
     }
   },

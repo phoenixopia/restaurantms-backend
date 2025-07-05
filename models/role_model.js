@@ -33,9 +33,9 @@ module.exports = (sequelize, DataTypes) => {
       foreignKey: "role_id",
       onUpdate: "CASCADE",
     });
-    Role.hasMany(models.RolePermission, {
+    Role.hasMany(models.Customer, {
       foreignKey: "role_id",
-      otherKey: "permission_id",
+      onUpdate: "CASCADE",
     });
   };
 

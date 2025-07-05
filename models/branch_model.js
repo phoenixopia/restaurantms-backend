@@ -36,14 +36,6 @@ module.exports = (sequelize, DataTypes) => {
           key: "id",
         },
       },
-      phone_number: {
-        type: DataTypes.STRING(20),
-        allowNull: true,
-      },
-      email: {
-        type: DataTypes.STRING(255),
-        allowNull: true,
-      },
       status: {
         type: DataTypes.ENUM("active", "inactive", "under_maintenance"),
         allowNull: false,
@@ -61,8 +53,6 @@ module.exports = (sequelize, DataTypes) => {
       tableName: "branches",
       timestamps: true,
       underscored: true,
-      createdAt: "created_at",
-      updatedAt: "updated_at",
     }
   );
 
@@ -118,20 +108,36 @@ module.exports = (sequelize, DataTypes) => {
   };
 
   Branch.associate = (models) => {
+    Branch.hasMany(models.ContactInfo, {
+      foreignKey: "module_id",
+      scope: {
+        module_type: "branch",
+      },
+      onUpdate: "CASCADE",
+      onDelete: "CASCADE",
+    });
+
     Branch.belongsTo(models.Restaurant, {
       foreignKey: "restaurant_id",
       onDelete: "CASCADE",
-      hooks: true,
     });
+
+    Branch.hasMany(models.User, {
+      foreignKey: "branch_id",
+      as: "assigned_users",
+    });
+
     Branch.belongsTo(models.Location, {
       foreignKey: "location_id",
       onUpdate: "CASCADE",
       onDelete: "SET NULL",
     });
+
     Branch.belongsTo(models.User, {
       foreignKey: "manager_id",
       as: "manager",
     });
+
     Branch.hasMany(models.MenuCategory, { foreignKey: "branch_id" });
   };
 

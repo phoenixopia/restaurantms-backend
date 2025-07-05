@@ -1,5 +1,5 @@
 const express = require("express");
-const RestaurantController = require("../../controllers/restaurant_controller");
+const RestaurantController = require("../../controllers/admin/restaurant_controller");
 const ValidateUploadedFiles = require("../../middleware/validateUploadedFiles");
 const Upload = require("../../middleware/uploads");
 const RestaurantStatus = require("../../middleware/checkRestaurantStatus");
@@ -19,14 +19,14 @@ const router = express.Router();
 
 // ================= restaurant related routes
 router.get(
-  "restaurants/owned",
+  "/owned",
   protect,
   authorize("restaurant_admin"),
   RestaurantController.getRestaurant
 );
 
 router.post(
-  "restaurants/register",
+  "/register",
   protect,
   authorize("restaurant_admin"),
   ValidateUploadedFiles.validateUploadedFiles("restaurant"),
@@ -37,7 +37,7 @@ router.post(
 );
 
 router.put(
-  "restaurants/update/:id",
+  "/update/:id",
   protect,
   authorize("restaurant_admin"),
   RestaurantStatus.checkStatusofRestaurant,
@@ -49,7 +49,7 @@ router.put(
 );
 
 router.delete(
-  "restaurants/delete/:id",
+  "/delete/:id",
   protect,
   authorize("restaurant_admin"),
   deleteRestaurantValidator,

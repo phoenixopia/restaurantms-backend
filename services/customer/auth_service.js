@@ -3,17 +3,17 @@
 const axios = require("axios");
 const { Op } = require("sequelize");
 const speakeasy = require("speakeasy");
-const throwError = require("../utils/throwError");
-const { User, TwoFA, sequelize } = require("../models");
-const { capitalizeFirstLetter } = require("../utils/capitalizeFirstLetter");
+const throwError = require("../../utils/throwError");
+const { Customer, TwoFA, sequelize } = require("../../models");
+const { capitalizeFirstLetter } = require("../../utils/capitalizeFirstLetter");
 const {
   sendConfirmationEmail,
   sendPasswordResetEmail,
-} = require("../utils/sendEmail");
-const getClientIp = require("../utils/getClientIp");
+} = require("../../utils/sendEmail");
 const { OAuth2Client } = require("google-auth-library");
-const { sendTokenResponse } = require("../utils/sendTokenResponse");
-const { assignRoleToUser } = require("../utils/roleUtils");
+const { sendTokenResponse } = require("../../utils/sendTokenResponse");
+const { assignRoleToUser } = require("../../utils/roleUtils");
+
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 const AuthService = {
@@ -24,39 +24,42 @@ const AuthService = {
     const t = await sequelize.transaction();
     try {
       const identifierField = signupMethod === "email" ? "email" : "phone";
-      const existingUser = await User.findOne({
+
+      const existingCustomer = await Customer.findOne({
         where: { [identifierField]: { [Op.iLike]: emailOrPhone } },
         transaction: t,
       });
-      if (existingUser) throwError("User already exists", 409);
+
+      if (existingCustomer) throwError("User already exists", 409);
 
       const confirmationCode = Math.floor(
         100000 + Math.random() * 900000
       ).toString();
-      const userData = {
+      const customerData = {
         first_name: capitalizeFirstLetter(firstName),
         last_name: capitalizeFirstLetter(lastName),
         is_active: true,
         social_provider: "none",
       };
+
       if (signupMethod === "email") {
-        userData.email = emailOrPhone.toLowerCase();
-        userData.password = password;
-        userData.confirmation_code = confirmationCode;
-        userData.confirmation_code_expires = new Date(
+        customerData.email = emailOrPhone.toLowerCase();
+        customerData.password = password;
+        customerData.confirmation_code = confirmationCode;
+        customerData.confirmation_code_expires = new Date(
           Date.now() + 10 * 60 * 1000
         );
       }
 
-      const newUser = await User.create(userData, { transaction: t });
-      await assignRoleToUser(newUser.id, urlPath, t);
-      await newUser.reload({ transaction: t });
+      const newCustomer = await Customer.create(customerData, {
+        transaction: t,
+      });
 
       if (signupMethod === "email") {
         await sendConfirmationEmail(
-          newUser.email,
-          newUser.first_name,
-          newUser.last_name,
+          newCustomer.email,
+          newCustomer.first_name,
+          newCustomer.last_name,
           confirmationCode
         );
       }
@@ -72,31 +75,26 @@ const AuthService = {
     }
   },
 
-  async login({
-    emailOrPhone,
-    password,
-    signupMethod,
-    device_type,
-    code,
-    req,
-  }) {
+  async preLogin({ emailOrPhone, password, signupMethod }) {
     const t = await sequelize.transaction();
     try {
       const identifierField = signupMethod === "email" ? "email" : "phone";
-      const user = await User.findOne({
+
+      const customer = await Customer.findOne({
         where: { [identifierField]: emailOrPhone },
-        include: [{ model: TwoFA, as: "twoFA" }],
+        include: [{ model: TwoFA }],
         transaction: t,
       });
-      if (!user) throwError("No account found.", 404);
 
-      if (signupMethod === "email" && !user.email_verified_at)
+      if (!customer) throwError("User not found.", 404);
+
+      if (signupMethod === "email" && !customer.email_verified_at)
         throwError("Email not confirmed.", 403);
-      if (signupMethod === "phone" && !user.phone_verified_at)
+      if (signupMethod === "phone" && !customer.phone_verified_at)
         throwError("Phone not confirmed.", 403);
 
-      if (user.isLocked()) {
-        const remainingMs = new Date(user.locked_until) - new Date();
+      if (customer.isLocked()) {
+        const remainingMs = new Date(customer.locked_until) - new Date();
         throwError(
           `Account locked. Try again in ${Math.ceil(
             remainingMs / 1000
@@ -105,38 +103,75 @@ const AuthService = {
         );
       }
 
-      const isMatched = await user.comparePassword(password);
+      const isMatched = await customer.comparePassword(password);
       if (!isMatched) {
-        await user.markFailedLoginAttempt();
+        await customer.markFailedLoginAttempt();
         throwError(
           `Invalid credentials. ${
-            5 - user.failed_login_attempts
+            5 - customer.failed_login_attempts
           } attempts remaining.`,
           401
         );
       }
 
-      const ip = getClientIp(req);
-      await user.markSuccessfulLogin(ip, device_type);
+      if (!customer.two_factor_enabled) {
+        if (t.finished !== "commit") await t.commit();
+        await customer.markSuccessfulLogin();
 
-      if (user.twoFA?.is_enabled) {
-        if (!code) throwError("2FA code required.", 400);
-        const isVerified = speakeasy.totp.verify({
-          secret: user.twoFA.secret_key,
-          encoding: "base32",
-          token: code,
-          window: 1,
-        });
-        if (!isVerified) throwError("Invalid 2FA code.", 401);
-      }
-
-      if (req.originalUrl.includes("/customer")) {
-        await assignRoleToUser(user.id, req.originalUrl, t);
-        await user.reload({ transaction: t });
+        return {
+          success: true,
+          message: "Login successful.",
+          requires2FA: false,
+          customer,
+        };
       }
 
       await t.commit();
-      return { user };
+
+      return {
+        success: true,
+        message: "Credentials verified.",
+        requires2FA: true,
+        customerId: customer.id,
+      };
+    } catch (err) {
+      await t.rollback();
+      throw err;
+    }
+  },
+
+  async verify2FA({ customerId, code, req }) {
+    const t = await sequelize.transaction();
+    try {
+      const customer = await Customer.findByPk(customerId, {
+        include: [{ model: TwoFA, as: "twoFA" }],
+        transaction: t,
+      });
+
+      if (!customer) throwError("User not found.", 404);
+      if (!customer.two_factor_enabled) throwError("2FA not enabled.", 400);
+
+      if (!customer.twoFA) throwError("2FA setup incomplete.", 500);
+      if (!code) throwError("2FA code is required.", 400);
+
+      const isVerified = speakeasy.totp.verify({
+        secret: customer.twoFA.secret_key,
+        encoding: "base32",
+        token: code,
+        window: 1,
+      });
+
+      if (!isVerified) throwError("Invalid 2FA code.", 401);
+
+      await customer.markSuccessfulLogin();
+
+      if (req.originalUrl.includes("/customer")) {
+        await assignRoleToUser(customer.id, req.originalUrl, t);
+        await customer.reload({ transaction: t });
+      }
+
+      await t.commit();
+      return { customer };
     } catch (err) {
       await t.rollback();
       throw err;
@@ -147,7 +182,7 @@ const AuthService = {
     const t = await sequelize.transaction();
     try {
       const identifierField = signupMethod === "email" ? "email" : "phone";
-      const user = await User.findOne({
+      const customer = await Customer.findOne({
         where: {
           [identifierField]: emailOrPhone,
           confirmation_code: code,
@@ -155,9 +190,10 @@ const AuthService = {
         },
         transaction: t,
       });
-      if (!user) throwError("Invalid or expired code.", 400);
 
-      await user.update(
+      if (!customer) throwError("Invalid or expired code.", 400);
+
+      await customer.update(
         {
           confirmation_code: null,
           confirmation_code_expires: null,
@@ -165,12 +201,16 @@ const AuthService = {
         },
         { transaction: t }
       );
+      await assignRoleToUser(customer.id, url, t);
+      await customer.reload({ transaction: t });
+
       await t.commit();
 
       if (url.includes("/customer")) {
-        await sendTokenResponse(user, 200, res, url);
+        await sendTokenResponse(customer, 200, res, url);
         return null;
       }
+
       return { message: "Verification successful", data: null };
     } catch (err) {
       if (!t.finished) await t.rollback();
@@ -182,16 +222,18 @@ const AuthService = {
     const t = await sequelize.transaction();
     try {
       const identifierField = signupMethod === "email" ? "email" : "phone";
-      const user = await User.findOne({
+      const customer = await Customer.findOne({
         where: { [identifierField]: emailOrPhone },
         transaction: t,
       });
-      if (!user) throwError("User not found.", 404);
-      if (user.email_verified_at || user.phone_verified_at)
+
+      if (!customer) throwError("User not found.", 404);
+      if (customer.email_verified_at || customer.phone_verified_at)
         throwError(`${signupMethod} already verified.`, 400);
 
       const newCode = Math.floor(100000 + Math.random() * 900000).toString();
-      await user.update(
+
+      await customer.update(
         {
           confirmation_code: newCode,
           confirmation_code_expires: new Date(Date.now() + 10 * 60 * 1000),
@@ -201,9 +243,9 @@ const AuthService = {
 
       if (signupMethod === "email") {
         await sendConfirmationEmail(
-          user.email,
-          user.first_name,
-          user.last_name,
+          customer.email,
+          customer.first_name,
+          customer.last_name,
           newCode
         );
       }
@@ -220,19 +262,20 @@ const AuthService = {
     const t = await sequelize.transaction();
     try {
       const identifierField = signupMethod === "email" ? "email" : "phone";
-      const user = await User.findOne({
+      const customer = await Customer.findOne({
         where: { [identifierField]: { [Op.iLike]: emailOrPhone } },
         transaction: t,
       });
-      if (!user) throwError("No account found.", 404);
+
+      if (!customer) throwError("User not found.", 404);
       if (
-        (signupMethod === "email" && !user.email_verified_at) ||
-        (signupMethod === "phone" && !user.phone_verified_at)
+        (signupMethod === "email" && !customer.email_verified_at) ||
+        (signupMethod === "phone" && !customer.phone_verified_at)
       )
         throwError(`${signupMethod} not verified.`, 400);
 
       const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
-      await user.update(
+      await customer.update(
         {
           confirmation_code: resetCode,
           confirmation_code_expires: new Date(Date.now() + 10 * 60 * 1000),
@@ -242,9 +285,9 @@ const AuthService = {
 
       if (signupMethod === "email") {
         await sendPasswordResetEmail(
-          user.email,
-          user.first_name,
-          user.last_name,
+          customer.email,
+          customer.first_name,
+          customer.last_name,
           resetCode
         );
       }
@@ -264,7 +307,7 @@ const AuthService = {
     const t = await sequelize.transaction();
     try {
       const identifierField = signupMethod === "email" ? "email" : "phone";
-      const user = await User.findOne({
+      const customer = await Customer.findOne({
         where: {
           [identifierField]: { [Op.iLike]: emailOrPhone },
           confirmation_code: code,
@@ -272,9 +315,10 @@ const AuthService = {
         },
         transaction: t,
       });
-      if (!user) throwError("Invalid or expired reset code.", 400);
 
-      await user.update(
+      if (!customer) throwError("Invalid or expired reset code.", 400);
+
+      await customer.update(
         {
           password: newPassword,
           confirmation_code: null,
@@ -284,6 +328,7 @@ const AuthService = {
         },
         { transaction: t }
       );
+
       await t.commit();
       return { message: "Password reset successful.", data: null };
     } catch (err) {
@@ -297,12 +342,13 @@ const AuthService = {
       idToken,
       audience: process.env.GOOGLE_CLIENT_ID,
     });
+
     const payload = ticket.getPayload();
     const { sub, email, given_name, family_name, picture } = payload;
 
     const t = await sequelize.transaction();
     try {
-      const [user, created] = await User.findOrCreate({
+      const [customer, created] = await Customer.findOrCreate({
         where: {
           [Op.or]: [
             { social_provider_id: sub },
@@ -322,15 +368,16 @@ const AuthService = {
         transaction: t,
       });
 
-      if (!created && user.social_provider !== "google") {
+      if (!created && customer.social_provider !== "google") {
         await t.rollback();
-        throwError("Account exists with different method.", 400);
+        throwError("User account exists with a different method.", 400);
       }
 
-      await assignRoleToUser(user.id, req.originalUrl, t);
-      await user.reload({ transaction: t });
+      await assignRoleToUser(customer.id, req.originalUrl, t);
+      await customer.reload({ transaction: t });
+
       if (!created) {
-        await user.update(
+        await customer.update(
           {
             first_name: given_name,
             last_name: family_name,
@@ -340,9 +387,9 @@ const AuthService = {
         );
       }
 
-      await user.markSuccessfulLogin(getClientIp(req), "web");
+      await customer.markSuccessfulLogin();
       await t.commit();
-      return { user };
+      return { customer };
     } catch (err) {
       await t.rollback();
       throw err;
@@ -355,6 +402,7 @@ const AuthService = {
       const fbResponse = await axios.get(
         `https://graph.facebook.com/me?fields=id,first_name,last_name,email,picture&access_token=${accessToken}`
       );
+
       const {
         id: fbId,
         first_name,
@@ -364,7 +412,7 @@ const AuthService = {
       } = fbResponse.data;
       if (!fbId) throwError("Invalid Facebook access token", 401);
 
-      const [user, created] = await User.findOrCreate({
+      const [customer, created] = await Customer.findOrCreate({
         where: {
           [Op.or]: [
             { social_provider_id: fbId },
@@ -384,23 +432,24 @@ const AuthService = {
         transaction: t,
       });
 
-      if (!created && user.social_provider !== "facebook") {
+      if (!created && customer.social_provider !== "facebook") {
         await t.rollback();
-        throwError("Account exists with different method.", 400);
+        throwError("User account exists with a different method.", 400);
       }
 
-      await assignRoleToUser(user.id, req.originalUrl, t);
-      await user.reload({ transaction: t });
+      await assignRoleToUser(customer.id, req.originalUrl, t);
+      await customer.reload({ transaction: t });
+
       if (!created) {
-        await user.update(
+        await customer.update(
           { first_name, last_name, profile_picture: picture?.data?.url },
           { transaction: t }
         );
       }
 
-      await user.markSuccessfulLogin(getClientIp(req), "web");
+      await customer.markSuccessfulLogin();
       await t.commit();
-      return { user };
+      return { customer };
     } catch (err) {
       await t.rollback();
       if (err.response?.data?.error) {
@@ -420,21 +469,22 @@ const AuthService = {
       req.cookies?.token ||
       req.headers?.authorization?.split(" ")[1] ||
       req.headers?.token;
+
     if (!token) throwError("No token provided.", 401);
 
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      const user = await User.findByPk(decoded.id);
-      if (!user) throwError("User not found.", 404);
-      return { user, tokenRefreshed: false };
+      const customer = await Customer.findByPk(decoded.id);
+      if (!customer) throwError("User not found.", 404);
+      return { customer, tokenRefreshed: false };
     } catch (err) {
       if (err.name === "TokenExpiredError") {
         const decoded = jwt.decode(token);
-        const user = await User.findByPk(decoded.id);
-        if (!user) throwError("User not found.", 404);
-        return { user, tokenRefreshed: true };
+        const customer = await Customer.findByPk(decoded.id);
+        if (!customer) throwError("User not found.", 404);
+        return { customer, tokenRefreshed: true };
       }
-      throwError("Invalid token", 401);
+      throwError("Invalid user token", 401);
     }
   },
 };

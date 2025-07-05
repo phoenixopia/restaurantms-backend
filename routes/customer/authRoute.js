@@ -1,5 +1,5 @@
 const express = require("express");
-const authController = require("../../controllers/authController");
+const authController = require("../../controllers/customer/authController");
 const validateRequest = require("../../middleware/validateRequest");
 
 const {
@@ -11,6 +11,7 @@ const {
   resetPasswordValidator,
   googleLoginValidator,
   facebookLoginValidator,
+  verify2FAValidator,
 } = require("../../validators/auth_validator");
 
 const router = express.Router();
@@ -22,7 +23,14 @@ router.post(
   authController.register
 );
 
-router.post("/login", loginValidator, validateRequest, authController.login);
+router.post("/login", loginValidator, validateRequest, authController.preLogin);
+
+router.post(
+  "/verify-2fa",
+  verify2FAValidator,
+  validateRequest,
+  authController.verify2FA
+);
 
 router.post(
   "/verify-code",

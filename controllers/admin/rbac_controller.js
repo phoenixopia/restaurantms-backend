@@ -1,6 +1,6 @@
-const RbacService = require("../services/rbac_service");
-const asyncHandler = require("../middleware/asyncHandler");
-const { success } = require("../utils/apiResponse");
+const RbacService = require("../../services/admin/rbac_service");
+const asyncHandler = require("../../middleware/asyncHandler");
+const { success } = require("../../utils/apiResponse");
 
 // ROLE
 

@@ -8,6 +8,7 @@ module.exports = (sequelize, DataTypes) => {
         autoIncrement: true,
         primaryKey: true,
       },
+
       restaurant_id: {
         type: DataTypes.UUID,
         allowNull: false,
@@ -16,6 +17,7 @@ module.exports = (sequelize, DataTypes) => {
           key: "id",
         },
       },
+
       plan_id: {
         type: DataTypes.UUID,
         allowNull: false,
@@ -24,27 +26,26 @@ module.exports = (sequelize, DataTypes) => {
           key: "id",
         },
       },
-      billing_cycle: {
-        type: DataTypes.ENUM("monthly", "yearly"),
-        allowNull: false,
-      },
+
       start_date: DataTypes.DATEONLY,
+
       end_date: DataTypes.DATEONLY,
-      billing_provider: DataTypes.ENUM(
-        "stripe",
+
+      payment_method: DataTypes.ENUM(
+        "card",
         "paypal",
         "telebirr",
         "cash",
-        "CBE"
+        "bank_transfer"
       ),
-      status: DataTypes.ENUM("active", "cancelled", "expired"),
-      subscribed_by: {
-        type: DataTypes.UUID,
-        references: {
-          model: "users",
-          key: "id",
-        },
-      },
+
+      status: DataTypes.ENUM(
+        "active",
+        "pending",
+        "inactive",
+        "cancelled",
+        "expired"
+      ),
     },
     {
       tableName: "subscriptions",

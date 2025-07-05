@@ -40,6 +40,7 @@ module.exports = (sequelize, DataTypes) => {
   MenuCategory.associate = (models) => {
     MenuCategory.belongsTo(models.Menu, { foreignKey: "menu_id" });
     MenuCategory.belongsTo(models.Branch, { foreignKey: "branch_id" });
+    MenuCategory.belongsTo(models.Restaurant, { foreignKey: "restaurant_id" });
     MenuCategory.hasMany(models.MenuItem, { foreignKey: "menu_category_id" });
     MenuCategory.belongsToMany(models.CategoryTag, {
       through: "MenuCategoryTags",

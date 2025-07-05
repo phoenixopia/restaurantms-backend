@@ -1,6 +1,6 @@
-const { Subscription, Restaurant, Plan, sequelize } = require("../models");
-const { capitalizeName } = require("../utils/capitalizeFirstLetter");
-const throwError = require("../utils/throwError");
+const { Subscription, Restaurant, Plan, sequelize } = require("../../models");
+const { capitalizeName } = require("../../utils/capitalizeFirstLetter");
+const throwError = require("../../utils/throwError");
 
 const SubscriptionService = {
   async subscribe(data, user_id) {

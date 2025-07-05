@@ -5,10 +5,10 @@ const {
   RolePermission,
   UserPermission,
   sequelize,
-} = require("../models");
+} = require("../../models");
 const { Op, where } = require("sequelize");
-const throwError = require("../utils/throwError");
-const { buildPagination } = require("../utils/pagination");
+const throwError = require("../../utils/throwError");
+const { buildPagination } = require("../../utils/pagination");
 
 const RbacService = {
   // ================== ROLE ==================

@@ -1,5 +1,5 @@
 "use strict";
-const validator = require("validator");
+
 const { DataTypes } = require("sequelize");
 module.exports = (sequelize) => {
   const Restaurant = sequelize.define(
@@ -10,76 +10,22 @@ module.exports = (sequelize) => {
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
       },
-      created_by: {
-        type: DataTypes.UUID,
-        allowNull: false,
-        references: {
-          model: "users",
-          key: "id",
-        },
-      },
-      location_id: {
-        type: DataTypes.UUID,
-        allowNull: false,
-        references: {
-          model: "locations",
-          key: "id",
-        },
-      },
+
       restaurant_name: {
         type: DataTypes.STRING(255),
+        unique: true,
         allowNull: false,
       },
-      logo_url: {
-        type: DataTypes.STRING(500),
-        validate: {
-          isUrl: {
-            msg: "Invalid logo URL",
-            args: {
-              protocols: ["http", "https"],
-              require_protocol: true,
-              allow_underscores: true,
-              allow_localhost: true,
-            },
-          },
-        },
-      },
-      images: {
-        type: DataTypes.ARRAY(DataTypes.STRING(500)),
-        defaultValue: [],
-        validate: {
-          isUrlArray(value) {
-            if (!Array.isArray(value))
-              throw new Error("Images must be an array");
-            value.forEach((url) => {
-              if (
-                !validator.isURL(url, {
-                  protocols: ["http", "https"],
-                  require_protocol: true,
-                  allow_underscores: true,
-                  allow_localhost: true,
-                })
-              ) {
-                throw new Error("Invalid URL in images array");
-              }
-            });
-          },
-        },
-      },
-      primary_color: DataTypes.STRING(7),
-      language: DataTypes.STRING(10),
-      rtl_enabled: DataTypes.BOOLEAN,
+
       status: {
-        type: DataTypes.ENUM("active", "trial", "cancelled", "expired"),
+        type: DataTypes.ENUM(
+          "active",
+          "trial",
+          "cancelled",
+          "expired",
+          "pending"
+        ),
         defaultValue: "trial",
-      },
-      has_branch: {
-        type: DataTypes.BOOLEAN,
-        defaultValue: false,
-      },
-      is_active: {
-        type: DataTypes.BOOLEAN,
-        defaultValue: true,
       },
     },
     {
@@ -90,31 +36,52 @@ module.exports = (sequelize) => {
   );
 
   Restaurant.associate = (models) => {
-    Restaurant.hasOne(models.Subscription, {
+    Restaurant.hasOne(models.SystemSetting, {
       foreignKey: "restaurant_id",
-      onDelete: "CASCADE",
       onUpdate: "CASCADE",
+      onDelete: "CASCADE",
     });
-    Restaurant.belongsTo(models.User, {
-      foreignKey: "created_by",
+    // to show restaurant owned contact info
+    Restaurant.hasMany(models.ContactInfo, {
+      foreignKey: "restaurant_id",
+      as: "owned_contact_info",
     });
-    Restaurant.belongsTo(models.Location, {
-      foreignKey: "location_id",
+    // to show contact info of restaurant branches
+    Restaurant.hasMany(models.ContactInfo, {
+      foreignKey: "module_id",
+      scope: {
+        module_type: "restaurant",
+      },
     });
+
+    Restaurant.hasMany(models.Subscription, {
+      foreignKey: "restaurant_id",
+      onUpdate: "CASCADE",
+      onDelete: "RESTRICT",
+    });
+
     Restaurant.hasMany(models.Branch, {
       foreignKey: "restaurant_id",
-      onDelete: "CASCADE",
+      onDelete: "RESTRICT",
       onUpdate: "CASCADE",
     });
-    Restaurant.belongsToMany(models.User, {
-      through: "RestaurantUser",
-      foreignKey: "restaurant_id",
-      otherKey: "user_id",
-    });
+
     Restaurant.hasOne(models.Menu, {
       foreignKey: "restaurant_id",
-      onDelete: "CASCADE",
+      oonDelete: "RESTRICT",
       onUpdate: "CASCADE",
+    });
+
+    Restaurant.hasMany(models.LoyaltyPoint, {
+      foreignKey: "restaurant_id",
+    });
+
+    Restaurant.hasMany(models.UserPermission, {
+      foreignKey: "restaurant_id",
+    });
+
+    Restaurant.hasMany(models.MenuCategory, {
+      foreignKey: "restaurant_id",
     });
   };
 

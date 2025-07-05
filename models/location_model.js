@@ -1,4 +1,7 @@
 "use strict";
+
+const { all } = require("axios");
+
 module.exports = (sequelize, DataTypes) => {
   const Location = sequelize.define(
     "Location",
@@ -8,10 +11,34 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
       },
-      name: DataTypes.STRING(255),
       address: DataTypes.TEXT,
+
       latitude: DataTypes.DECIMAL(10, 6),
       longitude: DataTypes.DECIMAL(10, 6),
+
+      timestamp: {
+        type: DataTypes.DATE,
+        allowNull: true,
+      },
+      accuracy: {
+        type: DataTypes.FLOAT,
+        allowNull: true,
+      },
+
+      altitude: {
+        type: DataTypes.FLOAT,
+        allowNull: true,
+      },
+
+      heading: {
+        type: DataTypes.FLOAT,
+        allowNull: true,
+      },
+
+      speed: {
+        type: DataTypes.FLOAT,
+        allowNull: true,
+      },
     },
     {
       tableName: "locations",
@@ -21,15 +48,18 @@ module.exports = (sequelize, DataTypes) => {
   );
 
   Location.associate = (models) => {
-    Location.hasOne(models.Restaurant, {
-      foreignKey: "location_id",
-      onUpdate: "CASCADE",
-      onDelete: "SET NULL",
-    });
     Location.hasOne(models.Branch, {
       foreignKey: "location_id",
       onUpdate: "CASCADE",
-      onDelete: "SET NULL",
+      onDelete: "RESTRICT",
+    });
+
+    Location.hasMany(models.Customer, {
+      foreignKey: "office_address_id",
+    });
+
+    Location.hasMany(models.Customer, {
+      foreignKey: "home_address_id",
     });
     // Location.hasMany(models.Table, { foreignKey: "location_id" });
   };
