@@ -9,6 +9,21 @@ exports.createRoleValidator = [
     .bail()
     .isString()
     .withMessage("Role name must be a string."),
+
+  body("description").optional().isString(),
+
+  body("permissions")
+    .optional()
+    .custom((value) => {
+      if (Array.isArray(value)) {
+        if (!value.every((id) => typeof id === "string")) {
+          throw new Error("Each permission ID must be a string");
+        }
+      } else if (typeof value !== "string") {
+        throw new Error("Permissions must be a string or an array of strings");
+      }
+      return true;
+    }),
 ];
 
 exports.updateRoleValidator = [
@@ -24,6 +39,11 @@ exports.createPermissionValidator = [
     .bail()
     .isString()
     .withMessage("Permission name must be a string."),
+  body("role_ids")
+    .optional()
+    .isArray()
+    .withMessage("role_ids must be an array"),
+  body("role_ids.*").isUUID().withMessage("Each role ID must be a valid UUID"),
 ];
 
 exports.updatePermissionValidator = [

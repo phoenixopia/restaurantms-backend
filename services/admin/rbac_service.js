@@ -17,18 +17,51 @@ const RbacService = {
     const t = await sequelize.transaction();
     try {
       const exists = await Role.findOne({
-        where: {
-          name: data.name.toLowerCase(),
-        },
+        where: { name: data.name.toLowerCase() },
         transaction: t,
       });
+
       if (exists) {
         throwError("Role with this name already exists", 400);
       }
 
-      const role = await Role.create(data, { transaction: t });
+      const { name, description, permissions } = data;
+
+      const role = await Role.create(
+        {
+          name: name.toLowerCase(),
+          description,
+        },
+        { transaction: t }
+      );
+
+      if (permissions && permissions.length > 0) {
+        const permissionIds = Array.isArray(permissions)
+          ? permissions
+          : [permissions];
+
+        const rolePermissions = permissionIds.map((permissionId) => ({
+          role_id: role.id,
+          permission_id: permissionId,
+          granted: true,
+        }));
+
+        await RolePermission.bulkCreate(rolePermissions, { transaction: t });
+      }
+
       await t.commit();
-      return role;
+
+      const roleWithPermissions = await Role.findByPk(role.id, {
+        include: [
+          {
+            model: Permission,
+            through: { attributes: ["granted"] },
+            attributes: ["id", "name", "description"],
+          },
+        ],
+      });
+
+      return roleWithPermissions;
     } catch (err) {
       await t.rollback();
       throw err;
@@ -39,9 +72,9 @@ const RbacService = {
     const t = await sequelize.transaction();
     try {
       const role = await Role.findByPk(id, { transaction: t });
-
       if (!role) throwError("Role not found", 404);
 
+      // Check for name uniqueness
       if (updates.name) {
         const exists = await Role.findOne({
           where: {
@@ -58,8 +91,71 @@ const RbacService = {
         }
       }
 
-      await role.update(updates, { transaction: t });
+      // Update role name or description
+      await role.update(
+        {
+          ...(updates.name && { name: updates.name.toLowerCase() }),
+          ...(updates.description && { description: updates.description }),
+        },
+        { transaction: t }
+      );
+
+      // Handle permissions if provided
+      if (updates.permissions) {
+        const permissionUpdates = Array.isArray(updates.permissions)
+          ? updates.permissions.map((p) =>
+              typeof p === "string" ? { id: p, granted: true } : p
+            )
+          : [];
+
+        // Load current RolePermissions
+        const currentPermissions = await RolePermission.findAll({
+          where: { role_id: id },
+          transaction: t,
+        });
+
+        const currentMap = new Map(
+          currentPermissions.map((p) => [p.permission_id, p])
+        );
+
+        for (const p of permissionUpdates) {
+          const existing = currentMap.get(p.id);
+
+          if (p.granted) {
+            // Grant if not already granted
+            if (!existing) {
+              await RolePermission.create(
+                {
+                  role_id: id,
+                  permission_id: p.id,
+                  granted: true,
+                },
+                { transaction: t }
+              );
+            }
+          } else {
+            // Revoke if already granted
+            if (existing) {
+              await existing.destroy({ transaction: t });
+            }
+          }
+        }
+      }
+
       await t.commit();
+
+      // Return updated role with permissions
+      const updatedRole = await Role.findByPk(id, {
+        include: [
+          {
+            model: Permission,
+            through: { attributes: ["granted"] },
+            attributes: ["id", "name", "description"],
+          },
+        ],
+      });
+
+      return updatedRole;
     } catch (err) {
       await t.rollback();
       throw err;
@@ -67,14 +163,59 @@ const RbacService = {
   },
 
   async getAllRoles() {
-    return await Role.findAll();
+    return await Role.findAll({
+      include: [
+        {
+          model: Permission,
+          attributes: ["id", "name", "description"],
+          through: {
+            where: { granted: true },
+            attributes: [],
+          },
+        },
+      ],
+      order: [["name", "ASC"]],
+    });
   },
 
   async getRoleById(id) {
-    const role = await Role.findByPk(id);
+    const role = await Role.findByPk(id, {
+      include: [
+        {
+          model: Permission,
+          attributes: ["id", "name", "description"],
+          through: {
+            where: { granted: true },
+            attributes: [],
+          },
+        },
+      ],
+    });
+
     if (!role) throwError("Role not found", 404);
+
     return role;
   },
+
+  async getMyOwnRolePermission(id) {
+    const role = await Role.findByPk(id, {
+      include: [
+        {
+          model: Permission,
+          attributes: ["id", "name", "description"],
+          through: {
+            where: { granted: true },
+            attributes: [],
+          },
+        },
+      ],
+    });
+
+    if (!role) throwError("Role not found", 404);
+
+    return role;
+  },
+
   // ================== PERMISSION ==================
 
   async createPermission(data) {
@@ -87,11 +228,31 @@ const RbacService = {
         ),
         transaction: t,
       });
+
       if (exists) {
         throwError("Permission with this name already exists", 400);
       }
 
-      const permission = await Permission.create(data, { transaction: t });
+      const { role_ids, ...permissionData } = data;
+
+      const permission = await Permission.create(permissionData, {
+        transaction: t,
+      });
+
+      // Optionally assign to roles if role_ids is provided
+      if (Array.isArray(role_ids) && role_ids.length > 0) {
+        const rolePermissionData = role_ids.map((role_id) => ({
+          role_id,
+          permission_id: permission.id,
+          granted: true,
+        }));
+
+        await RolePermission.bulkCreate(rolePermissionData, {
+          transaction: t,
+          ignoreDuplicates: true,
+        });
+      }
+
       await t.commit();
       return permission;
     } catch (err) {
@@ -147,11 +308,21 @@ const RbacService = {
   },
 
   async getPermissionById(id) {
-    const permission = await Permission.findByPk(id);
+    const permission = await Permission.findByPk(id, {
+      include: [
+        {
+          model: Role,
+          through: {
+            attributes: ["granted"],
+          },
+          attributes: ["id", "name", "description"],
+        },
+      ],
+    });
+
     if (!permission) throwError("Permission not found", 404);
     return permission;
   },
-
   // ================== ROLE-PERMISSION ==================
 
   async togglePermissionForRole(roleId, permissionIds) {

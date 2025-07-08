@@ -126,6 +126,8 @@ module.exports = (sequelize, DataTypes) => {
       onDelete: "CASCADE",
     });
 
+    Branch.belongsTo(models.Location, { foreignKey: "location_id" });
+
     Branch.hasMany(models.User, {
       foreignKey: "branch_id",
       as: "assigned_users",

@@ -11,6 +11,7 @@ const { buildPagination } = require("../../utils/pagination");
 const {
   User,
   SystemSetting,
+  ContactInfo,
   Restaurant,
   Plan,
   Location,
@@ -35,6 +36,8 @@ const getFileUrl = (filename) => {
 const getFilePath = (filename) => path.join(UPLOADS_DIR, filename);
 
 const RestaurantService = {
+  // ===================
+  // this is for the owner of restaurant = restaurant_admin
   async getUserRestaurants(userId) {
     const user = await User.findByPk(userId);
     if (!user || !user.restaurant_id) throwError("Restaurant not found", 404);
@@ -63,15 +66,90 @@ const RestaurantService = {
         ],
       },
       {
-        model: Branch,
+        model: ContactInfo,
         required: false,
-        where: { main_branch: false },
+        where: {
+          restaurant_id: restaurantId,
+          module_type: "restaurant",
+          module_id: restaurantId,
+        },
+        attributes: ["type", "value", "is_primary", "module_id"],
       },
     ];
 
-    return await Restaurant.findByPk(restaurantId, { include: includes });
+    return await Restaurant.findByPk(restaurantId, {
+      include: includes,
+      attributes: { exclude: ["created_at", "updated_at"] },
+    });
   },
 
+  // this for super admin to get all restaurants with their subscription
+  async getAllRestaurantsWithSubscriptions({ page, limit }) {
+    const offset = (page - 1) * limit;
+
+    const { count, rows } = await Restaurant.findAndCountAll({
+      attributes: { exclude: ["created_at", "updated_at"] },
+      include: [
+        {
+          model: Subscription,
+          attributes: [
+            "plan_id",
+            "start_date",
+            "end_date",
+            "payment_method",
+            "status",
+          ],
+          include: [
+            {
+              model: Plan,
+              attributes: ["id", "name", "price", "billing_cycle"],
+            },
+          ],
+        },
+      ],
+      offset,
+      limit,
+      order: [["created_at", "DESC"]],
+    });
+
+    return {
+      total: count,
+      page,
+      limit,
+      totalPages: Math.ceil(count / limit),
+      data: rows,
+    };
+  },
+
+  // this by id
+  async getRestaurantWithSubscriptionById(restaurantId) {
+    const restaurant = await Restaurant.findByPk(restaurantId, {
+      attributes: { exclude: ["created_at", "updated_at"] },
+      include: [
+        {
+          model: Subscription,
+          attributes: [
+            "plan_id",
+            "start_date",
+            "end_date",
+            "payment_method",
+            "status",
+          ],
+          include: [
+            {
+              model: Plan,
+              attributes: ["id", "name", "price", "billing_cycle"],
+            },
+          ],
+        },
+      ],
+    });
+
+    if (!restaurant) throwError("Restaurant not found", 404);
+    return restaurant;
+  },
+
+  // creating restaurant with assigning restaurant admin optionally
   async createRestaurant(body, files, superAdminId) {
     const transaction = await sequelize.transaction();
     try {
@@ -152,6 +230,7 @@ const RestaurantService = {
     }
   },
 
+  // update restaurant only for the restaurant admin
   async updateRestaurant(id, body, files, user) {
     const transaction = await sequelize.transaction();
 
@@ -247,6 +326,31 @@ const RestaurantService = {
     }
   },
 
+  async changeRestaurantStatus(id, status) {
+    const allowedStatuses = [
+      "active",
+      "trial",
+      "cancelled",
+      "expired",
+      "pending",
+    ];
+    if (!allowedStatuses.includes(status)) {
+      throwError("Invalid status", 400);
+    }
+
+    const restaurant = await Restaurant.findByPk(id);
+    if (!restaurant) throwError("Restaurant not found", 404);
+
+    restaurant.status = status;
+    await restaurant.save();
+    return restaurant;
+  },
+
+  async addContactInfo(data) {
+    return await ContactInfo.create(data);
+  },
+
+  // delete restaurant only for the restaurant admin
   async deleteRestaurant(id, user) {
     const transaction = await sequelize.transaction();
     try {
@@ -258,7 +362,6 @@ const RestaurantService = {
       });
       if (!restaurant) throwError("Restaurant not found", 404);
 
-      // Ensure the authenticated user is deleting their own restaurant
       if (user.restaurant_id !== id) {
         throwError(
           "Access denied: You can only delete your own restaurant",
@@ -266,7 +369,6 @@ const RestaurantService = {
         );
       }
 
-      // Remove logo file if present
       const setting = restaurant.SystemSetting;
 
       if (setting?.logo_url) {
@@ -293,6 +395,7 @@ const RestaurantService = {
     }
   },
 
+  // for customer
   async getAllRestaurants(query) {
     const { page, limit, offset, order, where } = buildPagination(query);
 
@@ -303,20 +406,29 @@ const RestaurantService = {
       order,
       include: [
         {
-          model: Menu,
+          model: Branch,
+          as: "mainBranch",
           required: false,
+          attributes: [],
           include: [
             {
-              model: MenuCategory,
-              attributes: ["id", "name"],
+              model: Location,
+              attributes: ["address", "latitude", "longitude"],
             },
           ],
         },
       ],
     });
 
+    const restaurants = rows.map((r) => {
+      const plain = r.get({ plain: true });
+      plain.location = plain.mainBranch?.Location || null;
+      delete plain.mainBranch;
+      return plain;
+    });
+
     return {
-      restaurants: rows,
+      restaurants,
       pagination: {
         totalItems: count,
         totalPages: Math.ceil(count / limit),
@@ -326,46 +438,57 @@ const RestaurantService = {
     };
   },
 
+  // for customer
   async getRestaurantById(id, page = 1, limit = 10) {
     const offset = (page - 1) * limit;
 
-    const restaurant = await Restaurant.findByPk(id);
-    if (!restaurant) throwError("Restaurant not found", 404);
-
-    const includes = [
-      {
-        model: Location,
-        attributes: ["name", "address", "latitude", "longitude"],
-      },
-      {
-        model: Branch,
-        required: true,
-        include: [
-          {
-            model: MenuCategory,
-            required: false,
-            offset,
-            limit,
-            include: [
-              {
-                model: MenuItem,
-                required: false,
-                separate: true,
-                limit,
-              },
-            ],
-          },
-        ],
-      },
-    ];
-
-    const fullRestaurant = await Restaurant.findByPk(id, {
-      include: includes,
+    const restaurant = await Restaurant.findByPk(id, {
+      include: [
+        {
+          model: Branch,
+          as: "mainBranch",
+          required: true,
+          attributes: [],
+          include: [
+            {
+              model: Location,
+              attributes: ["address", "latitude", "longitude"],
+            },
+          ],
+        },
+        {
+          model: Branch,
+          required: true,
+          include: [
+            {
+              model: MenuCategory,
+              required: false,
+              offset,
+              limit,
+              include: [
+                {
+                  model: MenuItem,
+                  required: false,
+                  separate: true,
+                  limit,
+                },
+              ],
+            },
+          ],
+        },
+      ],
     });
 
-    return fullRestaurant;
+    if (!restaurant) throwError("Restaurant not found", 404);
+
+    const plain = restaurant.get({ plain: true });
+    plain.location = plain.mainBranch?.Location || null;
+    delete plain.mainBranch;
+
+    return plain;
   },
 
+  // for customer
   async getAllRestaurantsWithMenusAndCheapestItems({ page = 1, limit = 10 }) {
     const offset = (page - 1) * limit;
 
@@ -378,6 +501,18 @@ const RestaurantService = {
       limit,
       distinct: true,
       include: [
+        {
+          model: Branch,
+          as: "mainBranch",
+          required: false,
+          attributes: [],
+          include: [
+            {
+              model: Location,
+              attributes: ["name", "address", "latitude", "longitude"],
+            },
+          ],
+        },
         {
           model: Menu,
           attributes: ["id", "name"],
@@ -400,10 +535,18 @@ const RestaurantService = {
       ],
     });
 
+    // flatten mainBranch.Location into restaurant.location
+    const data = restaurants.map((r) => {
+      const plain = r.get({ plain: true });
+      plain.location = plain.mainBranch?.Location || null;
+      delete plain.mainBranch;
+      return plain;
+    });
+
     const totalPages = Math.ceil(count / limit);
 
     return {
-      data: restaurants,
+      data,
       meta: {
         totalItems: count,
         totalPages,
@@ -413,26 +556,7 @@ const RestaurantService = {
     };
   },
 
-  async changeRestaurantStatus(id, status) {
-    const allowedStatuses = [
-      "active",
-      "trial",
-      "cancelled",
-      "expired",
-      "pending",
-    ];
-    if (!allowedStatuses.includes(status)) {
-      throwError("Invalid status", 400);
-    }
-
-    const restaurant = await Restaurant.findByPk(id);
-    if (!restaurant) throwError("Restaurant not found", 404);
-
-    restaurant.status = status;
-    await restaurant.save();
-    return restaurant;
-  },
-
+  // for customer
   async searchRestaurants({
     query,
     nearby,
@@ -476,25 +600,27 @@ const RestaurantService = {
         }`;
       }
 
+      // Join with main branch and location
       data = await sequelize.query(
         `
-        SELECT r.*, l.name AS location_name, l.address,
-          (
-            6371 * acos(
-              cos(radians(:latitude)) * cos(radians(l.latitude)) *
-              cos(radians(l.longitude) - radians(:longitude)) +
-              sin(radians(:latitude)) * sin(radians(l.latitude))
-            )
-          ) AS distance
-        FROM restaurants r
-        JOIN locations l ON r.location_id = l.id
-        WHERE 1=1
-        ${statusCondition}
-        ${query ? "AND r.restaurant_name ILIKE :query" : ""}
-        HAVING distance <= :maxDistance
-        ORDER BY distance ASC
-        LIMIT :limit OFFSET :offset
-        `,
+      SELECT r.*, l.name AS location_name, l.address, l.latitude, l.longitude,
+        (
+          6371 * acos(
+            cos(radians(:latitude)) * cos(radians(l.latitude)) *
+            cos(radians(l.longitude) - radians(:longitude)) +
+            sin(radians(:latitude)) * sin(radians(l.latitude))
+          )
+        ) AS distance
+      FROM restaurants r
+      JOIN branches b ON r.id = b.restaurant_id AND b.is_main = TRUE
+      JOIN locations l ON b.location_id = l.id
+      WHERE 1=1
+      ${statusCondition}
+      ${query ? "AND r.restaurant_name ILIKE :query" : ""}
+      HAVING distance <= :maxDistance
+      ORDER BY distance ASC
+      LIMIT :limit OFFSET :offset
+      `,
         {
           replacements: {
             ...replacements,
@@ -506,22 +632,23 @@ const RestaurantService = {
 
       const countResult = await sequelize.query(
         `
-        SELECT COUNT(*) FROM (
-          SELECT 1
-          FROM restaurants r
-          JOIN locations l ON r.location_id = l.id
-          WHERE 1=1
-          ${statusCondition}
-          ${query ? "AND r.restaurant_name ILIKE :query" : ""}
-          HAVING (
-            6371 * acos(
-              cos(radians(:latitude)) * cos(radians(l.latitude)) *
-              cos(radians(l.longitude) - radians(:longitude)) +
-              sin(radians(:latitude)) * sin(radians(l.latitude))
-            )
-          ) <= :maxDistance
-        ) AS subquery
-        `,
+      SELECT COUNT(*) FROM (
+        SELECT 1
+        FROM restaurants r
+        JOIN branches b ON r.id = b.restaurant_id AND b.is_main = TRUE
+        JOIN locations l ON b.location_id = l.id
+        WHERE 1=1
+        ${statusCondition}
+        ${query ? "AND r.restaurant_name ILIKE :query" : ""}
+        HAVING (
+          6371 * acos(
+            cos(radians(:latitude)) * cos(radians(l.latitude)) *
+            cos(radians(l.longitude) - radians(:longitude)) +
+            sin(radians(:latitude)) * sin(radians(l.latitude))
+          )
+        ) <= :maxDistance
+      ) AS subquery
+      `,
         {
           replacements: {
             ...replacements,
@@ -537,8 +664,16 @@ const RestaurantService = {
         where: filterCondition,
         include: [
           {
-            model: Location,
-            attributes: ["name", "address"],
+            model: Branch,
+            as: "mainBranch",
+            required: false,
+            attributes: [],
+            include: [
+              {
+                model: Location,
+                attributes: ["address", "latitude", "longitude"],
+              },
+            ],
           },
           {
             model: Menu,
@@ -556,9 +691,12 @@ const RestaurantService = {
         order: [[sort, order]],
       });
 
-      data = allRestaurants.rows.map((restaurant) =>
-        restaurant.get({ plain: true })
-      );
+      data = allRestaurants.rows.map((restaurant) => {
+        const plain = restaurant.get({ plain: true });
+        plain.location = plain.mainBranch?.Location || null;
+        delete plain.mainBranch;
+        return plain;
+      });
       totalItems = allRestaurants.count;
     }
 

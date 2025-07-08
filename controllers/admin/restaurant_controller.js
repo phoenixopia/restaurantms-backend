@@ -5,15 +5,11 @@ const MenuCategoryService = require("../../services/admin/menuCategory_service")
 const { success } = require("../../utils/apiResponse");
 const throwError = require("../../utils/throwError");
 
+// Restaurant Admin
 exports.getRestaurant = asyncHandler(async (req, res) => {
   const userId = req.user.id;
   const restaurant = await RestaurantService.getUserRestaurants(userId);
   return success(res, "Restaurant fetched successfully", restaurant);
-});
-
-exports.searchRestaurants = asyncHandler(async (req, res) => {
-  const result = await RestaurantService.searchRestaurants(req.query);
-  return success(res, "Restaurants fetched successfully", result);
 });
 
 exports.registerRestaurant = asyncHandler(async (req, res) => {
@@ -40,19 +36,47 @@ exports.deleteRestaurant = asyncHandler(async (req, res) => {
   return success(res, "Restaurant deleted successfully");
 });
 
+exports.addContactInfo = asyncHandler(async (req, res) => {
+  const { restaurant_id, module_type, type, value, is_primary } = req.body;
+
+  const contactInfo = await RestaurantService.addContactInfo({
+    restaurant_id,
+    module_type,
+    module_id:
+      module_type === "restaurant" ? restaurant_id : req.body.module_id,
+    type,
+    value,
+    is_primary: is_primary || false,
+  });
+
+  return success(res, "Contact info added successfully", contactInfo);
+});
+
+exports.changeRestaurantStatus = asyncHandler(async (req, res) => {
+  const restaurant = await RestaurantService.changeRestaurantStatus(
+    req.params.id,
+    req.body.status
+  );
+  return success(res, "Restaurant status updated", restaurant);
+});
+
 exports.getAllRestaurants = asyncHandler(async (req, res) => {
   const result = await RestaurantService.getAllRestaurants(req.query);
   return success(res, "All registered restaurants fetched", result);
 });
 
-exports.getRestaurantById = asyncHandler(async (req, res) => {
-  const { page = 1, limit = 10 } = req.query;
-  const restaurant = await RestaurantService.getRestaurantById(
-    req.params.id,
-    parseInt(page),
-    parseInt(limit)
+exports.getAllRestaurantsWithSubscriptions = asyncHandler(async (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const result = await RestaurantService.getAllRestaurantsWithSubscriptions({
+    page,
+    limit,
+  });
+  return success(
+    res,
+    "Restaurants with subscriptions fetched successfully",
+    result
   );
-  return success(res, "Restaurant fetched successfully", restaurant);
 });
 
 exports.getAllRestaurantWithCheapestItems = asyncHandler(async (req, res) => {
@@ -67,6 +91,23 @@ exports.getAllRestaurantWithCheapestItems = asyncHandler(async (req, res) => {
     "All registered restaurants with cheapest items fetched",
     result
   );
+});
+
+exports.getRestaurantById = asyncHandler(async (req, res) => {
+  const { page = 1, limit = 10 } = req.query;
+  const restaurant = await RestaurantService.getRestaurantById(
+    req.params.id,
+    parseInt(page),
+    parseInt(limit)
+  );
+  return success(res, "Restaurant fetched successfully", restaurant);
+});
+
+exports.getRestaurantWithSubscriptionById = asyncHandler(async (req, res) => {
+  const restaurant = await RestaurantService.getRestaurantWithSubscriptionById(
+    req.params.id
+  );
+  return success(res, "Restaurant fetched successfully", restaurant);
 });
 
 exports.getRestaurantsByCategoryTagId = asyncHandler(async (req, res) => {
@@ -89,14 +130,12 @@ exports.getRestaurantsByCategoryTagId = asyncHandler(async (req, res) => {
   );
 });
 
-exports.changeRestaurantStatus = asyncHandler(async (req, res) => {
-  const restaurant = await RestaurantService.changeRestaurantStatus(
-    req.params.id,
-    req.body.status
-  );
-  return success(res, "Restaurant status updated", restaurant);
+exports.searchRestaurants = asyncHandler(async (req, res) => {
+  const result = await RestaurantService.searchRestaurants(req.query);
+  return success(res, "Restaurants fetched successfully", result);
 });
 
+// Branch Management
 exports.createBranch = asyncHandler(async (req, res) => {
   const { restaurantId, branchLimit } = req.restaurantData;
 
@@ -108,16 +147,6 @@ exports.createBranch = asyncHandler(async (req, res) => {
   );
 
   return success(res, "Branch created successfully", branch, 201);
-});
-
-exports.updateBranch = asyncHandler(async (req, res) => {
-  const { branchId } = req.params;
-  const updated = await BranchService.updateBranch(
-    branchId,
-    req.body,
-    req.user.id
-  );
-  return success(res, "Branch updated successfully", updated);
 });
 
 exports.deleteBranch = asyncHandler(async (req, res) => {
@@ -148,4 +177,14 @@ exports.getBranchById = asyncHandler(async (req, res) => {
   }
 
   return success(res, "Branch fetched successfully", branch);
+});
+
+exports.updateBranch = asyncHandler(async (req, res) => {
+  const { branchId } = req.params;
+  const updated = await BranchService.updateBranch(
+    branchId,
+    req.body,
+    req.user.id
+  );
+  return success(res, "Branch updated successfully", updated);
 });

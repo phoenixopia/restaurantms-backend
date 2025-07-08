@@ -18,7 +18,7 @@ const router = express.Router();
 // ================= ROLE
 router.post(
   "/create-role",
-  protect,
+  protect("user"),
   authorize("super_admin"),
   createRoleValidator,
   validateRequest,
@@ -27,7 +27,7 @@ router.post(
 
 router.put(
   "/update-role/:id",
-  protect,
+  protect("user"),
   authorize("super_admin"),
   updateRoleValidator,
   validateRequest,
@@ -36,22 +36,28 @@ router.put(
 
 router.get(
   "/roles",
-  protect,
+  protect("user"),
   authorize("super_admin"),
   rbacController.getAllRoles
 );
 
 router.get(
   "/roles/:id",
-  protect,
+  protect("user"),
   authorize("super_admin"),
   rbacController.getRoleById
+);
+
+router.get(
+  "/my-role",
+  protect("user"),
+  rbacController.getMyRoleWithPermissions
 );
 
 // retruns role info with permissions
 router.get(
   "/roles/:id/permissions",
-  protect,
+  protect("user"),
   authorize("super_admin", "restaurant_admin"),
   rbacController.getRoleWithPermissions
 );
@@ -59,7 +65,7 @@ router.get(
 // grant or revoke permissions to role
 router.post(
   "/roles/:roleId/permissions/toggle",
-  protect,
+  protect("user"),
   authorize("super_admin"),
   grantOrRevokePermissionToRoleValidator,
   validateRequest,
@@ -69,7 +75,7 @@ router.post(
 // ================= PERMISSION
 router.post(
   "/create-permission",
-  protect,
+  protect("user"),
   authorize("super_admin"),
   createPermissionValidator,
   validateRequest,
@@ -78,7 +84,7 @@ router.post(
 
 router.put(
   "/update-permission/:id",
-  protect,
+  protect("user"),
   authorize("super_admin"),
   updatePermissionValidator,
   validateRequest,
@@ -87,14 +93,14 @@ router.put(
 
 router.get(
   "/permissions",
-  protect,
+  protect("user"),
   authorize("super_admin"),
   rbacController.getAllPermissions
 );
 
 router.get(
   "/permissions/:id",
-  protect,
+  protect("user"),
   authorize("super_admin"),
   rbacController.getPermissionById
 );
@@ -104,7 +110,7 @@ router.get(
 // grant or revoke permissions to user by restaurant admins
 router.post(
   "/users/:userId/permissions/toggle",
-  protect,
+  protect("user"),
   authorize("restaurant_admin"),
   grantOrRevokePermissionToUserValidator,
   validateRequest,
@@ -113,7 +119,7 @@ router.post(
 
 router.get(
   "/users/:userId/permissions",
-  protect,
+  protect("user"),
   rbacController.getUserPermissions
 );
 

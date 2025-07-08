@@ -66,6 +66,12 @@ module.exports = (sequelize) => {
       onUpdate: "CASCADE",
     });
 
+    Restaurant.hasOne(models.Branch, {
+      as: "mainBranch",
+      foreignKey: "restaurant_id",
+      scope: { main_branch: true },
+    });
+
     Restaurant.hasOne(models.Menu, {
       foreignKey: "restaurant_id",
       oonDelete: "RESTRICT",

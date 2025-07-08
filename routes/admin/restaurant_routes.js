@@ -18,12 +18,19 @@ const {
 
 const router = express.Router();
 
-// for the owner of restaurant
+// ========== SUPER ADMIN ==========
 router.get(
-  "/owned",
+  "/all-registered-restaurants",
   protect("user"),
-  authorize("restaurant_admin"),
-  RestaurantController.getRestaurant
+  authorize("super_admin"),
+  RestaurantController.getAllRestaurantsWithSubscriptions
+);
+
+router.get(
+  "/registered-restaurant/:id",
+  protect("user"),
+  authorize("super_admin"),
+  RestaurantController.getRestaurantWithSubscriptionById
 );
 
 router.post(
@@ -35,6 +42,30 @@ router.post(
   createRestaurantValidator,
   validateRequest,
   RestaurantController.registerRestaurant
+);
+
+router.put(
+  "/change-status/:id",
+  protect("user"),
+  authorize("super_admin"),
+  changeStatusValidator,
+  validateRequest,
+  RestaurantController.changeRestaurantStatus
+);
+
+// ========== RESTAURANT ADMIN ==========
+router.get(
+  "/owned",
+  protect("user"),
+  authorize("restaurant_admin"),
+  RestaurantController.getRestaurant
+);
+
+router.post(
+  "/add-contact-info",
+  protect("user"),
+  authorize("restaurant_admin"),
+  RestaurantController.addContactInfo
 );
 
 router.put(
@@ -58,18 +89,7 @@ router.delete(
   RestaurantController.deleteRestaurant
 );
 
-router.put(
-  "/change-status/:id",
-  protect("user"),
-  authorize("super_admin"),
-  RestaurantStatus.checkStatusofRestaurant,
-  changeStatusValidator,
-  validateRequest,
-  RestaurantController.changeRestaurantStatus
-);
-
-// Branch routes
-
+// ========== BRANCH MANAGEMENT ==========
 router.post(
   "/branches/create-branch",
   protect("user"),

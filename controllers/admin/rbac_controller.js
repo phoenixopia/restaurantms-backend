@@ -24,6 +24,11 @@ exports.getRoleById = asyncHandler(async (req, res) => {
   return success(res, "Role fetched successfully", role);
 });
 
+exports.getMyRoleWithPermissions = asyncHandler(async (req, res) => {
+  const role = await RbacService.getMyOwnRolePermission(req.user.role_id);
+  return success(res, "Your role and granted permissions fetched", role);
+});
+
 exports.getRoleWithPermissions = asyncHandler(async (req, res) => {
   const data = await RbacService.getRoleWithPermissions(
     req.params.id,
