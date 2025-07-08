@@ -8,7 +8,7 @@ const fileFilter = (req, file, cb) => {
     : cb(new Error("Invalid file type. Only JPEG/PNG allowed"), false);
 };
 
-const RESTAURANT_DIR = path.join(__dirname, "..", "..", "uploads");
+const RESTAURANT_DIR = path.resolve(__dirname, "../../uploads");
 
 const restaurantStorage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, RESTAURANT_DIR),
@@ -22,12 +22,12 @@ exports.uploadRestaurantFiles = multer({
   storage: restaurantStorage,
   fileFilter,
   limits: {
-    fileSize: 5 * 1024 * 1024,
+    fileSize: 1 * 1024 * 1024,
     files: 6,
   },
 }).fields([
   { name: "logo", maxCount: 1 },
-  { name: "images", maxCount: 5 },
+  { name: "images", maxCount: 1 },
 ]);
 
 const MENUITEM_DIR = path.join(__dirname, "..", "..", "uploads", "menu-items");

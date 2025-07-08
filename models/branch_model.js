@@ -40,6 +40,10 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.ENUM("active", "inactive", "under_maintenance"),
         allowNull: false,
       },
+      main_branch: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
+      },
       opening_time: {
         type: DataTypes.TIME,
         allowNull: false,

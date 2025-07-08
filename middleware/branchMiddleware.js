@@ -1,63 +1,26 @@
 const { Op } = require("sequelize");
 const {
+  sequelize,
   Restaurant,
   Subscription,
   Branch,
-  Plan,
-  Location,
+  PlanLimit,
 } = require("../models");
 
-exports.filterActiveBranches = async (req, res, next) => {
-  try {
-    const restaurantId = req.params.restaurantId;
-    if (!restaurantId) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Restaurant ID is required." });
-    }
-
-    const branches = await Branch.findAll({
-      where: {
-        restaurant_id: restaurantId,
-        status: "active",
-      },
-      attributes: [
-        "id",
-        "opening_time",
-        "closing_time",
-        "email",
-        "phone_number",
-        "name",
-      ],
-      include: [
-        {
-          model: Location,
-          attributes: ["name", "address"],
-        },
-      ],
-    });
-
-    req.branches = branches;
-    next();
-  } catch (error) {
-    console.error("Error filtering active branches:", error.message);
-    return res.status(500).json({
-      success: false,
-      message: "Failed to filter active branches.",
-    });
-  }
-};
-
-// this is for to check branch limit
 exports.branchLimit = async (req, res, next) => {
   const transaction = await sequelize.transaction();
   try {
-    const userId = req.user.id;
+    const restaurantId = req.user.restaurant_id;
 
-    const restaurant = await Restaurant.findOne({
-      where: { created_by: userId },
-      transaction,
-    });
+    if (!restaurantId) {
+      await transaction.rollback();
+      return res.status(400).json({
+        success: false,
+        message: "Restaurant ID is required",
+      });
+    }
+
+    const restaurant = await Restaurant.findByPk(restaurantId, { transaction });
 
     if (!restaurant) {
       await transaction.rollback();
@@ -71,9 +34,8 @@ exports.branchLimit = async (req, res, next) => {
       where: {
         restaurant_id: restaurant.id,
         status: { [Op.in]: ["active", "trial"] },
-        expires_at: { [Op.gt]: new Date() },
+        end_date: { [Op.gt]: new Date() },
       },
-      include: [Plan],
       transaction,
     });
 
@@ -86,24 +48,34 @@ exports.branchLimit = async (req, res, next) => {
       });
     }
 
+    const branchLimitRecord = await PlanLimit.findOne({
+      where: {
+        plan_id: activeSubscription.plan_id,
+        key: "branch_limit",
+      },
+      transaction,
+    });
+
+    const branchLimit = branchLimitRecord ? Number(branchLimitRecord.value) : 0;
+
     const branchCount = await Branch.count({
       where: { restaurant_id: restaurant.id },
       transaction,
     });
 
-    if (branchCount >= activeSubscription.Plan.branch_limit) {
+    if (branchCount >= branchLimit) {
       await transaction.rollback();
       return res.status(402).json({
         success: false,
-        message: `Branch limit reached (${activeSubscription.Plan.branch_limit})`,
-        limit: activeSubscription.Plan.branch_limit,
+        message: `Branch limit reached (${branchLimit})`,
+        limit: branchLimit,
         current: branchCount,
       });
     }
 
     req.restaurantData = {
       restaurantId: restaurant.id,
-      branchLimit: activeSubscription.Plan.branch_limit,
+      branchLimit,
       branchesUsed: branchCount,
     };
 

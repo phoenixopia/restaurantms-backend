@@ -13,22 +13,23 @@ const {
   updateRestaurantValidator,
   deleteRestaurantValidator,
   changeStatusValidator,
+  paginationValidation,
 } = require("../../validators/restaurant_validator");
 
 const router = express.Router();
 
-// ================= restaurant related routes
+// for the owner of restaurant
 router.get(
   "/owned",
-  protect,
+  protect("user"),
   authorize("restaurant_admin"),
   RestaurantController.getRestaurant
 );
 
 router.post(
   "/register",
-  protect,
-  authorize("restaurant_admin"),
+  protect("user"),
+  authorize("super_admin"),
   ValidateUploadedFiles.validateUploadedFiles("restaurant"),
   Upload.uploadRestaurantFiles,
   createRestaurantValidator,
@@ -38,7 +39,7 @@ router.post(
 
 router.put(
   "/update/:id",
-  protect,
+  protect("user"),
   authorize("restaurant_admin"),
   RestaurantStatus.checkStatusofRestaurant,
   ValidateUploadedFiles.validateUploadedFiles("restaurant"),
@@ -50,26 +51,16 @@ router.put(
 
 router.delete(
   "/delete/:id",
-  protect,
+  protect("user"),
   authorize("restaurant_admin"),
   deleteRestaurantValidator,
   validateRequest,
   RestaurantController.deleteRestaurant
 );
 
-// ================= branch related routes
-router.post(
-  "branches/create-branch",
-  protect,
-  authorize("restaurant_admin"),
-  RestaurantStatus.checkRestaurantStatus,
-  branchLimit,
-  RestaurantController.createBranch
-);
-
 router.put(
-  "branches/change-status/:id",
-  protect,
+  "/change-status/:id",
+  protect("user"),
   authorize("super_admin"),
   RestaurantStatus.checkStatusofRestaurant,
   changeStatusValidator,
@@ -77,11 +68,46 @@ router.put(
   RestaurantController.changeRestaurantStatus
 );
 
-router.patch(
-  "branches/toggle-active-status/:id",
-  protect,
+// Branch routes
+
+router.post(
+  "/branches/create-branch",
+  protect("user"),
   authorize("restaurant_admin"),
-  RestaurantController.toggleRestaurantActiveStatus
+  RestaurantStatus.checkStatusofRestaurant,
+  branchLimit,
+  RestaurantController.createBranch
+);
+
+router.put(
+  "/branches/:branchId",
+  protect("user"),
+  authorize("restaurant_admin"),
+  RestaurantStatus.checkStatusofRestaurant,
+  validateRequest,
+  RestaurantController.updateBranch
+);
+
+router.delete(
+  "/branches/:branchId",
+  protect("user"),
+  authorize("restaurant_admin"),
+  RestaurantController.deleteBranch
+);
+
+router.get(
+  "/branches",
+  protect("user"),
+  paginationValidation,
+  validateRequest,
+  RestaurantController.getAllBranches
+);
+
+router.get(
+  "/branches/:branchId",
+  protect("user"),
+  authorize("restaurant_admin"),
+  RestaurantController.getBranchById
 );
 
 module.exports = router;

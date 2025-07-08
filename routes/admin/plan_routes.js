@@ -10,37 +10,35 @@ const validateRequest = require("../../middleware/validateRequest");
 
 const router = express.Router();
 
-router.get("/", protect, PlanController.listPlans);
-router.get("/:id", protect, PlanController.getPlanById);
+router.get("/", protect("user"), PlanController.listPlans);
 
-// create a new plan . . . . maybe for the feature
+router.get("/:id", protect("user"), PlanController.getPlanById);
+
 router.post(
   "/create",
-  protect,
+  protect("user"),
   authorize("super_admin"),
   createPlanValidator,
   validateRequest,
   PlanController.createPlan
 );
 
-// update a plan
+// update
 router.put(
-  "/:id",
-  protect,
+  "/update/:id",
+  protect("user"),
   authorize("super_admin"),
   updatePlanValidator,
   validateRequest,
   PlanController.updatePlan
 );
 
-// delete a plan
+//
 router.delete(
   "/delete/:id",
-  protect,
+  protect("user"),
   authorize("super_admin"),
   PlanController.deletePlan
-
-  // get all plans
 );
 
 module.exports = router;

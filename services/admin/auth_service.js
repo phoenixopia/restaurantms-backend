@@ -106,8 +106,47 @@ const AuthService = {
 
       await user.markSuccessfulLogin();
 
+      const isCreatedUser = !!user.created_by;
+      const hasChangedPassword = !!user.password_changed_at;
+
       await t.commit();
-      return { user };
+
+      if (isCreatedUser && !hasChangedPassword) {
+        return {
+          user,
+          requiresPasswordChange: true,
+          message: "Please change your temporary password before proceeding.",
+        };
+      }
+
+      return { user, requiresPasswordChange: false };
+    } catch (err) {
+      await t.rollback();
+      throw err;
+    }
+  },
+
+  async changeTemporaryPassword({ userId, newPassword }) {
+    const t = await sequelize.transaction();
+    try {
+      const user = await User.findByPk(userId, { transaction: t });
+      if (!user) throwError("User not found", 404);
+
+      if (!newPassword || newPassword.length < 6) {
+        throwError("Password must be at least 6 characters long", 400);
+      }
+
+      await user.update(
+        {
+          password: newPassword,
+          password_changed_at: new Date(),
+        },
+        { transaction: t }
+      );
+
+      await t.commit();
+      await user.reload();
+      return { message: "Password changed successfully", user };
     } catch (err) {
       await t.rollback();
       throw err;

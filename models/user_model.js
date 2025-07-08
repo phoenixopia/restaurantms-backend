@@ -107,6 +107,10 @@ module.exports = (sequelize, DataTypes) => {
           key: "id",
         },
       },
+      password_changed_at: {
+        type: DataTypes.DATE,
+        allowNull: true,
+      },
     },
     {
       tableName: "users",
@@ -211,6 +215,10 @@ module.exports = (sequelize, DataTypes) => {
 
     User.belongsTo(models.Role, {
       foreignKey: "role_id",
+    });
+
+    User.hasMany(models.UserPermission, {
+      foreignKey: "user_id",
     });
 
     User.belongsToMany(models.Permission, {

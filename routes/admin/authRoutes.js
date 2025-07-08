@@ -24,6 +24,8 @@ const router = express.Router();
 
 router.post("/login", loginValidator, validateRequest, authController.login);
 
+router.post("/change-temp-password", authController.changeTemporaryPassword);
+
 router.post(
   "/verify-code",
   verifyCodeValidator,

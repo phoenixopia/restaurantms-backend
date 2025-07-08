@@ -44,28 +44,7 @@ exports.sendTokenResponse = async (
       return res.status(statusCode).cookie("token", token, cookieOptions).json({
         success: true,
         token,
-        user: {
-          id,
-          first_name,
-          last_name,
-          email,
-          phone_number,
-          profile_picture,
-          email_verified_at,
-          phone_verified_at,
-          social_provider,
-          social_provider_id,
-          last_login_at,
-          is_active,
-          role_id,
-          office_address_id,
-          home_address_id,
-          dob,
-          notes,
-          visit_count,
-          last_visit_at,
-          two_factor_enabled,
-        },
+        user,
       });
     }
 
@@ -77,18 +56,17 @@ exports.sendTokenResponse = async (
       role = await Role.findByPk(user.role_id, {
         include: [
           {
-            model: RolePermission,
-            where: { granted: true },
-            required: false,
-            include: [{ model: Permission, attributes: ["name"] }],
+            model: Permission,
+            through: {
+              attributes: ["granted"],
+              where: { granted: true },
+            },
+            attributes: ["name"],
           },
         ],
       });
 
-      permissions =
-        role?.RolePermissions?.map(
-          (rp) => rp.Permission?.code || rp.Permission?.name
-        ) || [];
+      permissions = role?.Permissions?.map((perm) => perm.name) || [];
     }
 
     return res

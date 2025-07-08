@@ -44,12 +44,14 @@ exports.protect = (type = "user") => {
           include: [
             {
               model: Role,
+              attributes: ["id", "name"],
               include: [
                 {
-                  model: RolePermission,
-                  where: { granted: true },
-                  required: false,
-                  include: [{ model: Permission }],
+                  model: Permission,
+                  through: {
+                    attributes: ["granted"],
+                    where: { granted: true },
+                  },
                 },
               ],
             },
@@ -70,6 +72,7 @@ exports.protect = (type = "user") => {
         }
 
         req.user = user;
+        req.user.role_name = user.Role?.name || null;
         req.user.restaurant_id = decoded.restaurant_id || null;
         req.user.branch_id = decoded.branch_id || null;
       }

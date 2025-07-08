@@ -1,5 +1,7 @@
 const asyncHandler = require("../../middleware/asyncHandler");
 const RestaurantService = require("../../services/admin/restaurant_service");
+const BranchService = require("../../services/admin/branch_service");
+const MenuCategoryService = require("../../services/admin/menuCategory_service");
 const { success } = require("../../utils/apiResponse");
 const throwError = require("../../utils/throwError");
 
@@ -28,13 +30,13 @@ exports.updateRestaurant = asyncHandler(async (req, res) => {
     req.params.id,
     req.body,
     req.files,
-    req.user.id
+    req.user
   );
   return success(res, "Restaurant updated successfully", updatedRestaurant);
 });
 
 exports.deleteRestaurant = asyncHandler(async (req, res) => {
-  await RestaurantService.deleteRestaurant(req.params.id, req.user.id);
+  await RestaurantService.deleteRestaurant(req.params.id, req.user);
   return success(res, "Restaurant deleted successfully");
 });
 
@@ -45,21 +47,21 @@ exports.getAllRestaurants = asyncHandler(async (req, res) => {
 
 exports.getRestaurantById = asyncHandler(async (req, res) => {
   const { page = 1, limit = 10 } = req.query;
-
   const restaurant = await RestaurantService.getRestaurantById(
     req.params.id,
     parseInt(page),
     parseInt(limit)
   );
-
   return success(res, "Restaurant fetched successfully", restaurant);
 });
 
 exports.getAllRestaurantWithCheapestItems = asyncHandler(async (req, res) => {
+  const { page = 1, limit = 10 } = req.query;
   const result =
-    await RestaurantService.getAllRestaurantsWithMenusAndCheapestItems(
-      req.query
-    );
+    await RestaurantService.getAllRestaurantsWithMenusAndCheapestItems({
+      page: parseInt(page),
+      limit: parseInt(limit),
+    });
   return success(
     res,
     "All registered restaurants with cheapest items fetched",
@@ -87,7 +89,6 @@ exports.getRestaurantsByCategoryTagId = asyncHandler(async (req, res) => {
   );
 });
 
-// this for super admin
 exports.changeRestaurantStatus = asyncHandler(async (req, res) => {
   const restaurant = await RestaurantService.changeRestaurantStatus(
     req.params.id,
@@ -96,21 +97,10 @@ exports.changeRestaurantStatus = asyncHandler(async (req, res) => {
   return success(res, "Restaurant status updated", restaurant);
 });
 
-exports.toggleRestaurantActiveStatus = asyncHandler(async (req, res) => {
-  const restaurant = await RestaurantService.toggleRestaurantActiveStatus(
-    req.params.id
-  );
-  return success(
-    res,
-    "Restaurant active status toggled successfully",
-    restaurant
-  );
-});
-
 exports.createBranch = asyncHandler(async (req, res) => {
   const { restaurantId, branchLimit } = req.restaurantData;
 
-  const branch = await RestaurantService.createBranch(
+  const branch = await BranchService.createBranch(
     req.body,
     req.user.id,
     restaurantId,
@@ -122,7 +112,7 @@ exports.createBranch = asyncHandler(async (req, res) => {
 
 exports.updateBranch = asyncHandler(async (req, res) => {
   const { branchId } = req.params;
-  const updated = await RestaurantService.updateBranch(
+  const updated = await BranchService.updateBranch(
     branchId,
     req.body,
     req.user.id
@@ -132,6 +122,30 @@ exports.updateBranch = asyncHandler(async (req, res) => {
 
 exports.deleteBranch = asyncHandler(async (req, res) => {
   const { branchId } = req.params;
-  await RestaurantService.deleteBranch(branchId, req.user.id);
+  await BranchService.deleteBranch(branchId, req.user.id);
   return success(res, "Branch deleted successfully");
+});
+
+exports.getAllBranches = asyncHandler(async (req, res) => {
+  const { page = 1, limit = 10 } = req.query;
+  const { restaurantId } = req.restaurantData;
+
+  const result = await BranchService.getAllBranches(
+    restaurantId,
+    parseInt(page),
+    parseInt(limit)
+  );
+
+  return success(res, "All branches fetched successfully", result);
+});
+
+exports.getBranchById = asyncHandler(async (req, res) => {
+  const { branchId } = req.params;
+  const branch = await BranchService.getBranchById(branchId);
+
+  if (!branch) {
+    throwError("Branch not found", 404);
+  }
+
+  return success(res, "Branch fetched successfully", branch);
 });

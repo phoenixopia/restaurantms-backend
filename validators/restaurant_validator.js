@@ -7,30 +7,6 @@ const restaurantNameValidation = body("restaurant_name")
   .isString()
   .withMessage("Restaurant name must be a string");
 
-const locationNameValidation = body("location_name")
-  .notEmpty()
-  .withMessage("Location name is required")
-  .bail()
-  .isString()
-  .withMessage("Location name must be a string");
-
-const addressValidation = body("address")
-  .notEmpty()
-  .withMessage("Address is required")
-  .bail()
-  .isString()
-  .withMessage("Address must be a string");
-
-const latitudeValidation = body("latitude")
-  .optional()
-  .isFloat({ min: -90, max: 90 })
-  .withMessage("Latitude must be a valid coordinate between -90 and 90");
-
-const longitudeValidation = body("longitude")
-  .optional()
-  .isFloat({ min: -180, max: 180 })
-  .withMessage("Longitude must be a valid coordinate between -180 and 180");
-
 const primaryColorValidation = body("primary_color")
   .optional()
   .matches(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/)
@@ -54,6 +30,10 @@ const statusValidation = body("status")
 const idParamValidation = param("id")
   .isUUID()
   .withMessage("Invalid restaurant ID");
+
+const branchIdParamValidation = param("branchId")
+  .isUUID()
+  .withMessage("Invalid branch ID");
 
 const paginationValidation = [
   query("page")
@@ -80,10 +60,6 @@ const paginationValidation = [
 module.exports = {
   createRestaurantValidator: [
     restaurantNameValidation,
-    locationNameValidation,
-    addressValidation,
-    latitudeValidation,
-    longitudeValidation,
     primaryColorValidation,
     languageValidation,
     rtlEnabledValidation,
@@ -91,10 +67,6 @@ module.exports = {
   updateRestaurantValidator: [
     idParamValidation,
     restaurantNameValidation.optional(),
-    locationNameValidation.optional(),
-    addressValidation.optional(),
-    latitudeValidation,
-    longitudeValidation,
     primaryColorValidation,
     languageValidation,
     rtlEnabledValidation,
@@ -106,8 +78,9 @@ module.exports = {
       .notEmpty()
       .withMessage("Status is required")
       .bail()
-      .isIn(["active", "trial", "cancelled", "expired"])
+      .isIn(["active", "trial", "cancelled", "expired", "pending"])
       .withMessage("Invalid status"),
   ],
   paginationValidation,
+  branchIdParamValidation,
 };

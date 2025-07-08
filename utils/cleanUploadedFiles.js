@@ -1,19 +1,37 @@
-// utils/cleanupUploadedFiles.js
-const fs = require("fs");
+const fs = require("fs").promises;
 const path = require("path");
 
-module.exports = function cleanupUploadedFiles(files, uploadDir) {
+module.exports = async function cleanupUploadedFiles(files) {
   if (!files) return;
 
-  if (files.logo?.[0]) {
-    const logoPath = path.join(uploadDir, files.logo[0].filename);
-    fs.existsSync(logoPath) && fs.unlinkSync(logoPath);
-  }
+  try {
+    const deletions = [];
 
-  if (Array.isArray(files.images)) {
-    files.images.forEach((img) => {
-      const imgPath = path.join(uploadDir, img.filename);
-      fs.existsSync(imgPath) && fs.unlinkSync(imgPath);
-    });
+    if (files.logo?.[0]?.path) {
+      deletions.push(
+        fs.unlink(files.logo[0].path).catch((err) => {
+          if (err.code !== "ENOENT") console.error("Error deleting logo:", err);
+        })
+      );
+    }
+
+    // Handle images
+    if (Array.isArray(files.images)) {
+      files.images.forEach((img) => {
+        if (img.path) {
+          deletions.push(
+            fs.unlink(img.path).catch((err) => {
+              if (err.code !== "ENOENT")
+                console.error("Error deleting image:", err);
+            })
+          );
+        }
+      });
+    }
+
+    await Promise.all(deletions);
+    console.log("File cleanup completed successfully");
+  } catch (err) {
+    console.error("Cleanup failed:", err);
   }
 };
