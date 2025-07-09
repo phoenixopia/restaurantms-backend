@@ -44,6 +44,19 @@ exports.validateUploadedFiles = (type) => {
       }
     }
 
+    if (type === "receipt") {
+      const image = req.file;
+      if (!image) return next();
+
+      if (!image.mimetype.startsWith("image/")) {
+        errors.push("Receipt image must be an image file");
+      }
+
+      if (image.size > 2 * 1024 * 1024) {
+        errors.push("Receipt image must be less than 3MB");
+      }
+    }
+
     if (errors.length > 0) {
       return res.status(400).json({
         success: false,

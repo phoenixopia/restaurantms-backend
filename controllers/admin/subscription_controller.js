@@ -3,6 +3,60 @@ const SubscriptionService = require("../../services/admin/subscription_service")
 const { success } = require("../../utils/apiResponse");
 
 exports.subscribe = asyncHandler(async (req, res) => {
-  const subscription = await SubscriptionService.create(req.body, req.user?.id);
-  return success(res, "Subscribed Successfully", subscription);
+  const receiptFile = req.file || null;
+
+  const subscription = await SubscriptionService.subscribe(
+    req.body,
+    req.user,
+    receiptFile
+  );
+
+  return success(res, "Subscription submitted successfully", subscription, 201);
+});
+
+exports.updateSubscriptionStatus = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+
+  const allowedStatuses = [
+    "active",
+    "pending",
+    "inactive",
+    "cancelled",
+    "expired",
+  ];
+  if (!allowedStatuses.includes(status)) {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid status value.",
+    });
+  }
+
+  const updated = await SubscriptionService.updateStatus(id, status);
+
+  req.app.locals.io
+    .to(updated.restaurant_id)
+    .emit("subscriptionStatusUpdated", {
+      subscriptionId: id,
+      newStatus: status,
+    });
+
+  return success(res, "Subscription status updated", updated);
+});
+
+exports.listSubscriptions = asyncHandler(async (req, res) => {
+  const subscriptions = await SubscriptionService.listSubscriptions(
+    req.user,
+    req.query
+  );
+  return success(res, "Subscriptions fetched successfully", subscriptions);
+});
+
+exports.exportSubscriptionsToCSV = asyncHandler(async (req, res) => {
+  const { csvData, filename } = await SubscriptionService.exportToCSV(
+    req.query
+  );
+  res.header("Content-Type", "text/csv");
+  res.attachment(filename);
+  res.send(csvData);
 });

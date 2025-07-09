@@ -46,6 +46,11 @@ module.exports = (sequelize, DataTypes) => {
         "cancelled",
         "expired"
       ),
+
+      receipt: {
+        type: DataTypes.STRING(2083),
+        allowNull: true,
+      },
     },
     {
       tableName: "subscriptions",
