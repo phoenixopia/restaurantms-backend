@@ -4,25 +4,17 @@ const { Op } = require("sequelize");
 const GRACE_PERIOD_DAYS = 2;
 const TRIAL_DAYS = 15;
 
-const deactivateExpiredSubscriptions = async () => {
+const deactivateExpiredSubscriptions = async (io) => {
   const transaction = await sequelize.transaction();
   try {
     const today = new Date();
     const graceCutoff = new Date(today);
     graceCutoff.setDate(today.getDate() - GRACE_PERIOD_DAYS);
 
-    const isFirstDayOfMonth = today.getDate() === 1;
-
-    const billingCyclesToCheck = ["monthly"];
-    if (isFirstDayOfMonth) {
-      billingCyclesToCheck.push("yearly");
-    }
-
     const expiredSubscriptions = await Subscription.findAll({
       where: {
         status: "active",
         end_date: { [Op.lt]: graceCutoff },
-        billing_cycle: { [Op.in]: billingCyclesToCheck },
       },
       transaction,
     });
@@ -32,20 +24,17 @@ const deactivateExpiredSubscriptions = async () => {
 
       await subscription.update({ status: "expired" }, { transaction });
 
-      await Restaurant.update(
-        {
-          status: "expired",
-          subscription_id: null,
-        },
-        {
-          where: { id: restaurantId },
-          transaction,
-        }
-      );
+      // Emit socket event
+      if (io) {
+        io.to(restaurantId).emit("subscriptionStatusUpdated", {
+          subscriptionId: subscription.id,
+          newStatus: "expired",
+        });
+      }
     }
 
     await transaction.commit();
-    console.log(`${expiredSubscriptions.length} subscriptions deactivated.`);
+    console.log(`${expiredSubscriptions.length} subscriptions expired.`);
   } catch (err) {
     await transaction.rollback();
     console.error("Failed to deactivate subscriptions:", err);
@@ -58,12 +47,12 @@ const expireTrialRestaurants = async () => {
     const today = new Date();
 
     const trialExpirationDate = new Date(today);
-    trialExpirationDate.setDate(trialExpirationDate.getDate() - TRIAL_DAYS);
+    trialExpirationDate.setDate(today.getDate() - TRIAL_DAYS);
 
     const expiredTrials = await Restaurant.findAll({
       where: {
         status: "trial",
-        created_at: { [Op.lte]: trialExpirationDate }, // trial started at created_at
+        created_at: { [Op.lte]: trialExpirationDate },
       },
       transaction,
     });

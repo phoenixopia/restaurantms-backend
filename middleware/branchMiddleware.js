@@ -33,7 +33,7 @@ exports.branchLimit = async (req, res, next) => {
     const activeSubscription = await Subscription.findOne({
       where: {
         restaurant_id: restaurant.id,
-        status: { [Op.in]: ["active", "trial"] },
+        status: { [Op.in]: ["active"] },
         end_date: { [Op.gt]: new Date() },
       },
       transaction,
@@ -43,8 +43,7 @@ exports.branchLimit = async (req, res, next) => {
       await transaction.rollback();
       return res.status(402).json({
         success: false,
-        message:
-          "Valid subscription (active or trial) required to create branches",
+        message: "Valid subscription active required to create branches",
       });
     }
 

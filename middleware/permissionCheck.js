@@ -4,6 +4,11 @@ exports.permissionCheck = (permissionName) => {
   return async (req, res, next) => {
     try {
       const user = req.user;
+
+      if (user.role_name === "super_admin") {
+        return next();
+      }
+
       const userId = user.id;
       const restaurantId =
         req.params.restaurantId ||
@@ -11,16 +16,23 @@ exports.permissionCheck = (permissionName) => {
         user.restaurant_id ||
         null;
 
-      const userPermission = user.UserPermissions?.some(
-        (up) => up.Permission?.name === permissionName
-      );
+      let userPermission = false;
+
+      if (user.role_name === "staff") {
+        userPermission = user.UserPermissions?.some(
+          (up) =>
+            up.Permission?.name === permissionName &&
+            up.restaurant_id === restaurantId
+        );
+      }
 
       const rolePermission = user.Role?.RolePermissions?.some(
         (rp) => rp.Permission?.name === permissionName
       );
 
       let dynamicPermission = false;
-      if (!userPermission && !rolePermission) {
+
+      if (!userPermission && !rolePermission && user.role_name === "staff") {
         dynamicPermission = await checkUserPermission(
           userId,
           permissionName,
@@ -34,13 +46,13 @@ exports.permissionCheck = (permissionName) => {
 
       return res.status(403).json({
         success: false,
-        message: `Access denied - requires ${permissionName} permission`,
+        message: `Access denied - requires '${permissionName}' permission.`,
       });
     } catch (err) {
-      console.error("Error in permissionCheck:", err);
+      console.error("Error in permissionCheck middleware:", err);
       return res.status(500).json({
         success: false,
-        message: "Error checking permissions",
+        message: "Internal server error while checking permissions.",
       });
     }
   };

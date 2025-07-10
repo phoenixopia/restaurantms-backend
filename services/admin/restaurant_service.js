@@ -400,11 +400,25 @@ const RestaurantService = {
     const { page, limit, offset, order, where } = buildPagination(query);
 
     const { count, rows } = await Restaurant.findAndCountAll({
-      where,
+      where: {
+        status: { [Op.in]: ["active"] },
+      },
       offset,
       limit,
       order,
       include: [
+        {
+          model: SystemSetting,
+          attributes: ["logo_url", "images"],
+          required: false,
+        },
+        {
+          model: ContactInfo,
+          as: "owned_contact_info",
+          where: { module_type: "restaurant" },
+          required: false,
+          attributes: ["type", "value", "is_primary"],
+        },
         {
           model: Branch,
           as: "mainBranch",
@@ -416,6 +430,11 @@ const RestaurantService = {
               attributes: ["address", "latitude", "longitude"],
             },
           ],
+        },
+        {
+          model: MenuCategory,
+          required: false,
+          attributes: ["name"],
         },
       ],
     });
@@ -444,6 +463,18 @@ const RestaurantService = {
 
     const restaurant = await Restaurant.findByPk(id, {
       include: [
+        {
+          model: SystemSetting,
+          attributes: ["logo_url", "images"],
+          required: false,
+        },
+        {
+          model: ContactInfo,
+          as: "owned_contact_info",
+          where: { module_type: "restaurant" },
+          required: false,
+          attributes: ["type", "value", "is_primary"],
+        },
         {
           model: Branch,
           as: "mainBranch",
@@ -495,12 +526,24 @@ const RestaurantService = {
     const { count, rows: restaurants } = await Restaurant.findAndCountAll({
       attributes: ["id", "restaurant_name", "logo_url"],
       where: {
-        status: { [Op.in]: ["active", "trial"] },
+        status: { [Op.in]: ["active"] },
       },
       offset,
       limit,
       distinct: true,
       include: [
+        {
+          model: SystemSetting,
+          attributes: ["logo_url", "images"],
+          required: false,
+        },
+        {
+          model: ContactInfo,
+          as: "owned_contact_info",
+          where: { module_type: "restaurant" },
+          required: false,
+          attributes: ["type", "value", "is_primary"],
+        },
         {
           model: Branch,
           as: "mainBranch",
@@ -663,6 +706,18 @@ const RestaurantService = {
       const allRestaurants = await Restaurant.findAndCountAll({
         where: filterCondition,
         include: [
+          {
+            model: SystemSetting,
+            attributes: ["logo_url", "images"],
+            required: false,
+          },
+          {
+            model: ContactInfo,
+            as: "owned_contact_info",
+            where: { module_type: "restaurant" },
+            required: false,
+            attributes: ["type", "value", "is_primary"],
+          },
           {
             model: Branch,
             as: "mainBranch",

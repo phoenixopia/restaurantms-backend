@@ -1,38 +1,31 @@
-const { User, Role } = require("../models");
+"use strict";
 
-async function validateManagerByEmail(
-  managerEmail,
-  adminId,
-  transaction = null
-) {
-  if (!managerEmail) {
-    throw new Error("Manager email is required");
+const { User, Role } = require("../models");
+const throwError = require("../utils/throwError");
+
+async function validateManagerById(managerId, adminId, transaction = null) {
+  if (!managerId) {
+    throwError("Manager ID is required");
   }
 
-  const manager = await User.findOne({
-    where: { email: managerEmail.toLowerCase() },
-    include: [
-      {
-        model: Role,
-        attributes: ["name"],
-      },
-    ],
+  const manager = await User.findByPk(managerId, {
+    include: [{ model: Role, attributes: ["name"] }],
     transaction,
   });
 
   if (!manager) {
-    throw new Error("No user found with that email");
+    throwError("Manager not found", 404);
   }
 
-  if (manager.Role.name !== "staff") {
-    throw new Error("User is not a branch manager");
+  if (!manager.Role || manager.Role.name !== "staff") {
+    throwError("User is not a staff (branch manager)", 400);
   }
 
   if (manager.created_by !== adminId) {
-    throw new Error("You can only assign managers created by you");
+    throwError("You can only assign managers you have created", 403);
   }
 
   return manager;
 }
 
-module.exports = { validateManagerByEmail };
+module.exports = { validateManagerById };

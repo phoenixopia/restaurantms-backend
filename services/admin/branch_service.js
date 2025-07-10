@@ -11,61 +11,89 @@ const {
   sequelize,
 } = require("../../models");
 
-async function validateManagerByEmail(email, userId, transaction) {
-  const manager = await User.findOne({ where: { email }, transaction });
-  if (!manager) throwError("Manager user not found with this email");
-  return manager;
-}
+const { validateManagerById } = require("../../utils/validateManager");
 
 const BranchService = {
   async createBranch(payload, userId, restaurantId, branchLimit) {
     const transaction = await sequelize.transaction();
     try {
-      // Validate user ownership of the restaurant (ensure user manages or created this restaurant)
-      const restaurant = await Restaurant.findOne({
-        where: { id: restaurantId, created_by: userId },
-        transaction,
-      });
-      if (!restaurant) {
-        throwError("Restaurant not found or access denied", 403);
+      const {
+        manager_id,
+        branch_email,
+        branch_phone,
+        main_branch,
+        address,
+        latitude,
+        longitude,
+        opening_time,
+        closing_time,
+        name,
+        status,
+      } = payload;
+
+      if (!address || !latitude || !longitude) {
+        throwError("Address, latitude, and longitude are required", 400);
       }
 
-      // Count existing branches for this restaurant
+      const restaurant = await Restaurant.findByPk(restaurantId, {
+        transaction,
+      });
+      if (!restaurant) throwError("Restaurant not found", 403);
+
       const currentCount = await Branch.count({
         where: { restaurant_id: restaurantId },
         transaction,
       });
-
       if (currentCount >= branchLimit) {
         throwError("Branch limit reached", 403);
       }
 
-      const { manager_email, branch_email, branch_phone, ...branchData } =
-        payload;
-
-      let managerId = null;
-      if (manager_email) {
-        if (!validator.isEmail(manager_email))
-          throwError("Invalid manager email format");
-        const manager = await validateManagerByEmail(
-          manager_email,
-          userId,
-          transaction
-        );
-        managerId = manager.id;
-      }
-
-      // Create branch
-      const branch = await Branch.create(
+      const location = await Location.create(
         {
-          ...branchData,
-          restaurant_id: restaurantId,
-          manager_id: managerId,
+          address,
+          latitude,
+          longitude,
         },
         { transaction }
       );
 
-      // Insert contact info
+      let validatedManagerId = null;
+      if (manager_id) {
+        const manager = await validateManagerById(
+          manager_id,
+          userId,
+          transaction
+        );
+        validatedManagerId = manager.id;
+      }
+
+      if (main_branch === true) {
+        const existingMain = await Branch.findOne({
+          where: {
+            restaurant_id: restaurantId,
+            main_branch: true,
+          },
+          transaction,
+        });
+        if (existingMain) {
+          throwError("Main branch already exists for this restaurant", 400);
+        }
+      }
+
+      const branch = await Branch.create(
+        {
+          name,
+          status,
+          main_branch: !!main_branch,
+          opening_time,
+          closing_time,
+          restaurant_id: restaurantId,
+          location_id: location.id,
+          manager_id: validatedManagerId,
+        },
+        { transaction }
+      );
+
       if (branch_email) {
         if (!validator.isEmail(branch_email))
           throwError("Invalid branch email format");
@@ -74,7 +102,7 @@ const BranchService = {
             restaurant_id: restaurantId,
             module_type: "branch",
             module_id: branch.id,
-            type: "email",
+            type: "Email",
             value: branch_email,
             is_primary: true,
           },
@@ -83,14 +111,12 @@ const BranchService = {
       }
 
       if (branch_phone) {
-        if (!validator.isMobilePhone(branch_phone))
-          throwError("Invalid branch phone number format");
         await ContactInfo.create(
           {
             restaurant_id: restaurantId,
             module_type: "branch",
             module_id: branch.id,
-            type: "phone",
+            type: "Phone Number ",
             value: branch_phone,
             is_primary: true,
           },
@@ -116,25 +142,19 @@ const BranchService = {
   async updateBranch(branchId, updates, userId) {
     const transaction = await sequelize.transaction();
     try {
-      // Find branch with restaurant and verify user ownership
-      const branch = await Branch.findOne({
-        where: { id: branchId },
-        include: {
-          model: Restaurant,
-          where: { created_by: userId }, // Validate ownership by creator
-          required: true,
-        },
-        transaction,
-      });
+      const branch = await Branch.findByPk(branchId, { transaction });
+      if (!branch) throwError("Branch not found", 404);
 
-      if (!branch) {
-        throwError("Branch not found or access denied", 404);
+      const user = await User.findByPk(userId, { transaction });
+      if (!user) throwError("User not found", 404);
+
+      if (user.restaurant_id !== branch.restaurant_id) {
+        throwError("Access denied", 403);
       }
 
       const allowedUpdates = [
         "name",
         "location_id",
-        "manager_email",
         "branch_email",
         "branch_phone",
         "opening_time",
@@ -145,12 +165,10 @@ const BranchService = {
       const invalidFields = Object.keys(updates).filter(
         (field) => !allowedUpdates.includes(field)
       );
-
       if (invalidFields.length > 0) {
         throwError(`Invalid fields: ${invalidFields.join(", ")}`);
       }
 
-      // Validate location if updated
       if (updates.location_id) {
         const locationExists = await Location.findByPk(updates.location_id, {
           transaction,
@@ -160,27 +178,13 @@ const BranchService = {
         }
       }
 
-      // Handle manager_email update
-      if (updates.manager_email) {
-        if (!validator.isEmail(updates.manager_email)) {
-          throwError("Invalid manager email format");
-        }
-        const manager = await validateManagerByEmail(
-          updates.manager_email,
-          userId,
-          transaction
-        );
-        updates.manager_id = manager.id;
-        delete updates.manager_email;
-      }
-
-      // Helper to upsert ContactInfo for branch email or phone
       async function upsertContactInfo(type, value) {
         if (value) {
           if (type === "email" && !validator.isEmail(value)) {
             throwError("Invalid branch email format");
           }
-          if (type === "phone" && !validator.isMobilePhone(value)) {
+
+          if (type === "phone" && typeof value !== "string") {
             throwError("Invalid branch phone number format");
           }
 
@@ -221,15 +225,11 @@ const BranchService = {
         delete updates.branch_phone;
       }
 
-      // Update other branch fields
       await branch.update(updates, { transaction });
 
-      // Reload branch with contact info and manager
+      // Reload updated branch with contact info and manager
       const updatedBranch = await Branch.findByPk(branchId, {
-        include: [
-          { model: ContactInfo, required: false },
-          { model: User, as: "manager" },
-        ],
+        include: [{ model: ContactInfo, required: false }],
         transaction,
       });
 
@@ -247,13 +247,11 @@ const BranchService = {
       const branch = await Branch.findByPk(branchId, { transaction });
       if (!branch) throwError("Branch not found", 404);
 
-      // Verify ownership by checking if user owns the restaurant linked to this branch
       const user = await User.findByPk(userId, { transaction });
       if (!user || user.restaurant_id !== branch.restaurant_id) {
         throwError("Access denied", 403);
       }
 
-      // Delete branch (cascade will handle contact info)
       await branch.destroy({ transaction });
       await transaction.commit();
     } catch (err) {
@@ -296,6 +294,16 @@ const BranchService = {
           attributes: ["id", "name", "email"],
           required: false,
         },
+        {
+          model: MenuCategory,
+          attributes: { exclude: ["created_at", "updated_at"] },
+          include: [
+            {
+              model: MenuItem,
+              attributes: { exclude: ["created_at", "updated_at"] },
+            },
+          ],
+        },
       ],
     });
 
@@ -315,7 +323,7 @@ const BranchService = {
       include: [
         {
           model: Location,
-          attributes: ["id", "name", "address", "latitude", "longitude"],
+          attributes: ["id", "address", "latitude", "longitude"],
         },
         {
           model: ContactInfo,
@@ -328,6 +336,18 @@ const BranchService = {
           attributes: ["id", "name", "email"],
           required: false,
         },
+        {
+          model: MenuCategory,
+          attributes: { exclude: ["created_at", "updated_at"] },
+          include: [
+            {
+              model: MenuItem,
+              attributes: { exclude: ["created_at", "updated_at"] },
+              limit: 10,
+              order: [["name", "ASC"]],
+            },
+          ],
+        },
       ],
     });
 
@@ -336,6 +356,117 @@ const BranchService = {
     }
 
     return branch;
+  },
+
+  async addBranchContactInfo(branchId, data) {
+    const transaction = await sequelize.transaction();
+    try {
+      const branch = await Branch.findByPk(branchId, { transaction });
+      if (!branch) throwError("Branch not found", 404);
+
+      const { type, value, is_primary = true } = data;
+
+      if (!type || !value) {
+        throwError("Both 'type' and 'value' are required");
+      }
+
+      const normalizedType = type.trim().toLowerCase();
+
+      const existing = await ContactInfo.findOne({
+        where: {
+          module_type: "branch",
+          module_id: branchId,
+          type: normalizedType,
+        },
+        transaction,
+      });
+
+      let contactInfo;
+
+      if (existing) {
+        contactInfo = await existing.update(
+          { value, is_primary },
+          { transaction }
+        );
+      } else {
+        contactInfo = await ContactInfo.create(
+          {
+            restaurant_id: branch.restaurant_id,
+            module_type: "branch",
+            module_id: branchId,
+            type: normalizedType,
+            value,
+            is_primary,
+          },
+          { transaction }
+        );
+      }
+
+      await transaction.commit();
+      return contactInfo;
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
+  },
+
+  async toggleBranchStatus(branchId, status, userId) {
+    const ALLOWED_STATUSES = ["active", "inactive", "under_maintenance"];
+    const transaction = await sequelize.transaction();
+    try {
+      if (!ALLOWED_STATUSES.includes(status)) {
+        throwError("Invalid status", 400);
+      }
+
+      const branch = await Branch.findByPk(branchId, { transaction });
+      if (!branch) throwError("Branch not found", 404);
+
+      const user = await User.findByPk(userId, { transaction });
+      if (!user || user.restaurant_id !== branch.restaurant_id) {
+        throwError("Access denied", 403);
+      }
+
+      await branch.update({ status }, { transaction });
+      await transaction.commit();
+
+      return branch;
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
+  },
+
+  async updateBranchContactInfo(branchId, contactInfoId, data, userId) {
+    const transaction = await sequelize.transaction();
+    try {
+      const contactInfo = await ContactInfo.findByPk(contactInfoId, {
+        transaction,
+      });
+
+      if (
+        !contactInfo ||
+        contactInfo.module_type !== "branch" ||
+        contactInfo.module_id !== branchId
+      ) {
+        throwError("Contact info not found for this branch", 404);
+      }
+
+      const branch = await Branch.findByPk(branchId, { transaction });
+      if (!branch) throwError("Branch not found", 404);
+
+      const user = await User.findByPk(userId, { transaction });
+      if (!user || user.restaurant_id !== branch.restaurant_id) {
+        throwError("Access denied", 403);
+      }
+
+      await contactInfo.update(data, { transaction });
+
+      await transaction.commit();
+      return contactInfo;
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
   },
 };
 

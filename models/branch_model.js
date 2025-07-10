@@ -38,6 +38,8 @@ module.exports = (sequelize, DataTypes) => {
       },
       status: {
         type: DataTypes.ENUM("active", "inactive", "under_maintenance"),
+        defaultValue: "active",
+
         allowNull: false,
       },
       main_branch: {

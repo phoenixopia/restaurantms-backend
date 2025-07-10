@@ -1,6 +1,10 @@
 const { User, Permission } = require("../models");
 
 const checkUserPermission = async (userId, permissionKey, restaurantId) => {
+  if (!userId || !permissionKey || !restaurantId) {
+    return false;
+  }
+
   const user = await User.findByPk(userId, {
     include: [
       {
@@ -8,10 +12,7 @@ const checkUserPermission = async (userId, permissionKey, restaurantId) => {
         where: { key: permissionKey },
         through: {
           where: {
-            [sequelize.Op.or]: [
-              { restaurant_id: restaurantId },
-              { restaurant_id: null },
-            ],
+            restaurant_id: restaurantId,
             granted: true,
           },
         },
@@ -19,5 +20,7 @@ const checkUserPermission = async (userId, permissionKey, restaurantId) => {
     ],
   });
 
-  return !!user && user.Permissions.length > 0;
+  return !!user && user.Permissions && user.Permissions.length > 0;
 };
+
+module.exports = { checkUserPermission };

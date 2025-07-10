@@ -135,7 +135,7 @@ exports.searchRestaurants = asyncHandler(async (req, res) => {
   return success(res, "Restaurants fetched successfully", result);
 });
 
-// Branch Management
+//===================== Branch Management
 exports.createBranch = asyncHandler(async (req, res) => {
   const { restaurantId, branchLimit } = req.restaurantData;
 
@@ -181,10 +181,48 @@ exports.getBranchById = asyncHandler(async (req, res) => {
 
 exports.updateBranch = asyncHandler(async (req, res) => {
   const { branchId } = req.params;
-  const updated = await BranchService.updateBranch(
+  const userId = req.user.id;
+  const updates = req.body;
+
+  const updatedBranch = await BranchService.updateBranch(
     branchId,
+    updates,
+    userId
+  );
+
+  return success(res, "Branch updated successfully", updatedBranch);
+});
+
+exports.updateBranchContactInfo = asyncHandler(async (req, res) => {
+  const { branchId, contactInfoId } = req.params;
+  const updated = await BranchService.updateBranchContactInfo(
+    branchId,
+    contactInfoId,
     req.body,
     req.user.id
   );
-  return success(res, "Branch updated successfully", updated);
+
+  return success(res, "Branch contact info updated successfully", updated);
+});
+
+exports.addBranchContactInfo = asyncHandler(async (req, res) => {
+  const { branchId } = req.params;
+  const contactInfo = await BranchService.addBranchContactInfo(
+    branchId,
+    req.body
+  );
+  return success(res, "Branch contact info added successfully", contactInfo);
+});
+
+exports.toggleBranchStatus = asyncHandler(async (req, res) => {
+  const { branchId } = req.params;
+  const { status } = req.body;
+
+  const updatedBranch = await BranchService.toggleBranchStatus(
+    branchId,
+    status,
+    req.user.id
+  );
+
+  return success(res, "Branch status updated successfully", updatedBranch);
 });

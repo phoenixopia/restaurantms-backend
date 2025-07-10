@@ -1,13 +1,13 @@
 const {
   deactivateExpiredSubscriptions,
   expireTrialRestaurants,
-} = require("./../utils/subscriptionUtils");
+} = require("../utils/subscriptionUtils");
 
-const runSubscriptionJob = async () => {
+const runSubscriptionJob = async (io = null) => {
   console.log("Running subscription expiration job...");
-  await deactivateExpiredSubscriptions();
+  await deactivateExpiredSubscriptions(io);
 
-  console.log("Running trial expiration job. . . .");
+  console.log("Running trial expiration job...");
   await expireTrialRestaurants();
 };
 
