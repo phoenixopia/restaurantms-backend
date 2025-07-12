@@ -56,3 +56,11 @@ exports.assignBranchManager = asyncHandler(async (req, res) => {
   );
   return success(res, result.message, result);
 });
+
+exports.removeBranchManager = asyncHandler(async (req, res) => {
+  const { branchId } = req.body;
+
+  const result = await UserService.removeBranchManager(branchId, req.user);
+
+  return success(res, result.message, result);
+});

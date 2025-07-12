@@ -50,7 +50,7 @@ exports.branchLimit = async (req, res, next) => {
     const branchLimitRecord = await PlanLimit.findOne({
       where: {
         plan_id: activeSubscription.plan_id,
-        key: "branch_limit",
+        key: "max_branches",
       },
       transaction,
     });
@@ -66,7 +66,7 @@ exports.branchLimit = async (req, res, next) => {
       await transaction.rollback();
       return res.status(402).json({
         success: false,
-        message: `Branch limit reached (${branchLimit})`,
+        message: `Your current subscription allows up to ${branchLimit} branches. You have already created ${branchCount}, so you cannot create more.`,
         limit: branchLimit,
         current: branchCount,
       });

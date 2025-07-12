@@ -70,4 +70,11 @@ router.post(
   UserController.assignBranchManager
 );
 
+router.post(
+  "/remove/branch-manager",
+  protect("user"),
+  authorize("restaurant_admin"),
+  UserController.removeBranchManager
+);
+
 module.exports = router;

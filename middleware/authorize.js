@@ -1,6 +1,7 @@
 exports.authorize = (...allowedRoles) => {
   return (req, res, next) => {
     const roleName = req.user?.Role?.name;
+    console.log(roleName);
     if (!roleName || !allowedRoles.includes(roleName)) {
       return res.status(403).json({
         success: false,

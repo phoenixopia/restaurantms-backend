@@ -6,6 +6,10 @@ const {
   Restaurant,
   Branch,
   Plan,
+  PlanLimit,
+  Permission,
+  UserPermission,
+  Subscription,
   sequelize,
 } = require("../../models");
 const throwError = require("../../utils/throwError");
@@ -266,109 +270,174 @@ const UserService = {
   async getCreatedUserById(creatorId, id) {
     const user = await User.findOne({
       where: { id, created_by: creatorId },
+      attributes: {
+        exclude: [
+          "password",
+          "confirmation_code",
+          "confirmation_code_expires",
+          "locked_until",
+          "failed_login_attempts",
+          "last_login_at",
+          "social_provider",
+          "social_provider_id",
+          "email_verified_at",
+          "phone_verified_at",
+          "createdAt",
+          "updatedAt",
+          "created_at",
+          "updated_at",
+          "password_changed_at",
+        ],
+      },
       include: [
         {
           model: Role,
           attributes: ["id", "name"],
           include: [
             {
-              model: sequelize.models.Permission,
+              model: Permission,
+              attributes: ["id", "name"],
               through: {
                 where: { granted: true },
                 attributes: [],
               },
-              attributes: ["id", "name", "description"],
             },
           ],
         },
         {
-          model: sequelize.models.UserPermission,
+          model: UserPermission,
           where: { granted: true },
           required: false,
+          attributes: ["permission_id"],
           include: [
             {
-              model: sequelize.models.Permission,
-              attributes: ["id", "name", "description"],
+              model: Permission,
+              attributes: ["id", "name"],
             },
           ],
         },
       ],
     });
 
-    if (!user)
+    if (!user) {
       throwError(
         "User not found or you are not authorized to view this user",
         404
       );
+    }
 
-    const rolePermissions = user.Role?.Permissions?.map((p) => p.name) || [];
-    const userPermissions =
-      user.UserPermissions?.map((up) => up.Permission.name) || [];
+    const userJson = user.toJSON();
 
-    const allPermissions = [
-      ...new Set([...rolePermissions, ...userPermissions]),
-    ];
+    const fromRole =
+      userJson.Role?.Permissions?.map(({ id, name }) => ({ id, name })) || [];
+    const fromUser =
+      userJson.UserPermissions?.map(({ Permission }) => ({
+        id: Permission.id,
+        name: Permission.name,
+      })) || [];
+
+    delete userJson.Role;
+    delete userJson.UserPermissions;
 
     return {
-      ...user.toJSON(),
-      permissions: allPermissions,
+      ...userJson,
+      permissions: {
+        fromRole,
+        fromUser,
+      },
     };
   },
 
   async getAllCreatedUsers(adminId, query = {}) {
-    const { page, limit, offset, order } = buildPagination(query);
-    console.log(adminId);
+    let { page, limit, offset, order } = buildPagination(query);
 
-    const { count, rows: users } = await User.findAndCountAll({
+    if (
+      order?.length === 1 &&
+      (order[0][0] === "created_at" || order[0][0] === "createdAt")
+    ) {
+      order = [["created_by", "ASC"]];
+    }
+
+    const result = await User.findAndCountAll({
       where: { created_by: adminId },
       limit,
       offset,
       order,
+      attributes: {
+        exclude: [
+          "password",
+          "confirmation_code",
+          "confirmation_code_expires",
+          "locked_until",
+          "failed_login_attempts",
+          "last_login_at",
+          "social_provider",
+          "social_provider_id",
+          "email_verified_at",
+          "phone_verified_at",
+          "createdAt",
+          "updatedAt",
+          "created_at",
+          "updated_at",
+          "password_changed_at",
+        ],
+      },
       include: [
         {
           model: Role,
           attributes: ["id", "name"],
           include: [
             {
-              model: sequelize.models.Permission,
-              through: {
-                where: { granted: true },
-                attributes: [],
-              },
-              attributes: ["id", "name", "description"],
+              model: Permission,
+              attributes: ["id", "name"],
+              through: { attributes: [] },
             },
           ],
         },
         {
-          model: sequelize.models.UserPermission,
+          model: UserPermission,
           where: { granted: true },
           required: false,
+          attributes: ["permission_id"],
           include: [
             {
-              model: sequelize.models.Permission,
-              attributes: ["id", "name", "description"],
+              model: Permission,
+              attributes: ["id", "name"],
             },
           ],
         },
       ],
     });
 
-    const usersWithPermissions = users.map((user) => {
-      const rolePermissions = user.Role?.Permissions?.map((p) => p.name) || [];
-      const userPermissions =
-        user.UserPermissions?.map((up) => up.Permission.name) || [];
+    const formattedUsers = result.rows.map((user) => {
+      const userJson = user.toJSON();
+
+      const fromRole =
+        userJson.Role?.Permissions?.map(({ id, name }) => ({ id, name })) || [];
+
+      const fromUser =
+        userJson.UserPermissions?.map(({ Permission }) => ({
+          id: Permission.id,
+          name: Permission.name,
+        })) || [];
+
+      delete userJson.Role;
+      delete userJson.UserPermissions;
 
       return {
-        ...user.toJSON(),
-        permissions: [...new Set([...rolePermissions, ...userPermissions])],
+        ...userJson,
+        permissions: {
+          fromRole,
+          fromUser,
+        },
       };
     });
 
     return {
-      total: count,
+      total: result.count,
       page,
       limit,
-      users: usersWithPermissions,
+      users: formattedUsers,
     };
   },
 
@@ -393,7 +462,8 @@ const UserService = {
           403
         );
       }
-
+      if (user.branch_id === branch.id)
+        throwError("User is already assigned to this branch", 400);
       user.branch_id = branch.id;
       await user.save({ transaction: t });
 
@@ -427,7 +497,7 @@ const UserService = {
       }
 
       if (user.restaurant_id) {
-        throwError("User is already assigned to a restaurant", 400);
+        throwError("User already assigned to a restaurant", 400);
       }
 
       const restaurant = await Restaurant.findByPk(restaurantId, {
@@ -503,6 +573,10 @@ const UserService = {
         );
       }
 
+      if (branch.manager_id === user.id) {
+        throwError("This user is already assigned as the branch manager", 409);
+      }
+
       if (branch.manager_id && branch.manager_id !== user.id) {
         throwError("This branch already has a manager assigned", 409);
       }
@@ -514,7 +588,7 @@ const UserService = {
       await user.save({ transaction: t });
 
       const manageBranchPermission = await sequelize.models.Permission.findOne({
-        where: { name: "manage_branch" },
+        where: { name: "manage_branches" },
         transaction: t,
       });
 
@@ -549,6 +623,63 @@ const UserService = {
 
       return {
         message: "User assigned as branch manager and permission granted",
+        userId: user.id,
+        branchId: branch.id,
+      };
+    } catch (err) {
+      await t.rollback();
+      throw err;
+    }
+  },
+
+  async removeBranchManager(branchId, currentUser) {
+    const t = await sequelize.transaction();
+    try {
+      const branch = await Branch.findOne({
+        where: { id: branchId, restaurant_id: currentUser.restaurant_id },
+        transaction: t,
+      });
+
+      if (!branch)
+        throwError(
+          "Branch not found or does not belong to your restaurant",
+          404
+        );
+
+      const currentManagerId = branch.manager_id;
+      if (!currentManagerId)
+        throwError("No manager is assigned to this branch", 400);
+
+      const user = await User.findByPk(currentManagerId, { transaction: t });
+
+      branch.manager_id = null;
+      await branch.save({ transaction: t });
+
+      if (user.branch_id === branch.id) {
+        user.branch_id = null;
+        await user.save({ transaction: t });
+      }
+
+      const manageBranchPermission = await sequelize.models.Permission.findOne({
+        where: { name: "manage_branches" },
+        transaction: t,
+      });
+
+      if (manageBranchPermission) {
+        await sequelize.models.UserPermission.destroy({
+          where: {
+            user_id: user.id,
+            permission_id: manageBranchPermission.id,
+            restaurant_id: currentUser.restaurant_id,
+          },
+          transaction: t,
+        });
+      }
+
+      await t.commit();
+
+      return {
+        message: "Branch manager removed successfully",
         userId: user.id,
         branchId: branch.id,
       };
