@@ -71,7 +71,7 @@ const MenuCategoryService = {
     }
   },
 
-  async updateMenuCategory(id, restaurantId, data, imageFile) {
+  async updateMenuCategory(id, restaurantId, data) {
     const t = await sequelize.transaction();
     try {
       const category = await MenuCategory.findByPk(id, {
@@ -166,6 +166,12 @@ const MenuCategoryService = {
       page,
       paginate: limit,
       where: filters,
+      include: [
+        {
+          model: MenuItem,
+          attributes: { exclude: ["created_at", "updated_at"] },
+        },
+      ],
       order: [["sort_order", "ASC"]],
     });
   },
@@ -176,6 +182,12 @@ const MenuCategoryService = {
         model: Menu,
         required: true,
         where: { restaurant_id: restaurantId },
+        include: [
+          {
+            model: MenuItem,
+            attributes: { exclude: ["created_at", "updated_at"] },
+          },
+        ],
       },
     });
 

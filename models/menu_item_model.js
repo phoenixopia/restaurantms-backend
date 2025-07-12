@@ -25,7 +25,10 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.STRING(2083),
         allowNull: true,
       },
-      is_active: DataTypes.BOOLEAN,
+      is_active: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: true,
+      },
       seasonal: DataTypes.BOOLEAN,
     },
     {

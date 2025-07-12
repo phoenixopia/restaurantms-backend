@@ -1,8 +1,16 @@
 "use strict";
 
-const { User, Role, Restaurant, Branch, sequelize } = require("../../models");
+const {
+  User,
+  Role,
+  Restaurant,
+  Branch,
+  Plan,
+  sequelize,
+} = require("../../models");
 const throwError = require("../../utils/throwError");
 const { sendUserCredentialsEmail } = require("../../utils/sendEmail");
+const { buildPagination } = require("../../utils/pagination");
 
 const UserService = {
   async createRestaurantAdmin(superAdminId, data) {
@@ -29,7 +37,7 @@ const UserService = {
         const restaurant = await Restaurant.findByPk(restaurant_id, {
           transaction: t,
         });
-        if (!restaurant) throwError("Invalid restaurant_id provided", 400);
+        if (!restaurant) throwError("Restaurant not found", 400);
       }
 
       const role = await Role.findOne({
@@ -40,8 +48,12 @@ const UserService = {
 
       const whereClause =
         creatorMode === "email" ? { email } : { phone_number };
-      if (await User.findOne({ where: whereClause, transaction: t }))
-        throwError("User with this email or phone already exists", 409);
+
+      if (await User.findOne({ where: whereClause, transaction: t })) {
+        const conflictField =
+          creatorMode === "email" ? "email" : "phone number";
+        throwError(`User with this ${conflictField} already exists`, 409);
+      }
 
       const now = new Date();
 
@@ -120,6 +132,45 @@ const UserService = {
       if (!creator) throwError("Creator not found", 404);
       if (!creator.restaurant_id) throwError("Creator has no restaurant", 400);
 
+      const activeSubscription = await Subscription.findOne({
+        where: {
+          restaurant_id: creator.restaurant_id,
+          status: "active",
+        },
+        order: [["created_at", "DESC"]],
+        transaction: t,
+      });
+
+      if (!activeSubscription) throwError("No active subscription found", 403);
+
+      const plan = await Plan.findByPk(activeSubscription.plan_id, {
+        include: [{ model: PlanLimit }],
+        transaction: t,
+      });
+
+      const maxStaffLimit = plan.PlanLimits.find(
+        (limit) => limit.key === "max_staff"
+      );
+
+      if (!maxStaffLimit)
+        throwError("Plan does not define max_staff limit", 400);
+
+      const maxStaff = parseInt(maxStaffLimit.value, 10);
+
+      const currentStaffCount = await User.count({
+        where: {
+          created_by: restaurantAdminId,
+        },
+        transaction: t,
+      });
+
+      if (currentStaffCount >= maxStaff) {
+        throwError(
+          `You have reached your staff limit (${maxStaff}) for your current subscription plan.`,
+          403
+        );
+      }
+
       if (branch_id) {
         const branch = await Branch.findOne({
           where: { id: branch_id, restaurant_id: creator.restaurant_id },
@@ -141,7 +192,7 @@ const UserService = {
       const whereClause =
         creatorMode === "email" ? { email } : { phone_number };
       if (await User.findOne({ where: whereClause, transaction: t }))
-        throwError("User with this email or phone already exists", 409);
+        throwError(`User with this ${creatorMode} already exists`, 409);
 
       const now = new Date();
 
@@ -266,6 +317,7 @@ const UserService = {
 
   async getAllCreatedUsers(adminId, query = {}) {
     const { page, limit, offset, order } = buildPagination(query);
+    console.log(adminId);
 
     const { count, rows: users } = await User.findAndCountAll({
       where: { created_by: adminId },
@@ -449,6 +501,10 @@ const UserService = {
           "Branch not found or does not belong to your restaurant",
           403
         );
+      }
+
+      if (branch.manager_id && branch.manager_id !== user.id) {
+        throwError("This branch already has a manager assigned", 409);
       }
 
       branch.manager_id = user.id;

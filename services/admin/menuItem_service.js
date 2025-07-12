@@ -5,6 +5,7 @@ const fs = require("fs");
 const { MenuItem, MenuCategory, sequelize } = require("../../models");
 const { Op } = require("sequelize");
 const throwError = require("../../utils/throwError");
+const cleanupUploadedFiles = require("../../utils/cleanUploadedFiles");
 
 const SERVER_URL = process.env.SERVER_URL || "http://127.0.0.1:8000";
 const UPLOADS_DIR = path.join(__dirname, "..", "..", "uploads", "menu-items");
@@ -19,7 +20,7 @@ const getFilePath = (filename) => path.join(UPLOADS_DIR, filename);
 const MenuItemService = {
   async createMenuItem(data, imageFile, restaurantId) {
     const {
-      menu_category_name,
+      menu_category_id,
       name,
       description,
       unit_price,
@@ -31,14 +32,11 @@ const MenuItemService = {
 
     try {
       if (!menu_category_name || !name || !unit_price) {
-        throwError(
-          "menu_category_name, name, and unit_price are required",
-          400
-        );
+        throwError("menu_category_id, name, and unit_price are required", 400);
       }
 
       const category = await MenuCategory.findOne({
-        where: { name: menu_category_name },
+        where: { id: menu_category_id },
         include: [
           {
             association: "Menu",
@@ -70,6 +68,9 @@ const MenuItemService = {
       return menuItem;
     } catch (error) {
       await t.rollback();
+      if (imageFile) {
+        cleanupUploadedFiles(imageFile);
+      }
       throw error;
     }
   },
@@ -144,6 +145,9 @@ const MenuItemService = {
       return item;
     } catch (error) {
       await t.rollback();
+      if (imageFile) {
+        cleanupUploadedFiles(imageFile);
+      }
       throw error;
     }
   },

@@ -35,7 +35,21 @@ const MenuService = {
   },
 
   async listMenu(restaurantId) {
-    const menu = await Menu.findOne({ where: { restaurant_id: restaurantId } });
+    const menu = await Menu.findOne({
+      where: { restaurant_id: restaurantId },
+      include: [
+        {
+          model: MenuCategory,
+          attributes: { exclude: ["created_at", "updated_at"] },
+          include: [
+            {
+              model: MenuItem,
+              attributes: { exclude: ["created_at", "updated_at"] },
+            },
+          ],
+        },
+      ],
+    });
     if (!menu) throwError("No menu found for this restaurant", 404);
     return menu;
   },

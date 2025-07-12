@@ -8,10 +8,19 @@ const PlanService = {
     const offset = (page - 1) * limit;
 
     const { count, rows } = await Plan.findAndCountAll({
-      include: [{ model: PlanLimit }],
+      attributes: {
+        exclude: ["created_at", "updated_at", "createdAt", "updatedAt"],
+      },
+      include: [
+        {
+          model: PlanLimit,
+          attributes: {
+            exclude: ["created_at", "updated_at", "createdAt", "updatedAt"],
+          },
+        },
+      ],
       limit,
       offset,
-      order: [["created_at", "DESC"]],
     });
 
     return {
@@ -184,6 +193,105 @@ const PlanService = {
       await plan.destroy({ transaction: t });
 
       await t.commit();
+    } catch (err) {
+      await t.rollback();
+      throw err;
+    }
+  },
+
+  async listAllPlanLimit({ page = 1, limit = 10 }) {
+    const offset = (page - 1) * limit;
+
+    const { count, rows } = await PlanLimit.findAndCountAll({
+      attributes: {
+        exclude: ["createdAt", "updatedAt", "created_at", "updated_at"],
+      },
+      offset,
+      limit,
+    });
+
+    return {
+      total: count,
+      page: Number(page),
+      limit: Number(limit),
+      totalPages: Math.ceil(count / limit),
+      plan_limits: rows,
+    };
+  },
+
+  async listAllPlanLimitsWithPlans({ page = 1, limit = 10 }) {
+    const offset = (page - 1) * limit;
+
+    const { count, rows } = await PlanLimit.findAndCountAll({
+      include: [
+        {
+          model: Plan,
+          attributes: {
+            exclude: ["createdAt", "updatedAt", "created_at", "updated_at"],
+          },
+        },
+      ],
+      attributes: {
+        exclude: ["createdAt", "updatedAt", "created_at", "updated_at"],
+      },
+      offset,
+      limit,
+    });
+
+    return {
+      total: count,
+      page: Number(page),
+      limit: Number(limit),
+      totalPages: Math.ceil(count / limit),
+      plan_limits: rows,
+    };
+  },
+
+  async createAndAssign(data) {
+    const { key, value, data_type, description, plan_ids } = data;
+
+    const t = await sequelize.transaction();
+
+    try {
+      const plans = await Plan.findAll({
+        where: { id: plan_ids },
+        include: [{ model: PlanLimit }],
+        transaction: t,
+      });
+
+      if (plans.length !== plan_ids.length) {
+        throwError("One or more plan IDs are invalid", 404);
+      }
+
+      const conflictingPlans = plans.filter((plan) =>
+        plan.PlanLimits.some((limit) => limit.key === key)
+      );
+
+      if (conflictingPlans.length > 0) {
+        const conflictNames = conflictingPlans
+          .map((p) => `${p.name} (${p.id})`)
+          .join(", ");
+        throwError(`The key "${key}" already exists in: ${conflictNames}`, 400);
+      }
+
+      const createdLimits = [];
+
+      for (const plan of plans) {
+        const newLimit = await PlanLimit.create(
+          {
+            plan_id: plan.id,
+            key,
+            value: String(value),
+            data_type,
+            description: description || null,
+          },
+          { transaction: t }
+        );
+        createdLimits.push(newLimit);
+      }
+
+      await t.commit();
+      return createdLimits;
     } catch (err) {
       await t.rollback();
       throw err;

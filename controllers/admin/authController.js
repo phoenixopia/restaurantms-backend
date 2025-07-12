@@ -44,6 +44,15 @@ exports.changeTemporaryPassword = asyncHandler(async (req, res) => {
   return sendTokenResponse(user.user, 200, res);
 });
 
+exports.logout = asyncHandler(async (req, res) => {
+  res.clearCookie("token", {
+    httpOnly: true,
+    secure: false,
+    sameSite: "Lax",
+  });
+  return success(res, "Logged out successfully.");
+});
+
 exports.verifyCode = asyncHandler(async (req, res) => {
   const result = await AuthService.verifyCode(req.body, res);
   if (result) {
@@ -64,15 +73,6 @@ exports.forgotPassword = asyncHandler(async (req, res) => {
 exports.resetPassword = asyncHandler(async (req, res) => {
   const result = await AuthService.resetPassword(req.body);
   return success(res, result.message);
-});
-
-exports.logout = asyncHandler(async (req, res) => {
-  res.clearCookie("token", {
-    httpOnly: true,
-    secure: false,
-    sameSite: "Lax",
-  });
-  return success(res, "Logged out successfully.");
 });
 
 exports.refreshOrValidateToken = asyncHandler(async (req, res) => {

@@ -1,19 +1,56 @@
 const express = require("express");
 const authController = require("../../controllers/admin/authController");
 const validateRequest = require("../../middleware/validateRequest");
+const { protect } = require("../../middleware/protect");
 
 const {
-  registerValidator,
   loginValidator,
   verifyCodeValidator,
   resendCodeValidator,
   forgotPasswordValidator,
   resetPasswordValidator,
-  googleLoginValidator,
-  facebookLoginValidator,
+  // registerValidator,
+  // googleLoginValidator,
+  // facebookLoginValidator,
 } = require("../../validators/auth_validator");
 
 const router = express.Router();
+
+router.post("/login", loginValidator, validateRequest, authController.login);
+
+router.post("/change-temp-password", authController.changeTemporaryPassword);
+
+router.post("/verify-token", authController.refreshOrValidateToken);
+
+router.post("/logout", protect("user"), authController.logout);
+
+// router.post(
+//   "/forgot-password",
+//   forgotPasswordValidator,
+//   validateRequest,
+//   authController.forgotPassword
+// );
+
+// router.post(
+//   "/reset-password",
+//   resetPasswordValidator,
+//   validateRequest,
+//   authController.resetPassword
+// );
+
+// router.post(
+//   "/verify-code",
+//   verifyCodeValidator,
+//   validateRequest,
+//   authController.verifyCode
+// );
+
+// router.post(
+//   "/resend-code",
+//   resendCodeValidator,
+//   validateRequest,
+//   authController.resendCode
+// );
 
 // router.post(
 //   "/signup",
@@ -21,43 +58,6 @@ const router = express.Router();
 //   validateRequest,
 //   authController.register
 // );
-
-router.post("/login", loginValidator, validateRequest, authController.login);
-
-router.post("/change-temp-password", authController.changeTemporaryPassword);
-
-router.post(
-  "/verify-code",
-  verifyCodeValidator,
-  validateRequest,
-  authController.verifyCode
-);
-
-router.post(
-  "/resend-code",
-  resendCodeValidator,
-  validateRequest,
-  authController.resendCode
-);
-
-router.post(
-  "/forgot-password",
-  forgotPasswordValidator,
-  validateRequest,
-  authController.forgotPassword
-);
-
-router.post(
-  "/reset-password",
-  resetPasswordValidator,
-  validateRequest,
-  authController.resetPassword
-);
-
-router.post(
-  "/logout",
-  authController.logout // no validation needed here
-);
 
 // router.post(
 //   "/google-login",
@@ -72,10 +72,5 @@ router.post(
 //   validateRequest,
 //   authController.facebookLogin
 // );
-
-router.post(
-  "/verify-token",
-  authController.refreshOrValidateToken // no validation needed here
-);
 
 module.exports = router;

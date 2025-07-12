@@ -38,3 +38,24 @@ exports.deletePlan = asyncHandler(async (req, res) => {
   await PlanService.delete(req.params.id);
   return success(res, "Plan deleted successfully");
 });
+
+exports.listPlanLimits = asyncHandler(async (req, res) => {
+  const { page = 1, limit = 10 } = req.query;
+  const result = await PlanService.listAllPlanLimit({ page, limit });
+  return success(res, "Plan limits fetched successfully", result);
+});
+
+exports.listPlanLimitsWithPlans = asyncHandler(async (req, res) => {
+  const { page = 1, limit = 10 } = req.query;
+  const result = await PlanService.listAllPlanLimitsWithPlans({ page, limit });
+  return success(
+    res,
+    "Plan limits with assigned plans fetched successfully",
+    result
+  );
+});
+
+exports.createAndAssign = asyncHandler(async (req, res) => {
+  const result = await PlanService.createAndAssign(req.body);
+  return success(res, "Plan limit created and assigned successfully", result);
+});

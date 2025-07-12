@@ -68,3 +68,24 @@ exports.updatePlanValidator = [
     .isIn(DATA_TYPES)
     .withMessage("Data type must be one of: number, boolean, string."),
 ];
+
+exports.createAndAssignPlanLimitValidator = [
+  body("key").notEmpty().withMessage("Plan limit key is required."),
+
+  body("value").not().isEmpty().withMessage("Plan limit value is required."),
+
+  body("data_type")
+    .notEmpty()
+    .withMessage("Data type is required.")
+    .bail()
+    .isIn(DATA_TYPES)
+    .withMessage("Data type must be one of: number, boolean, string."),
+
+  body("description").optional().isString(),
+
+  body("plan_ids")
+    .isArray({ min: 1 })
+    .withMessage("At least one plan must be provided."),
+
+  body("plan_ids.*").isUUID().withMessage("Each plan ID must be a valid UUID."),
+];
