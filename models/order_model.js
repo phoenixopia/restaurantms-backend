@@ -88,6 +88,9 @@ module.exports = (sequelize, DataTypes) => {
     Order.hasOne(models.Review, {
       foreignKey: "order_id",
     });
+    Order.hasOne(models.Payment, {
+      foreignKey: "order_id"
+    })
   };
 
   return Order;

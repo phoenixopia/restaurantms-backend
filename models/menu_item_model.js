@@ -42,6 +42,9 @@ module.exports = (sequelize, DataTypes) => {
     MenuItem.belongsTo(models.MenuCategory, { foreignKey: "menu_category_id" });
     MenuItem.hasMany(models.OrderItem, { foreignKey: "menu_item_id" });
     MenuItem.hasMany(models.AnalyticsSnapshot, { foreignKey: "top_item_id" });
+    MenuItem.hasMany(models.Promotion, {
+      foreignKey: "menu_item_id",
+    });
   };
 
   sequelizePaginate.paginate(MenuItem);

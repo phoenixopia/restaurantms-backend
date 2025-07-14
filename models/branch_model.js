@@ -161,6 +161,9 @@ module.exports = (sequelize, DataTypes) => {
     Branch.hasMany(models.KdsOrder, {
       foreignKey: "branch_id",
     });
+    Branch.hasMany(models.Promotion, {
+      foreignKey: "branch_id",
+    });
   };
 
   return Branch;

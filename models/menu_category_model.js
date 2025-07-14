@@ -47,6 +47,9 @@ module.exports = (sequelize, DataTypes) => {
       foreignKey: "menu_category_id",
       otherKey: "category_tag_id",
     });
+    MenuCategory.hasMany(models.Promotion, {
+      foreignKey: "category_id",
+    });
   };
 
   return MenuCategory;

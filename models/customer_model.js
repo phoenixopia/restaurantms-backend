@@ -227,6 +227,9 @@ module.exports = (sequelize, DataTypes) => {
     Customer.hasMany(models.Notification, {
       foreignKey: "customer_id",
     });
+    Customer.hasMany(models.Payment, {
+      foreignKey: "customer_id",
+    });
   };
 
   return Customer;
