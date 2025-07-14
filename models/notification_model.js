@@ -1,63 +1,64 @@
 "use strict";
 
 module.exports = (sequelize, DataTypes) => {
-  const ActivityLog = sequelize.define(
-    "ActivityLog",
+  const Notification = sequelize.define(
+    "Notification",
     {
       id: {
         type: DataTypes.UUID,
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
       },
-
       user_id: {
         type: DataTypes.UUID,
+        allowNull: false,
         references: {
           model: "users",
           key: "id",
         },
       },
-
       customer_id: {
         type: DataTypes.UUID,
+        allowNull: false,
         references: {
           model: "customers",
           key: "id",
         },
       },
-      // affected module(model)
-      module: {
-        type: DataTypes.STRING(100),
+      channel: {
+        type: DataTypes.ENUM("Email", "SMS", "In-App"),
         allowNull: false,
       },
-      // what was done
-      action: {
+      message: {
         type: DataTypes.TEXT,
         allowNull: false,
       },
-
-      details: {
-        type: DataTypes.JSONB,
-        allowNull: true,
+      status: {
+        type: DataTypes.ENUM("Pending", "Sent", "Failed"),
+        allowNull: false,
+        defaultValue: "Pending",
+      },
+      created_at: {
+        type: DataTypes.DATE,
+        allowNull: false,
+        defaultValue: DataTypes.NOW,
       },
     },
     {
-      tableName: "activity_logs",
-      timestamps: true,
-      createdAt: "created_at",
-      updatedAt: false,
+      tableName: "notifications",
+      timestamps: false,
       underscored: true,
     }
   );
 
-  ActivityLog.associate = (models) => {
-    ActivityLog.belongsTo(models.User, {
+  Notification.associate = (models) => {
+    Notification.belongsTo(models.User, {
       foreignKey: "user_id",
     });
-    ActivityLog.belongsTo(models.Customer, {
+    Notification.belongsTo(models.Customer, {
       foreignKey: "customer_id",
     });
   };
 
-  return ActivityLog;
+  return Notification;
 };

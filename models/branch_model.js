@@ -147,6 +147,20 @@ module.exports = (sequelize, DataTypes) => {
     });
 
     Branch.hasMany(models.MenuCategory, { foreignKey: "branch_id" });
+
+    Branch.hasMany(models.Order, {
+      foreignKey: "branch_id",
+    });
+
+    Branch.hasMany(models.Table, {
+      foreignKey: "branch_id",
+    });
+    Branch.hasMany(models.Reservation, {
+      foreignKey: "branch_id",
+    });
+    Branch.hasMany(models.KdsOrder, {
+      foreignKey: "branch_id",
+    });
   };
 
   return Branch;

@@ -230,6 +230,12 @@ module.exports = (sequelize, DataTypes) => {
     User.hasMany(models.ActivityLog, {
       foreignKey: "user_id",
     });
+    User.hasMany(models.SupportTicket, {
+      foreignKey: "user_id",
+    });
+    User.hasMany(models.Notification, {
+      foreignKey: "user_id",
+    });
   };
   return User;
 };

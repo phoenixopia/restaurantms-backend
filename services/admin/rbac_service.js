@@ -183,7 +183,7 @@ const RbacService = {
       include: [
         {
           model: Permission,
-          attributes: ["id", "name", "description"],
+          attributes: ["id", "name"],
           through: {
             where: { granted: true },
             attributes: [],
@@ -197,23 +197,73 @@ const RbacService = {
     return role;
   },
 
-  async getMyOwnRolePermission(id) {
-    const role = await Role.findByPk(id, {
+  async getMyOwnRolePermission(userId) {
+    console.log(userId);
+    const user = await User.findByPk(userId, {
       include: [
         {
-          model: Permission,
-          attributes: ["id", "name", "description"],
-          through: {
-            where: { granted: true },
-            attributes: [],
-          },
+          model: Role,
+          attributes: ["id", "name"],
+          include: [
+            {
+              model: Permission,
+              attributes: ["id", "name"],
+              through: {
+                where: { granted: true },
+                attributes: [],
+              },
+            },
+          ],
         },
       ],
     });
 
-    if (!role) throwError("Role not found", 404);
+    if (!user || !user.Role) throwError("User or role not found", 404);
 
-    return role;
+    const role = user.Role;
+    const rolePermissions = role.Permissions.map((p) => ({
+      id: p.id,
+      name: p.name,
+      source: "role",
+    }));
+
+    let directPermissions = [];
+
+    if (role.name.toLowerCase() === "staff") {
+      const userPermissions = await UserPermission.findAll({
+        where: {
+          user_id: userId,
+          granted: true,
+        },
+        include: [
+          {
+            model: Permission,
+            attributes: ["id", "name"],
+          },
+        ],
+      });
+
+      directPermissions = userPermissions.map((up) => ({
+        id: up.Permission.id,
+        name: up.Permission.name,
+        source: "direct",
+      }));
+    }
+
+    const merged = new Map();
+    [...rolePermissions, ...directPermissions].forEach((p) => {
+      if (!merged.has(p.id)) {
+        merged.set(p.id, p);
+      }
+    });
+
+    return {
+      role: {
+        id: role.id,
+        name: role.name,
+      },
+      permissions: Array.from(merged.values()),
+    };
   },
 
   // ================== PERMISSION ==================
@@ -527,8 +577,6 @@ const RbacService = {
     if (!user) throwError("User not found", 404);
     return user.Permissions;
   },
-
-  // EFFECTIVE PERMISSION UTIL
 
   async getUserEffectivePermissions(userId) {
     const user = await User.findByPk(userId, {

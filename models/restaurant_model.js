@@ -89,6 +89,29 @@ module.exports = (sequelize) => {
     Restaurant.hasMany(models.MenuCategory, {
       foreignKey: "restaurant_id",
     });
+
+    Restaurant.hasMany(models.Order, {
+      foreignKey: "restaurant_id",
+    });
+
+    Restaurant.hasMany(models.Table, {
+      foreignKey: "restaurant_id",
+    });
+    Restaurant.hasMany(models.Reservation, {
+      foreignKey: "restaurant_id",
+    });
+    Restaurant.hasMany(models.KdsOrder, {
+      foreignKey: "restaurant_id",
+    });
+    Restaurant.hasMany(models.Review, {
+      foreignKey: "restaurant_id",
+    });
+    Restaurant.hasMany(models.SupportTicket, {
+      foreignKey: "restaurant_id",
+    });
+    Restaurant.hasMany(models.AnalyticsSnapshot, {
+      foreignKey: "restaurant_id",
+    });
   };
 
   Restaurant.paginate = async function (page = 1, limit = 10, filter = {}) {
