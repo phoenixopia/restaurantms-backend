@@ -46,6 +46,22 @@ module.exports = (sequelize, DataTypes) => {
       onUpdate: "CASCADE",
       onDelete: "CASCADE",
     });
+
+    ContactInfo.belongsTo(models.Branch, {
+      foreignKey: "module_id",
+      constraints: false,
+      scope: {
+        module_type: "branch",
+      },
+    });
+
+    ContactInfo.belongsTo(models.Restaurant, {
+      foreignKey: "module_id",
+      constraints: false,
+      scope: {
+        module_type: "restaurant",
+      },
+    });
   };
 
   return ContactInfo;

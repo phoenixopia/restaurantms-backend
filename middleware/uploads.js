@@ -15,6 +15,7 @@ const restaurantStorage = multer.diskStorage({
   filename: (req, file, cb) => {
     const unique = Date.now() + "-" + Math.round(Math.random() * 1e9);
     cb(null, `${file.fieldname}-${unique}${path.extname(file.originalname)}`);
+    console.log();
   },
 });
 
@@ -23,7 +24,7 @@ exports.uploadRestaurantFiles = multer({
   fileFilter,
   limits: {
     fileSize: 1 * 1024 * 1024,
-    files: 6,
+    files: 2,
   },
 }).fields([
   { name: "logo", maxCount: 1 },

@@ -391,7 +391,7 @@ const AuthService = {
       await t.commit();
       return { customer };
     } catch (err) {
-      await t.rollback();
+      if (!t.finished) await t.rollback();
       throw err;
     }
   },

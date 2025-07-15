@@ -37,13 +37,30 @@ exports.deleteRestaurant = asyncHandler(async (req, res) => {
 });
 
 exports.addContactInfo = asyncHandler(async (req, res) => {
-  const { restaurant_id, module_type, type, value, is_primary } = req.body;
+  const { restaurant_id, module_type, type, value, is_primary, module_id } =
+    req.body;
+
+  if (!["restaurant", "branch"].includes(module_type)) {
+    return throwError(
+      "Invalid module_type. Must be 'restaurant' or 'branch'",
+      400
+    );
+  }
+
+  if (module_type === "branch" && !module_id) {
+    return throwError(
+      "module_id is required when module_type is 'branch'",
+      400
+    );
+  }
+
+  const resolvedModuleId =
+    module_type === "restaurant" ? restaurant_id : module_id;
 
   const contactInfo = await RestaurantService.addContactInfo({
     restaurant_id,
     module_type,
-    module_id:
-      module_type === "restaurant" ? restaurant_id : req.body.module_id,
+    module_id: resolvedModuleId,
     type,
     value,
     is_primary: is_primary || false,

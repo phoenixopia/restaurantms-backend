@@ -47,7 +47,7 @@ const RestaurantService = {
     const includes = [
       {
         model: Subscription,
-        attributes: ["plan_id", "expires_at", "status"],
+        attributes: ["plan_id", "end_date", "status"],
         include: {
           model: Plan,
           attributes: ["name", "price", "billing_cycle"],
@@ -55,15 +55,20 @@ const RestaurantService = {
       },
       {
         model: Branch,
-        required: true,
+        required: false,
         where: { main_branch: true },
         attributes: ["id", "name"],
         include: [
           {
             model: Location,
-            attributes: ["name", "address", "latitude", "longitude"],
+            attributes: ["address", "latitude", "longitude"],
           },
         ],
+      },
+      {
+        model: SystemSetting,
+        required: false,
+        attributes: ["logo_url", "images"],
       },
       {
         model: ContactInfo,
@@ -90,6 +95,11 @@ const RestaurantService = {
     const { count, rows } = await Restaurant.findAndCountAll({
       attributes: { exclude: ["created_at", "updated_at"] },
       include: [
+        {
+          model: SystemSetting,
+          required: false,
+          attributes: ["logo_url", "images"],
+        },
         {
           model: Subscription,
           attributes: [
@@ -230,7 +240,6 @@ const RestaurantService = {
     }
   },
 
-  // update restaurant only for the restaurant admin
   async updateRestaurant(id, body, files, user) {
     const transaction = await sequelize.transaction();
 
@@ -253,26 +262,25 @@ const RestaurantService = {
 
       const updates = {};
       const settingUpdates = {};
-      const filesToCleanup = [];
 
       if (files?.logo?.[0]) {
         const newLogo = files.logo[0];
-        settingUpdates.logo_url = getFileUrl(newLogo.filename);
-        filesToCleanup.push(newLogo.path);
+        const newLogoUrl = getFileUrl(newLogo.filename);
+        settingUpdates.logo_url = newLogoUrl;
 
-        const oldLogo = restaurant.SystemSetting?.logo_url;
-        if (oldLogo) {
-          const oldFile = decodeURIComponent(oldLogo.split("/").pop());
+        const oldLogoUrl = restaurant.SystemSetting?.logo_url;
+        if (oldLogoUrl) {
+          const oldFile = decodeURIComponent(oldLogoUrl.split("/").pop());
           const oldPath = getFilePath(oldFile);
           if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
         }
       }
 
       if (files?.images?.length) {
-        settingUpdates.images = files.images.map((img) =>
+        const newImageUrls = files.images.map((img) =>
           getFileUrl(img.filename)
         );
-        filesToCleanup.push(...files.images.map((img) => img.path));
+        settingUpdates.images = newImageUrls;
 
         const oldImages = restaurant.SystemSetting?.images || [];
         for (const imgUrl of oldImages) {
@@ -283,11 +291,11 @@ const RestaurantService = {
       }
 
       if (body.restaurant_name) updates.restaurant_name = body.restaurant_name;
-
       if (body.primary_color) settingUpdates.primary_color = body.primary_color;
       if (body.language) settingUpdates.default_language = body.language;
-      if (typeof body.rtl_enabled === "boolean")
+      if (typeof body.rtl_enabled === "boolean") {
         settingUpdates.rtl_enabled = body.rtl_enabled;
+      }
 
       if (Object.keys(updates).length) {
         await restaurant.update(updates, { transaction });
@@ -310,9 +318,6 @@ const RestaurantService = {
       }
 
       await transaction.commit();
-      filesToCleanup.forEach((filePath) => {
-        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-      });
 
       return await Restaurant.findByPk(id, {
         include: [SystemSetting],
@@ -322,6 +327,7 @@ const RestaurantService = {
       if (files) {
         await cleanupUploadedFiles(files);
       }
+
       throw err;
     }
   },
@@ -524,7 +530,7 @@ const RestaurantService = {
     const offset = (page - 1) * limit;
 
     const { count, rows: restaurants } = await Restaurant.findAndCountAll({
-      attributes: ["id", "restaurant_name", "logo_url"],
+      attributes: ["id", "restaurant_name"],
       where: {
         status: { [Op.in]: ["active"] },
       },
@@ -552,7 +558,7 @@ const RestaurantService = {
           include: [
             {
               model: Location,
-              attributes: ["name", "address", "latitude", "longitude"],
+              attributes: ["address", "latitude", "longitude"],
             },
           ],
         },

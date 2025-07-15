@@ -49,6 +49,7 @@ module.exports = (sequelize) => {
     // to show contact info of restaurant branches
     Restaurant.hasMany(models.ContactInfo, {
       foreignKey: "module_id",
+      constraints: false,
       scope: {
         module_type: "restaurant",
       },

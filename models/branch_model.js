@@ -116,6 +116,7 @@ module.exports = (sequelize, DataTypes) => {
   Branch.associate = (models) => {
     Branch.hasMany(models.ContactInfo, {
       foreignKey: "module_id",
+      constraints: false,
       scope: {
         module_type: "branch",
       },

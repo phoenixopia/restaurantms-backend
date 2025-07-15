@@ -45,11 +45,6 @@ module.exports = async () => {
         name: "Admin One",
         restaurantName: "Gourmet Delight",
       },
-      {
-        email: "yak399515@gmail.com",
-        name: "Admin Two",
-        restaurantName: "Savory Bites",
-      },
     ];
 
     for (const admin of adminData) {
@@ -89,7 +84,6 @@ module.exports = async () => {
     console.log("Test credentials:");
     console.log("- Super Admin: natikeleme1@gmail.com / 12345678");
     console.log("- Restaurant Admin 1: bci00436@gmail.com / 12345678");
-    console.log("- Restaurant Admin 2: yak399515@gmail.com / 12345678");
   } catch (error) {
     console.error("❌ Seeding failed:", error);
     throw error;
