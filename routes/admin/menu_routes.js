@@ -30,7 +30,7 @@ router.post(
 router.put(
   "/update/:id",
   protect,
-  permissionCheck("update_menu"),
+  permissionCheck("edit_menu"),
   RestaurantStatus.checkRestaurantStatus,
   MenuController.updateMenu
 );
@@ -56,7 +56,7 @@ router.patch(
 router.get(
   "/menu-category/list",
   protect,
-  permissionCheck("view_menu_categories"),
+  permissionCheck("view_menu_category"),
   RestaurantStatus.checkRestaurantStatus,
   MenuController.listMenuCategories
 );
@@ -64,7 +64,7 @@ router.get(
 router.get(
   "/menu-category/byID/:id",
   protect,
-  permissionCheck("view_menu_categories"),
+  permissionCheck("view_menu_category"),
   RestaurantStatus.checkRestaurantStatus,
   MenuController.getMenuCategory
 );
@@ -82,7 +82,7 @@ router.post(
 router.put(
   "/menu-category/update/:id",
   protect,
-  permissionCheck("update_menu_category"),
+  permissionCheck("edit_menu_category"),
   RestaurantStatus.checkRestaurantStatus,
   MenuController.updateMenuCategory
 );
@@ -118,7 +118,7 @@ router.post(
 router.put(
   "/menu-item/update/:id",
   protect,
-  permissionCheck("update_menu_item"),
+  permissionCheck("edit_menu_item"),
   RestaurantStatus.checkRestaurantStatus,
   ValidateUploadedFiles.validateUploadedFiles("menuItem"),
   Upload.uploadMenuItemImage,
@@ -139,6 +139,14 @@ router.patch(
   permissionCheck("toggle_seasonal"),
   RestaurantStatus.checkRestaurantStatus,
   MenuController.toggleSeasonal
+);
+
+router.patch(
+  "/menu-item/toggle-activation/:id",
+  protect,
+  permissionCheck("toggle_menu_item_activation"),
+  RestaurantStatus.checkRestaurantStatus,
+  MenuController.toggleMenuItemActivation
 );
 
 router.get(

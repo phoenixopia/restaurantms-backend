@@ -10,6 +10,7 @@ module.exports = async () => {
       name: "manage_restaurant",
       description: "Can manage restaurant settings",
     },
+    { name: "view_branch", description: "Can view branches" },
     { name: "manage_branches", description: "Can manage branches" },
     { name: "manage_subscription", description: "Can manage subscription" },
     { name: "view_menu", description: "Can view menu" },

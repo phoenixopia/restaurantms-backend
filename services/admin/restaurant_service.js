@@ -317,6 +317,47 @@ const RestaurantService = {
         }
       }
 
+      if (body.contact_info) {
+        const { type, value, is_primary = false } = body.contact_info;
+
+        if (!type || !value)
+          throwError("Contact info type and value are required");
+
+        const [contact, created] = await ContactInfo.findOrCreate({
+          where: {
+            restaurant_id: restaurant.id,
+            module_type: "restaurant",
+            module_id: restaurant.id,
+            type,
+          },
+          defaults: {
+            value,
+            is_primary,
+          },
+          transaction,
+        });
+
+        if (!created) {
+          await contact.update({ value, is_primary }, { transaction });
+        }
+
+        if (is_primary) {
+          await ContactInfo.update(
+            { is_primary: false },
+            {
+              where: {
+                restaurant_id: restaurant.id,
+                module_type: "restaurant",
+                module_id: restaurant.id,
+                type,
+                id: { [Op.ne]: contact.id },
+              },
+              transaction,
+            }
+          );
+        }
+      }
+
       await transaction.commit();
 
       return await Restaurant.findByPk(id, {
@@ -484,7 +525,7 @@ const RestaurantService = {
         {
           model: Branch,
           as: "mainBranch",
-          required: true,
+          required: false,
           attributes: [],
           include: [
             {
@@ -584,7 +625,6 @@ const RestaurantService = {
       ],
     });
 
-    // flatten mainBranch.Location into restaurant.location
     const data = restaurants.map((r) => {
       const plain = r.get({ plain: true });
       plain.location = plain.mainBranch?.Location || null;
@@ -615,20 +655,17 @@ const RestaurantService = {
     order = "DESC",
     page = 1,
     limit = 10,
-    is_active,
   }) {
     page = parseInt(page);
     limit = parseInt(limit);
     const offset = (page - 1) * limit;
 
-    const filterCondition = {};
+    const filterCondition = {
+      status: "active",
+    };
 
     if (query) {
       filterCondition.restaurant_name = { [Op.iLike]: `%${query}%` };
-    }
-
-    if (typeof is_active !== "undefined") {
-      filterCondition.is_active = is_active === "true";
     }
 
     let data, totalItems;
@@ -642,14 +679,6 @@ const RestaurantService = {
         offset,
       };
 
-      let statusCondition = "";
-      if (typeof is_active !== "undefined") {
-        statusCondition = `AND r.is_active = ${
-          is_active === "true" ? "TRUE" : "FALSE"
-        }`;
-      }
-
-      // Join with main branch and location
       data = await sequelize.query(
         `
       SELECT r.*, l.name AS location_name, l.address, l.latitude, l.longitude,
@@ -663,8 +692,7 @@ const RestaurantService = {
       FROM restaurants r
       JOIN branches b ON r.id = b.restaurant_id AND b.is_main = TRUE
       JOIN locations l ON b.location_id = l.id
-      WHERE 1=1
-      ${statusCondition}
+      WHERE r.status = 'active'
       ${query ? "AND r.restaurant_name ILIKE :query" : ""}
       HAVING distance <= :maxDistance
       ORDER BY distance ASC
@@ -686,8 +714,7 @@ const RestaurantService = {
         FROM restaurants r
         JOIN branches b ON r.id = b.restaurant_id AND b.is_main = TRUE
         JOIN locations l ON b.location_id = l.id
-        WHERE 1=1
-        ${statusCondition}
+        WHERE r.status = 'active'
         ${query ? "AND r.restaurant_name ILIKE :query" : ""}
         HAVING (
           6371 * acos(

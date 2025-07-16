@@ -142,7 +142,7 @@ router.put(
 router.get(
   "/branches",
   protect("user"),
-  permissionCheck("view_branch"),
+  permissionCheck(["view_branch", "manage_branches"]),
   RestaurantStatus.checkRestaurantStatus,
   paginationValidation,
   validateRequest,
@@ -152,7 +152,7 @@ router.get(
 router.get(
   "/branches/:branchId",
   protect("user"),
-  permissionCheck("view_branch"),
+  permissionCheck(["view_branch", "manage_branches"]),
   RestaurantStatus.checkRestaurantStatus,
   RestaurantController.getBranchById
 );

@@ -463,7 +463,7 @@ const UserService = {
         );
       }
       if (user.branch_id === branch.id)
-        throwError("User is already assigned to this branch", 400);
+        throwError("User already assigned to this branch", 400);
       user.branch_id = branch.id;
       await user.save({ transaction: t });
 

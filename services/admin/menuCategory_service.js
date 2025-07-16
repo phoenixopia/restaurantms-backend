@@ -16,7 +16,8 @@ const throwError = require("../../utils/throwError");
 const MenuCategoryService = {
   async createMenuCategory({
     restaurantId,
-    branchName,
+    user,
+    branchId = null,
     name,
     description,
     sort_order,
@@ -33,24 +34,39 @@ const MenuCategoryService = {
       });
       if (!menu) throwError("Menu not found for this restaurant", 404);
 
-      let branchId = null;
-      if (branchName) {
-        const branch = await Branch.findOne({
-          where: {
-            name: branchName,
-            restaurant_id: restaurantId,
-          },
-          transaction: t,
-        });
-        if (!branch) throwError("Branch not found under this restaurant", 404);
+      let finalBranchId = null;
 
-        branchId = branch.id;
+      if (user.role_name === "staff") {
+        if (!user.branch_id) {
+          throwError("Branch assignment required for staff", 403);
+        }
+        if (branchId && branchId !== user.branch_id) {
+          throwError(
+            "Staff can only create categories under their assigned branch",
+            403
+          );
+        }
+        finalBranchId = user.branch_id;
+      } else {
+        if (branchId) {
+          const branch = await Branch.findOne({
+            where: {
+              id: branchId,
+              restaurant_id: restaurantId,
+            },
+            transaction: t,
+          });
+          if (!branch) {
+            throwError("Branch not found under this restaurant", 404);
+          }
+          finalBranchId = branchId;
+        }
       }
 
       const category = await MenuCategory.create(
         {
           menu_id: menu.id,
-          branch_id: branchId,
+          branch_id: finalBranchId,
           name,
           description,
           sort_order,
@@ -71,9 +87,25 @@ const MenuCategoryService = {
     }
   },
 
-  async updateMenuCategory(id, restaurantId, data) {
+  async updateMenuCategory(id, user, data) {
     const t = await sequelize.transaction();
     try {
+      let restaurantId;
+
+      if (user.role_name === "staff") {
+        if (!user.branch_id) {
+          throwError("Branch assignment required for staff", 403);
+        }
+
+        const branch = await Branch.findByPk(user.branch_id, {
+          transaction: t,
+        });
+        if (!branch) throwError("Assigned branch not found", 404);
+        restaurantId = branch.restaurant_id;
+      } else {
+        restaurantId = user.restaurant_id;
+      }
+
       const category = await MenuCategory.findByPk(id, {
         include: {
           model: Menu,
@@ -84,6 +116,27 @@ const MenuCategoryService = {
       });
 
       if (!category) throwError("Menu category not found or unauthorized", 404);
+
+      if (user.role_name === "staff") {
+        if (category.branch_id !== user.branch_id) {
+          throwError(
+            "Access denied - You can only update categories in your assigned branch",
+            403
+          );
+        }
+      } else {
+        if (data.branch_id && data.branch_id !== category.branch_id) {
+          const newBranch = await Branch.findOne({
+            where: {
+              id: data.branch_id,
+              restaurant_id: restaurantId,
+            },
+            transaction: t,
+          });
+          if (!newBranch)
+            throwError("Branch not found under this restaurant", 404);
+        }
+      }
 
       const { categoryTagIds, ...restData } = data;
 
@@ -93,6 +146,7 @@ const MenuCategoryService = {
       if (Array.isArray(categoryTagIds)) {
         await category.setCategoryTags(categoryTagIds, { transaction: t });
       }
+
       await t.commit();
       return category;
     } catch (error) {
@@ -101,9 +155,24 @@ const MenuCategoryService = {
     }
   },
 
-  async deleteMenuCategory(id, restaurantId) {
+  async deleteMenuCategory(id, user) {
     const t = await sequelize.transaction();
     try {
+      let restaurantId;
+
+      if (user.role_name === "staff") {
+        if (!user.branch_id) {
+          throwError("Branch assignment required for staff", 403);
+        }
+        const branch = await Branch.findByPk(user.branch_id, {
+          transaction: t,
+        });
+        if (!branch) throwError("Assigned branch not found", 404);
+        restaurantId = branch.restaurant_id;
+      } else {
+        restaurantId = user.restaurant_id;
+      }
+
       const category = await MenuCategory.findByPk(id, {
         include: {
           model: Menu,
@@ -114,6 +183,15 @@ const MenuCategoryService = {
       });
 
       if (!category) throwError("Menu category not found or unauthorized", 404);
+
+      if (user.role_name === "staff") {
+        if (category.branch_id !== user.branch_id) {
+          throwError(
+            "Access denied - You can only delete categories in your assigned branch",
+            403
+          );
+        }
+      }
 
       await category.destroy({ transaction: t });
       await t.commit();
@@ -123,9 +201,24 @@ const MenuCategoryService = {
     }
   },
 
-  async toggleMenuCategoryActivation(id, restaurantId) {
+  async toggleMenuCategoryActivation(id, user) {
     const t = await sequelize.transaction();
     try {
+      let restaurantId;
+
+      if (user.role_name === "staff") {
+        if (!user.branch_id) {
+          throwError("Branch assignment required for staff", 403);
+        }
+        const branch = await Branch.findByPk(user.branch_id, {
+          transaction: t,
+        });
+        if (!branch) throwError("Assigned branch not found", 404);
+        restaurantId = branch.restaurant_id;
+      } else {
+        restaurantId = user.restaurant_id;
+      }
+
       const category = await MenuCategory.findByPk(id, {
         include: {
           model: Menu,
@@ -136,6 +229,15 @@ const MenuCategoryService = {
       });
 
       if (!category) throwError("Menu category not found or unauthorized", 404);
+
+      if (user.role_name === "staff") {
+        if (category.branch_id !== user.branch_id) {
+          throwError(
+            "Access denied - You can only toggle categories in your assigned branch",
+            403
+          );
+        }
+      }
 
       category.is_active = !category.is_active;
       await category.save({ transaction: t });
@@ -148,11 +250,30 @@ const MenuCategoryService = {
   },
 
   async listMenuCategoriesUnderRestaurant(
-    restaurantId,
+    user,
     branchId = null,
     page = 1,
     limit = 10
   ) {
+    let restaurantId;
+    let effectiveBranchId = branchId;
+
+    if (user.role_name === "restaurant_admin") {
+      restaurantId = user.restaurant_id;
+    } else if (user.role_name === "staff") {
+      if (!user.branch_id) throwError("Branch not assigned to staff user", 403);
+      restaurantId = null;
+      effectiveBranchId = user.branch_id;
+    } else {
+      throwError("Unauthorized role", 403);
+    }
+
+    if (!restaurantId && effectiveBranchId) {
+      const branch = await Branch.findByPk(effectiveBranchId);
+      if (!branch) throwError("Branch not found", 404);
+      restaurantId = branch.restaurant_id;
+    }
+
     const menu = await Menu.findOne({ where: { restaurant_id: restaurantId } });
     if (!menu) throwError("Menu not found", 404);
 
@@ -160,7 +281,9 @@ const MenuCategoryService = {
       menu_id: menu.id,
     };
 
-    if (branchId) filters.branch_id = branchId;
+    if (effectiveBranchId) {
+      filters.branch_id = effectiveBranchId;
+    }
 
     return await MenuCategory.paginate({
       page,
@@ -176,7 +299,18 @@ const MenuCategoryService = {
     });
   },
 
-  async getMenuCategoryById(id, restaurantId) {
+  async getMenuCategoryById(id, user) {
+    const restaurantId =
+      user.role_name === "staff" && user.branch_id
+        ? await getRestaurantIdByBranchId(user.branch_id)
+        : user.restaurant_id;
+
+    async function getRestaurantIdByBranchId(branchId) {
+      const branch = await Branch.findByPk(branchId);
+      if (!branch) throwError("Branch not found", 404);
+      return branch.restaurant_id;
+    }
+
     const category = await MenuCategory.findByPk(id, {
       include: {
         model: Menu,

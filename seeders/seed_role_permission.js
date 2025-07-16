@@ -26,6 +26,7 @@ module.exports = async () => {
     "manage_users",
     "assign_permissions",
     "manage_restaurant",
+    "view_branch",
     "manage_branches",
     "manage_subscription",
     "view_menu",

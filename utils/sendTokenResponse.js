@@ -1,4 +1,4 @@
-const { Role, RolePermission, Permission } = require("../models");
+const { Role, Permission } = require("../models");
 
 exports.sendTokenResponse = async (
   user,
@@ -18,29 +18,6 @@ exports.sendTokenResponse = async (
     };
 
     if (isCustomer) {
-      const {
-        id,
-        first_name,
-        last_name,
-        email,
-        phone_number,
-        profile_picture,
-        email_verified_at,
-        phone_verified_at,
-        social_provider,
-        social_provider_id,
-        last_login_at,
-        is_active,
-        role_id,
-        office_address_id,
-        home_address_id,
-        dob,
-        notes,
-        visit_count,
-        last_visit_at,
-        two_factor_enabled,
-      } = user;
-
       return res.status(statusCode).cookie("token", token, cookieOptions).json({
         success: true,
         token,
@@ -48,9 +25,9 @@ exports.sendTokenResponse = async (
       });
     }
 
-    // this part  for admin, staff . . . . .
     let role = null;
-    let permissions = [];
+    let rolePermissions = [];
+    let directPermissions = [];
 
     if (user.role_id) {
       role = await Role.findByPk(user.role_id, {
@@ -66,8 +43,26 @@ exports.sendTokenResponse = async (
         ],
       });
 
-      permissions = role?.Permissions?.map((perm) => perm.name) || [];
+      rolePermissions = role?.Permissions?.map((perm) => perm.name) || [];
     }
+
+    const userWithPermissions = await user.reload({
+      include: [
+        {
+          model: Permission,
+          through: { attributes: [] },
+          attributes: ["name"],
+        },
+      ],
+    });
+
+    directPermissions = userWithPermissions.Permissions.map(
+      (perm) => perm.name
+    );
+
+    const permissions = [
+      ...new Set([...rolePermissions, ...directPermissions]),
+    ];
 
     return res
       .status(statusCode)

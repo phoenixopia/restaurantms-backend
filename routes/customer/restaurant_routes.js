@@ -3,6 +3,8 @@ const RestaurantController = require("../../controllers/admin/restaurant_control
 
 const router = express.Router();
 
+router.get("/:id", RestaurantController.getRestaurantById);
+
 router.get("/get-all", RestaurantController.getAllRestaurants);
 
 router.get(
@@ -16,7 +18,5 @@ router.get(
   "/category-tag/:id",
   RestaurantController.getRestaurantsByCategoryTagId
 );
-
-router.get("/:id", RestaurantController.getRestaurantById);
 
 module.exports = router;

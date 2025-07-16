@@ -11,7 +11,7 @@ sequelize
   .authenticate()
   .then(async () => {
     console.log("Connected to the database");
-    await sequelize.sync({ alter: true });
+    await sequelize.sync();
 
     console.log("Database synced");
 

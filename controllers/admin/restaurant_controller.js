@@ -174,20 +174,21 @@ exports.deleteBranch = asyncHandler(async (req, res) => {
 
 exports.getAllBranches = asyncHandler(async (req, res) => {
   const { page = 1, limit = 10 } = req.query;
-  const { restaurantId } = req.restaurantData;
+  const restaurantId = req.user.restaurant_id;
 
-  const result = await BranchService.getAllBranches(
+  const result = await BranchService.getAllBranches({
     restaurantId,
-    parseInt(page),
-    parseInt(limit)
-  );
+    page: parseInt(page),
+    limit: parseInt(limit),
+    user: req.user,
+  });
 
   return success(res, "All branches fetched successfully", result);
 });
 
 exports.getBranchById = asyncHandler(async (req, res) => {
   const { branchId } = req.params;
-  const branch = await BranchService.getBranchById(branchId);
+  const branch = await BranchService.getBranchById(branchId, req.user);
 
   if (!branch) {
     throwError("Branch not found", 404);
@@ -216,7 +217,7 @@ exports.updateBranchContactInfo = asyncHandler(async (req, res) => {
     branchId,
     contactInfoId,
     req.body,
-    req.user.id
+    req.user
   );
 
   return success(res, "Branch contact info updated successfully", updated);
@@ -226,7 +227,8 @@ exports.addBranchContactInfo = asyncHandler(async (req, res) => {
   const { branchId } = req.params;
   const contactInfo = await BranchService.addBranchContactInfo(
     branchId,
-    req.body
+    req.body,
+    req.user
   );
   return success(res, "Branch contact info added successfully", contactInfo);
 });
@@ -238,7 +240,7 @@ exports.toggleBranchStatus = asyncHandler(async (req, res) => {
   const updatedBranch = await BranchService.toggleBranchStatus(
     branchId,
     status,
-    req.user.id
+    req.user
   );
 
   return success(res, "Branch status updated successfully", updatedBranch);

@@ -1,6 +1,10 @@
-const { checkUserPermission } = require("../utils/checkUserPermission");
+const { RolePermission, Permission, UserPermission } = require("../models");
 
-exports.permissionCheck = (permissionName) => {
+exports.permissionCheck = (permissionNames = []) => {
+  if (!Array.isArray(permissionNames)) {
+    permissionNames = [permissionNames];
+  }
+
   return async (req, res, next) => {
     try {
       const user = req.user;
@@ -9,44 +13,53 @@ exports.permissionCheck = (permissionName) => {
         return next();
       }
 
-      const userId = user.id;
-      const restaurantId =
-        req.params.restaurantId ||
-        req.body.restaurantId ||
-        user.restaurant_id ||
-        null;
+      // Check role permissions
+      const rolePerms = await RolePermission.findAll({
+        where: {
+          role_id: user.role_id,
+          granted: true,
+        },
+        include: [
+          {
+            model: Permission,
+            required: true,
+            where: {
+              name: permissionNames,
+            },
+          },
+        ],
+      });
 
-      let userPermission = false;
-
-      if (user.role_name === "staff") {
-        userPermission = user.UserPermissions?.some(
-          (up) =>
-            up.Permission?.name === permissionName &&
-            up.restaurant_id === restaurantId
-        );
+      if (rolePerms.length > 0) {
+        return next();
       }
 
-      const rolePermission = user.Role?.RolePermissions?.some(
-        (rp) => rp.Permission?.name === permissionName
-      );
+      // Check user permissions
+      const userPerms = await UserPermission.findAll({
+        where: {
+          user_id: user.id,
+          granted: true,
+        },
+        include: [
+          {
+            model: Permission,
+            required: true,
+            where: {
+              name: permissionNames,
+            },
+          },
+        ],
+      });
 
-      let dynamicPermission = false;
-
-      if (!userPermission && !rolePermission && user.role_name === "staff") {
-        dynamicPermission = await checkUserPermission(
-          userId,
-          permissionName,
-          restaurantId
-        );
-      }
-
-      if (userPermission || rolePermission || dynamicPermission) {
+      if (userPerms.length > 0) {
         return next();
       }
 
       return res.status(403).json({
         success: false,
-        message: `Access denied - requires '${permissionName}' permission.`,
+        message: `Access denied - requires one of [${permissionNames.join(
+          ", "
+        )}] permission.`,
       });
     } catch (err) {
       console.error("Error in permissionCheck middleware:", err);

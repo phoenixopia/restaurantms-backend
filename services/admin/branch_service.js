@@ -8,6 +8,8 @@ const {
   Location,
   ContactInfo,
   User,
+  MenuCategory,
+  MenuItem,
   sequelize,
 } = require("../../models");
 
@@ -265,12 +267,18 @@ const BranchService = {
     limit = 10,
     restaurantId,
     order = [["created_at", "DESC"]],
+    user,
   }) {
     const offset = (page - 1) * limit;
 
     const where = {};
+
     if (restaurantId) {
       where.restaurant_id = restaurantId;
+    }
+
+    if (user.role_name === "staff" && user.branch_id) {
+      where.id = user.branch_id;
     }
 
     const { count, rows } = await Branch.findAndCountAll({
@@ -291,7 +299,7 @@ const BranchService = {
         {
           model: User,
           as: "manager",
-          attributes: ["id", "name", "email"],
+          attributes: ["id", "first_name", "last_name", "email"],
           required: false,
         },
         {
@@ -318,7 +326,7 @@ const BranchService = {
     };
   },
 
-  async getBranchById(branchId) {
+  async getBranchById(branchId, user) {
     const branch = await Branch.findByPk(branchId, {
       include: [
         {
@@ -333,7 +341,7 @@ const BranchService = {
         {
           model: User,
           as: "manager",
-          attributes: ["id", "name", "email"],
+          attributes: ["id", "first_name", "last_name", "email"],
           required: false,
         },
         {
@@ -355,14 +363,46 @@ const BranchService = {
       throwError("Branch not found", 404);
     }
 
+    if (!user) throwError("User not found", 404);
+
+    if (user.role_name === "staff") {
+      if (user.branch_id !== branch.id) {
+        throwError("Access denied - Not your assigned branch", 403);
+      }
+    } else {
+      if (user.restaurant_id !== branch.restaurant_id) {
+        throwError(
+          "Access denied - Branch does not belong to your restaurant",
+          403
+        );
+      }
+    }
+
     return branch;
   },
 
-  async addBranchContactInfo(branchId, data) {
+  async addBranchContactInfo(branchId, data, user) {
     const transaction = await sequelize.transaction();
+
     try {
       const branch = await Branch.findByPk(branchId, { transaction });
       if (!branch) throwError("Branch not found", 404);
+
+      const dbUser = await User.findByPk(user.id, { transaction });
+      if (!dbUser) throwError("User not found", 404);
+
+      if (dbUser.role_name === "staff") {
+        if (dbUser.branch_id !== branch.id) {
+          throwError("Access denied - Not your assigned branch", 403);
+        }
+      } else {
+        if (dbUser.restaurant_id !== branch.restaurant_id) {
+          throwError(
+            "Access denied - Branch doesn't belong to your restaurant",
+            403
+          );
+        }
+      }
 
       const { type, value, is_primary = true } = data;
 
@@ -410,9 +450,10 @@ const BranchService = {
     }
   },
 
-  async toggleBranchStatus(branchId, status, userId) {
+  async toggleBranchStatus(branchId, status, user) {
     const ALLOWED_STATUSES = ["active", "inactive", "under_maintenance"];
     const transaction = await sequelize.transaction();
+
     try {
       if (!ALLOWED_STATUSES.includes(status)) {
         throwError("Invalid status", 400);
@@ -421,9 +462,19 @@ const BranchService = {
       const branch = await Branch.findByPk(branchId, { transaction });
       if (!branch) throwError("Branch not found", 404);
 
-      const user = await User.findByPk(userId, { transaction });
-      if (!user || user.restaurant_id !== branch.restaurant_id) {
-        throwError("Access denied", 403);
+      if (!user) throwError("User not found", 404);
+
+      if (user.role_name === "staff") {
+        if (user.branch_id !== branch.id) {
+          throwError("Access denied - Not your assigned branch", 403);
+        }
+      } else {
+        if (user.restaurant_id !== branch.restaurant_id) {
+          throwError(
+            "Access denied - Branch doesn't belong to your restaurant",
+            403
+          );
+        }
       }
 
       await branch.update({ status }, { transaction });
@@ -436,8 +487,9 @@ const BranchService = {
     }
   },
 
-  async updateBranchContactInfo(branchId, contactInfoId, data, userId) {
+  async updateBranchContactInfo(branchId, contactInfoId, data, user) {
     const transaction = await sequelize.transaction();
+
     try {
       const contactInfo = await ContactInfo.findByPk(contactInfoId, {
         transaction,
@@ -454,9 +506,20 @@ const BranchService = {
       const branch = await Branch.findByPk(branchId, { transaction });
       if (!branch) throwError("Branch not found", 404);
 
-      const user = await User.findByPk(userId, { transaction });
-      if (!user || user.restaurant_id !== branch.restaurant_id) {
-        throwError("Access denied", 403);
+      if (user.role_name === "staff") {
+        if (user.branch_id !== branch.id) {
+          throwError(
+            "Access denied - You are not assigned to this branch",
+            403
+          );
+        }
+      } else {
+        if (user.restaurant_id !== branch.restaurant_id) {
+          throwError(
+            "Access denied - Branch does not belong to your restaurant",
+            403
+          );
+        }
       }
 
       await contactInfo.update(data, { transaction });
