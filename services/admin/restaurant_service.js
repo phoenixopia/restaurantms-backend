@@ -468,9 +468,9 @@ const RestaurantService = {
         },
         {
           model: Branch,
-          as: "mainBranch",
           required: false,
-          attributes: [],
+          where: { main_branch: true },
+          attributes: ["id", "name"],
           include: [
             {
               model: Location,
@@ -481,14 +481,21 @@ const RestaurantService = {
         {
           model: MenuCategory,
           required: false,
-          attributes: ["name"],
+          attributes: ["id", "name"],
         },
       ],
     });
 
     const restaurants = rows.map((r) => {
       const plain = r.get({ plain: true });
+
+      plain.MenuCategories = plain.MenuCategories?.map((cat) => ({
+        id: cat.id,
+        name: cat.name.split(" - ")[0],
+      }));
+
       plain.location = plain.mainBranch?.Location || null;
+
       delete plain.mainBranch;
       return plain;
     });
@@ -524,9 +531,9 @@ const RestaurantService = {
         },
         {
           model: Branch,
-          as: "mainBranch",
           required: false,
-          attributes: [],
+          where: { main_branch: true },
+          attributes: ["id", "name"],
           include: [
             {
               model: Location,
@@ -547,7 +554,7 @@ const RestaurantService = {
                 {
                   model: MenuItem,
                   required: false,
-                  separate: true,
+                  offset,
                   limit,
                 },
               ],

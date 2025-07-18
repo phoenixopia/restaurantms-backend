@@ -13,7 +13,7 @@ const router = express.Router();
 // ======================== Menu
 router.get(
   "/list",
-  protect,
+  protect("user"),
   permissionCheck("view_menu"),
   RestaurantStatus.checkRestaurantStatus,
   MenuController.getMenu
@@ -21,7 +21,7 @@ router.get(
 
 router.post(
   "/create",
-  protect,
+  protect("user"),
   authorize("restaurant_admin"),
   RestaurantStatus.checkRestaurantStatus,
   MenuController.createMenu
@@ -29,7 +29,7 @@ router.post(
 
 router.put(
   "/update/:id",
-  protect,
+  protect("user"),
   permissionCheck("edit_menu"),
   RestaurantStatus.checkRestaurantStatus,
   MenuController.updateMenu
@@ -37,25 +37,25 @@ router.put(
 
 router.delete(
   "/delete/:id",
-  protect,
+  protect("user"),
   permissionCheck("delete_menu"),
   RestaurantStatus.checkRestaurantStatus,
   MenuController.deleteMenu
 );
 
-router.patch(
-  "/toggle-activation/:id",
-  protect,
-  permissionCheck("toggle_menu_activation"),
-  RestaurantStatus.checkRestaurantStatus,
-  MenuController.toggleMenuActivation
-);
+// router.patch(
+//   "/toggle-activation/:id",
+//   protect("user"),
+//   permissionCheck("toggle_menu_activation"),
+//   RestaurantStatus.checkRestaurantStatus,
+//   MenuController.toggleMenuActivation
+// );
 
 // ======================== Menu Category
 
 router.get(
   "/menu-category/list",
-  protect,
+  protect("user"),
   permissionCheck("view_menu_category"),
   RestaurantStatus.checkRestaurantStatus,
   MenuController.listMenuCategories
@@ -63,7 +63,7 @@ router.get(
 
 router.get(
   "/menu-category/byID/:id",
-  protect,
+  protect("user"),
   permissionCheck("view_menu_category"),
   RestaurantStatus.checkRestaurantStatus,
   MenuController.getMenuCategory
@@ -73,7 +73,7 @@ router.get("menu-category-tags/list", protect, MenuController.listCategoryTags);
 
 router.post(
   "/menu-category/create",
-  protect,
+  protect("user"),
   permissionCheck("create_menu_category"),
   RestaurantStatus.checkRestaurantStatus,
   MenuController.createMenuCategory
@@ -81,7 +81,7 @@ router.post(
 
 router.put(
   "/menu-category/update/:id",
-  protect,
+  protect("user"),
   permissionCheck("edit_menu_category"),
   RestaurantStatus.checkRestaurantStatus,
   MenuController.updateMenuCategory
@@ -89,7 +89,7 @@ router.put(
 
 router.delete(
   "/menu-category/delete/:id",
-  protect,
+  protect("user"),
   permissionCheck("delete_menu_category"),
   RestaurantStatus.checkRestaurantStatus,
   MenuController.deleteMenuCategory
@@ -97,7 +97,7 @@ router.delete(
 
 router.patch(
   "/menu-category/toggle-activation/:id",
-  protect,
+  protect("user"),
   permissionCheck("toggle_menu_category_activation"),
   RestaurantStatus.checkRestaurantStatus,
   MenuController.toggleMenuCategoryActivation
@@ -107,7 +107,7 @@ router.patch(
 
 router.post(
   "/menu-item/create",
-  protect,
+  protect("user"),
   permissionCheck("create_menu_item"),
   RestaurantStatus.checkRestaurantStatus,
   ValidateUploadedFiles.validateUploadedFiles("menuItem"),
@@ -117,7 +117,7 @@ router.post(
 
 router.put(
   "/menu-item/update/:id",
-  protect,
+  protect("user"),
   permissionCheck("edit_menu_item"),
   RestaurantStatus.checkRestaurantStatus,
   ValidateUploadedFiles.validateUploadedFiles("menuItem"),
@@ -127,7 +127,7 @@ router.put(
 
 router.delete(
   "/menu-item/delete/:id",
-  protect,
+  protect("user"),
   permissionCheck("delete_menu_item"),
   RestaurantStatus.checkRestaurantStatus,
   MenuController.deleteMenuItem
@@ -135,7 +135,7 @@ router.delete(
 
 router.patch(
   "/menu-item/toggle-seasonal/:id",
-  protect,
+  protect("user"),
   permissionCheck("toggle_seasonal"),
   RestaurantStatus.checkRestaurantStatus,
   MenuController.toggleSeasonal
@@ -143,7 +143,7 @@ router.patch(
 
 router.patch(
   "/menu-item/toggle-activation/:id",
-  protect,
+  protect("user"),
   permissionCheck("toggle_menu_item_activation"),
   RestaurantStatus.checkRestaurantStatus,
   MenuController.toggleMenuItemActivation
@@ -151,7 +151,7 @@ router.patch(
 
 router.get(
   "/menu-item/byID/:id",
-  protect,
+  protect("user"),
   permissionCheck("view_menu_item"),
   RestaurantStatus.checkRestaurantStatus,
   MenuController.getSingleMenuItem
@@ -159,7 +159,7 @@ router.get(
 
 router.get(
   "/menu-item/list/:id",
-  protect,
+  protect("user"),
   permissionCheck("view_menu_item"),
   RestaurantStatus.checkRestaurantStatus,
   MenuController.listMenuItemsWithRestaurant

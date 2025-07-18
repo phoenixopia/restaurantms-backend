@@ -1,17 +1,17 @@
 "use strict";
 
-const path = require("path");
-const fs = require("fs");
 const { Op } = require("sequelize");
 const {
   MenuCategory,
   Menu,
   Branch,
   Restaurant,
+  MenuItem,
   CategoryTag,
   sequelize,
 } = require("../../models");
 const throwError = require("../../utils/throwError");
+const { buildPagination } = require("../../utils/pagination");
 
 const MenuCategoryService = {
   async createMenuCategory({
@@ -285,9 +285,11 @@ const MenuCategoryService = {
       filters.branch_id = effectiveBranchId;
     }
 
-    return await MenuCategory.paginate({
-      page,
-      paginate: limit,
+    const { offset, order } = buildPagination({ page, limit });
+
+    const finalOrder = [["sort_order", "ASC"]];
+
+    const { count, rows } = await MenuCategory.findAndCountAll({
       where: filters,
       include: [
         {
@@ -295,8 +297,17 @@ const MenuCategoryService = {
           attributes: { exclude: ["created_at", "updated_at"] },
         },
       ],
-      order: [["sort_order", "ASC"]],
+      order: finalOrder,
+      limit,
+      offset,
     });
+
+    return {
+      totalItems: count,
+      totalPages: Math.ceil(count / limit),
+      currentPage: page,
+      data: rows,
+    };
   },
 
   async getMenuCategoryById(id, user) {

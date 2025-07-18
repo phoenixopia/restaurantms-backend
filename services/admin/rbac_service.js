@@ -502,6 +502,12 @@ const RbacService = {
         );
       }
 
+      if (!currentUser.restaurant_id) {
+        throwError("Current user is not assigned to any restaurant", 400);
+      }
+
+      const restaurantId = currentUser.restaurant_id;
+
       const currentPerms = await this.getUserEffectivePermissions(
         currentUser.id
       );
@@ -535,7 +541,7 @@ const RbacService = {
             user_id: userId,
             permission_id: id,
             granted: true,
-            granted_by: currentUser.id,
+            restaurant_id: restaurantId,
           }));
 
         const toDelete = batch.filter((id) => existingIds.has(id));
@@ -564,7 +570,6 @@ const RbacService = {
       throw err;
     }
   },
-
   async getUserPermissions(userId) {
     const user = await User.findByPk(userId, {
       include: {

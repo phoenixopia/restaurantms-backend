@@ -1,6 +1,12 @@
 "use strict";
 
-const { Menu, sequelize } = require("../../models");
+const {
+  Menu,
+  MenuCategory,
+  MenuItem,
+  Branch,
+  sequelize,
+} = require("../../models");
 const throwError = require("../../utils/throwError");
 
 const MenuService = {
@@ -142,39 +148,39 @@ const MenuService = {
       throw err;
     }
   },
-  async toggleMenuActivation(id, user) {
-    const t = await sequelize.transaction();
-    try {
-      let restaurantId;
+  // async toggleMenuActivation(id, user) {
+  //   const t = await sequelize.transaction();
+  //   try {
+  //     let restaurantId;
 
-      if (user.role_name === "restaurant_admin") {
-        restaurantId = user.restaurant_id;
-      } else if (user.role_name === "staff") {
-        const branch = await Branch.findByPk(user.branch_id, {
-          transaction: t,
-        });
-        if (!branch) throwError("Branch not found", 404);
-        restaurantId = branch.restaurant_id;
-      } else {
-        throwError("Unauthorized role for toggling menu activation", 403);
-      }
+  //     if (user.role_name === "restaurant_admin") {
+  //       restaurantId = user.restaurant_id;
+  //     } else if (user.role_name === "staff") {
+  //       const branch = await Branch.findByPk(user.branch_id, {
+  //         transaction: t,
+  //       });
+  //       if (!branch) throwError("Branch not found", 404);
+  //       restaurantId = branch.restaurant_id;
+  //     } else {
+  //       throwError("Unauthorized role for toggling menu activation", 403);
+  //     }
 
-      const menu = await Menu.findOne({
-        where: { id, restaurant_id: restaurantId },
-        transaction: t,
-      });
-      if (!menu) throwError("Menu not found for this restaurant", 404);
+  //     const menu = await Menu.findOne({
+  //       where: { id, restaurant_id: restaurantId },
+  //       transaction: t,
+  //     });
+  //     if (!menu) throwError("Menu not found for this restaurant", 404);
 
-      menu.is_active = !menu.is_active;
-      await menu.save({ transaction: t });
-      await t.commit();
+  //     menu.is_active = !menu.is_active;
+  //     await menu.save({ transaction: t });
+  //     await t.commit();
 
-      return menu;
-    } catch (err) {
-      await t.rollback();
-      throw err;
-    }
-  },
+  //     return menu;
+  //   } catch (err) {
+  //     await t.rollback();
+  //     throw err;
+  //   }
+  // },
 };
 
 module.exports = MenuService;

@@ -3,9 +3,9 @@ const RestaurantController = require("../../controllers/admin/restaurant_control
 
 const router = express.Router();
 
-router.get("/:id", RestaurantController.getRestaurantById);
-
 router.get("/get-all", RestaurantController.getAllRestaurants);
+
+router.get("/:id", RestaurantController.getRestaurantById);
 
 router.get(
   "/cheapest-items",

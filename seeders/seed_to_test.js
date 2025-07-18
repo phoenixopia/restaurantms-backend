@@ -239,6 +239,7 @@ module.exports = async () => {
       for (let i = 0; i < categories.length; i++) {
         const menuCategory = await MenuCategory.create({
           id: uuidv4(),
+          restaurant_id: restaurant.id,
           branch_id: branch.id,
           menu_id: menu.id,
           name: `${categories[i]} - ${branch.name}`,

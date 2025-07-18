@@ -31,15 +31,15 @@ exports.deleteMenu = asyncHandler(async (req, res) => {
   return success(res, "Menu deleted successfully");
 });
 
-exports.toggleMenuActivation = asyncHandler(async (req, res) => {
-  const { id } = req.params;
-  const menu = await MenuService.toggleMenuActivation(id, req.user);
-  return success(
-    res,
-    `Menu is now ${menu.is_active ? "active" : "inactive"}`,
-    menu
-  );
-});
+// exports.toggleMenuActivation = asyncHandler(async (req, res) => {
+//   const { id } = req.params;
+//   const menu = await MenuService.toggleMenuActivation(id, req.user);
+//   return success(
+//     res,
+//     `Menu is now ${menu.is_active ? "active" : "inactive"}`,
+//     menu
+//   );
+// });
 
 // ====================== Menu Category
 
