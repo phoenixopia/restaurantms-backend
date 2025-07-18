@@ -5,12 +5,12 @@ const router = express.Router();
 
 router.get("/get-all", RestaurantController.getAllRestaurants);
 
-router.get("/:id", RestaurantController.getRestaurantById);
-
 router.get(
   "/cheapest-items",
   RestaurantController.getAllRestaurantWithCheapestItems
 );
+
+router.get("/:id", RestaurantController.getRestaurantById);
 
 router.get("/search", RestaurantController.searchRestaurants);
 

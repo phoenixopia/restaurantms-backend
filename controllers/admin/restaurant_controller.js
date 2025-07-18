@@ -98,11 +98,10 @@ exports.getAllRestaurantsWithSubscriptions = asyncHandler(async (req, res) => {
 
 exports.getAllRestaurantWithCheapestItems = asyncHandler(async (req, res) => {
   const { page = 1, limit = 10 } = req.query;
-  const result =
-    await RestaurantService.getAllRestaurantsWithMenusAndCheapestItems({
-      page: parseInt(page),
-      limit: parseInt(limit),
-    });
+  const result = await RestaurantService.getAllRestaurantsWithCheapestItem({
+    page: parseInt(page),
+    limit: parseInt(limit),
+  });
   return success(
     res,
     "All registered restaurants with cheapest items fetched",

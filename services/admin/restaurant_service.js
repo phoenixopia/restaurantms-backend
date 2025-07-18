@@ -444,7 +444,7 @@ const RestaurantService = {
 
   // for customer
   async getAllRestaurants(query) {
-    const { page, limit, offset, order, where } = buildPagination(query);
+    const { page, limit, offset, order } = buildPagination(query);
 
     const { count, rows } = await Restaurant.findAndCountAll({
       where: {
@@ -453,19 +453,8 @@ const RestaurantService = {
       offset,
       limit,
       order,
+      attributes: { exclude: ["created_at", "updated_at"] },
       include: [
-        {
-          model: SystemSetting,
-          attributes: ["logo_url", "images"],
-          required: false,
-        },
-        {
-          model: ContactInfo,
-          as: "owned_contact_info",
-          where: { module_type: "restaurant" },
-          required: false,
-          attributes: ["type", "value", "is_primary"],
-        },
         {
           model: Branch,
           required: false,
@@ -478,6 +467,19 @@ const RestaurantService = {
             },
           ],
         },
+        {
+          model: SystemSetting,
+          attributes: ["logo_url", "images"],
+          required: false,
+        },
+        {
+          model: ContactInfo,
+          as: "owned_contact_info",
+          where: { module_type: "restaurant" },
+          required: false,
+          attributes: ["type", "value", "is_primary"],
+        },
+
         {
           model: MenuCategory,
           required: false,
@@ -494,9 +496,10 @@ const RestaurantService = {
         name: cat.name.split(" - ")[0],
       }));
 
-      plain.location = plain.mainBranch?.Location || null;
+      plain.location = (plain.Branches && plain.Branches[0]?.Location) || null;
 
-      delete plain.mainBranch;
+      delete plain.Branches;
+
       return plain;
     });
 
@@ -516,6 +519,7 @@ const RestaurantService = {
     const offset = (page - 1) * limit;
 
     const restaurant = await Restaurant.findByPk(id, {
+      attributes: { exclude: ["createdAt", "updatedAt"] },
       include: [
         {
           model: SystemSetting,
@@ -544,18 +548,21 @@ const RestaurantService = {
         {
           model: Branch,
           required: true,
+          attributes: ["id", "name"],
           include: [
+            {
+              model: Location,
+              attributes: ["address", "latitude", "longitude"],
+            },
             {
               model: MenuCategory,
               required: false,
-              offset,
-              limit,
+              attributes: { exclude: ["createdAt", "updatedAt"] },
               include: [
                 {
                   model: MenuItem,
                   required: false,
-                  offset,
-                  limit,
+                  attributes: { exclude: ["createdAt", "updatedAt"] },
                 },
               ],
             },
@@ -570,88 +577,110 @@ const RestaurantService = {
     plain.location = plain.mainBranch?.Location || null;
     delete plain.mainBranch;
 
-    return plain;
+    return {
+      restaurant: {
+        id: plain.id,
+        name: plain.name,
+        description: plain.description,
+        logo: plain.SystemSetting?.logo_url || null,
+        images: plain.SystemSetting?.images || [],
+        contact_info: plain.owned_contact_info || [],
+        location: plain.location,
+      },
+      branches: (plain.Branches || []).map((branch) => ({
+        id: branch.id,
+        name: branch.name,
+        location: branch.Location || null,
+        menu_categories: (branch.MenuCategories || []).map((cat) => ({
+          id: cat.id,
+          name: cat.name,
+          branch_id: cat.branch_id,
+          menu_items: cat.MenuItems || [],
+        })),
+      })),
+      pagination: {
+        page,
+        limit,
+        offset,
+      },
+    };
   },
 
   // for customer
-  async getAllRestaurantsWithMenusAndCheapestItems({ page = 1, limit = 10 }) {
+  async getAllRestaurantsWithCheapestItem({ page = 1, limit = 10 }) {
     const offset = (page - 1) * limit;
 
     const { count, rows: restaurants } = await Restaurant.findAndCountAll({
-      attributes: ["id", "restaurant_name"],
-      where: {
-        status: { [Op.in]: ["active"] },
-      },
+      where: { status: "active" },
       offset,
       limit,
-      distinct: true,
+      attributes: ["id", "restaurant_name"],
       include: [
         {
           model: SystemSetting,
           attributes: ["logo_url", "images"],
           required: false,
         },
-        {
-          model: ContactInfo,
-          as: "owned_contact_info",
-          where: { module_type: "restaurant" },
-          required: false,
-          attributes: ["type", "value", "is_primary"],
-        },
-        {
-          model: Branch,
-          as: "mainBranch",
-          required: false,
-          attributes: [],
-          include: [
-            {
-              model: Location,
-              attributes: ["address", "latitude", "longitude"],
-            },
-          ],
-        },
-        {
-          model: Menu,
-          attributes: ["id", "name"],
+      ],
+    });
+
+    const data = await Promise.all(
+      restaurants.map(async (restaurant) => {
+        const cheapestItem = await MenuItem.findOne({
           include: [
             {
               model: MenuCategory,
-              attributes: ["id", "name"],
+              required: true,
               include: [
                 {
-                  model: MenuItem,
-                  attributes: ["id", "name", "unit_price"],
-                  separate: true,
-                  order: [["unit_price", "ASC"]],
-                  limit: 1,
+                  model: Menu,
+                  required: true,
+                  where: { restaurant_id: restaurant.id },
                 },
               ],
             },
           ],
-        },
-      ],
-    });
+          order: [["unit_price", "ASC"]],
+          attributes: {
+            exclude: ["createdAt", "updatedAt"],
+          },
+        });
 
-    const data = restaurants.map((r) => {
-      const plain = r.get({ plain: true });
-      plain.location = plain.mainBranch?.Location || null;
-      delete plain.mainBranch;
-      return plain;
-    });
+        let categoryInfo = null;
+        if (cheapestItem?.MenuCategory) {
+          categoryInfo = {
+            id: cheapestItem.MenuCategory.id,
+            name: cheapestItem.MenuCategory.name,
+          };
+        }
 
-    const totalPages = Math.ceil(count / limit);
+        const restaurantImage = restaurant.SystemSetting?.images?.[0] || null;
+
+        return {
+          id: restaurant.id,
+          restaurant_name: restaurant.restaurant_name,
+          restaurant_logo: restaurant.SystemSetting?.logo_url || null,
+          restaurant_image: restaurantImage,
+          cheapest_menu_item: cheapestItem
+            ? {
+                ...cheapestItem.get({ plain: true }),
+                category: categoryInfo,
+              }
+            : null,
+        };
+      })
+    );
 
     return {
       data,
       meta: {
         totalItems: count,
-        totalPages,
+        totalPages: Math.ceil(count / limit),
         currentPage: page,
         pageSize: limit,
       },
     };
   },
-
   // for customer
   async searchRestaurants({
     query,

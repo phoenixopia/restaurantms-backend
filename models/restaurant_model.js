@@ -75,7 +75,7 @@ module.exports = (sequelize) => {
 
     Restaurant.hasOne(models.Menu, {
       foreignKey: "restaurant_id",
-      oonDelete: "RESTRICT",
+      onDelete: "RESTRICT",
       onUpdate: "CASCADE",
     });
 
