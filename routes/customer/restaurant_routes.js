@@ -10,13 +10,13 @@ router.get(
   RestaurantController.getAllRestaurantWithCheapestItems
 );
 
-router.get("/:id", RestaurantController.getRestaurantById);
-
 router.get("/search", RestaurantController.searchRestaurants);
 
 router.get(
   "/category-tag/:id",
   RestaurantController.getRestaurantsByCategoryTagId
 );
+
+router.get("/:id", RestaurantController.getRestaurantById);
 
 module.exports = router;

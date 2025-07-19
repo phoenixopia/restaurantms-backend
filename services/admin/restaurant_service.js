@@ -446,10 +446,12 @@ const RestaurantService = {
   async getAllRestaurants(query) {
     const { page, limit, offset, order } = buildPagination(query);
 
-    const { count, rows } = await Restaurant.findAndCountAll({
-      where: {
-        status: { [Op.in]: ["active"] },
-      },
+    const totalItems = await Restaurant.count({
+      where: { status: { [Op.in]: ["active"] } },
+    });
+
+    const rows = await Restaurant.findAll({
+      where: { status: { [Op.in]: ["active"] } },
       offset,
       limit,
       order,
@@ -479,7 +481,6 @@ const RestaurantService = {
           required: false,
           attributes: ["type", "value", "is_primary"],
         },
-
         {
           model: MenuCategory,
           required: false,
@@ -490,24 +491,22 @@ const RestaurantService = {
 
     const restaurants = rows.map((r) => {
       const plain = r.get({ plain: true });
-
       plain.MenuCategories = plain.MenuCategories?.map((cat) => ({
         id: cat.id,
         name: cat.name.split(" - ")[0],
       }));
-
       plain.location = (plain.Branches && plain.Branches[0]?.Location) || null;
-
       delete plain.Branches;
-
       return plain;
     });
+
+    const totalPages = Math.ceil(totalItems / limit);
 
     return {
       restaurants,
       pagination: {
-        totalItems: count,
-        totalPages: Math.ceil(count / limit),
+        totalItems,
+        totalPages,
         currentPage: page,
         pageSize: limit,
       },
@@ -610,7 +609,11 @@ const RestaurantService = {
   async getAllRestaurantsWithCheapestItem({ page = 1, limit = 10 }) {
     const offset = (page - 1) * limit;
 
-    const { count, rows: restaurants } = await Restaurant.findAndCountAll({
+    const totalItems = await Restaurant.count({
+      where: { status: "active" },
+    });
+
+    const restaurants = await Restaurant.findAll({
       where: { status: "active" },
       offset,
       limit,
@@ -674,8 +677,8 @@ const RestaurantService = {
     return {
       data,
       meta: {
-        totalItems: count,
-        totalPages: Math.ceil(count / limit),
+        totalItems,
+        totalPages: Math.ceil(totalItems / limit),
         currentPage: page,
         pageSize: limit,
       },
@@ -704,7 +707,8 @@ const RestaurantService = {
       filterCondition.restaurant_name = { [Op.iLike]: `%${query}%` };
     }
 
-    let data, totalItems;
+    let data = [];
+    let totalItems = 0;
 
     if (nearby === "true" && lat && lng) {
       const replacements = {
@@ -715,62 +719,104 @@ const RestaurantService = {
         offset,
       };
 
-      data = await sequelize.query(
-        `
-      SELECT r.*, l.name AS location_name, l.address, l.latitude, l.longitude,
-        (
-          6371 * acos(
-            cos(radians(:latitude)) * cos(radians(l.latitude)) *
-            cos(radians(l.longitude) - radians(:longitude)) +
-            sin(radians(:latitude)) * sin(radians(l.latitude))
-          )
-        ) AS distance
-      FROM restaurants r
-      JOIN branches b ON r.id = b.restaurant_id AND b.is_main = TRUE
-      JOIN locations l ON b.location_id = l.id
-      WHERE r.status = 'active'
-      ${query ? "AND r.restaurant_name ILIKE :query" : ""}
-      HAVING distance <= :maxDistance
-      ORDER BY distance ASC
-      LIMIT :limit OFFSET :offset
-      `,
-        {
-          replacements: {
-            ...replacements,
-            ...(query ? { query: `%${query}%` } : {}),
-          },
-          type: QueryTypes.SELECT,
-        }
-      );
-
-      const countResult = await sequelize.query(
-        `
-      SELECT COUNT(*) FROM (
-        SELECT 1
+      const selectQuery = `
+      WITH nearby_restaurants AS (
+        SELECT
+          r.*,
+          l.address,
+          l.latitude,
+          l.longitude,
+          (
+            6371 * acos(
+              cos(radians(:latitude)) * cos(radians(l.latitude)) *
+              cos(radians(l.longitude) - radians(:longitude)) +
+              sin(radians(:latitude)) * sin(radians(l.latitude))
+            )
+          ) AS distance
         FROM restaurants r
-        JOIN branches b ON r.id = b.restaurant_id AND b.is_main = TRUE
+        JOIN branches b ON r.id = b.restaurant_id AND b.main_branch = TRUE
         JOIN locations l ON b.location_id = l.id
         WHERE r.status = 'active'
         ${query ? "AND r.restaurant_name ILIKE :query" : ""}
-        HAVING (
-          6371 * acos(
-            cos(radians(:latitude)) * cos(radians(l.latitude)) *
-            cos(radians(l.longitude) - radians(:longitude)) +
-            sin(radians(:latitude)) * sin(radians(l.latitude))
-          )
-        ) <= :maxDistance
-      ) AS subquery
-      `,
-        {
-          replacements: {
-            ...replacements,
-            ...(query ? { query: `%${query}%` } : {}),
-          },
-          type: QueryTypes.SELECT,
-        }
-      );
+      )
+      SELECT *
+      FROM nearby_restaurants
+      WHERE distance <= :maxDistance
+      ORDER BY distance ASC
+      LIMIT :limit OFFSET :offset
+    `;
+
+      data = await sequelize.query(selectQuery, {
+        replacements: {
+          ...replacements,
+          ...(query ? { query: `%${query}%` } : {}),
+        },
+        type: QueryTypes.SELECT,
+      });
+
+      const countQuery = `
+      WITH nearby_restaurants AS (
+        SELECT
+          r.id,
+          (
+            6371 * acos(
+              cos(radians(:latitude)) * cos(radians(l.latitude)) *
+              cos(radians(l.longitude) - radians(:longitude)) +
+              sin(radians(:latitude)) * sin(radians(l.latitude))
+            )
+          ) AS distance
+        FROM restaurants r
+        JOIN branches b ON r.id = b.restaurant_id AND b.main_branch = TRUE
+        JOIN locations l ON b.location_id = l.id
+        WHERE r.status = 'active'
+        ${query ? "AND r.restaurant_name ILIKE :query" : ""}
+      )
+      SELECT COUNT(*) FROM nearby_restaurants WHERE distance <= :maxDistance
+    `;
+
+      const countResult = await sequelize.query(countQuery, {
+        replacements: {
+          ...replacements,
+          ...(query ? { query: `%${query}%` } : {}),
+        },
+        type: QueryTypes.SELECT,
+      });
 
       totalItems = parseInt(countResult[0].count);
+
+      const restaurantIds = data.map((r) => r.id);
+
+      if (restaurantIds.length) {
+        const menuCategories = await sequelize.models.MenuCategory.findAll({
+          where: {
+            restaurant_id: restaurantIds,
+          },
+          attributes: ["id", "name", "restaurant_id"],
+          order: [["name", "ASC"]],
+        });
+
+        const categoriesByRestaurant = {};
+        menuCategories.forEach((cat) => {
+          if (!categoriesByRestaurant[cat.restaurant_id]) {
+            categoriesByRestaurant[cat.restaurant_id] = [];
+          }
+          const cleanName = cat.name.split(" - ")[0];
+          categoriesByRestaurant[cat.restaurant_id].push({
+            id: cat.id,
+            name: cleanName,
+          });
+        });
+
+        data = data.map((restaurant) => ({
+          ...restaurant,
+          menu_categories: categoriesByRestaurant[restaurant.id] || [],
+        }));
+      } else {
+        data = data.map((restaurant) => ({
+          ...restaurant,
+          menu_categories: [],
+        }));
+      }
     } else {
       const allRestaurants = await Restaurant.findAndCountAll({
         where: filterCondition,
@@ -790,6 +836,7 @@ const RestaurantService = {
           {
             model: Branch,
             as: "mainBranch",
+            where: { main_branch: true },
             required: false,
             attributes: [],
             include: [
@@ -800,14 +847,8 @@ const RestaurantService = {
             ],
           },
           {
-            model: Menu,
-            required: false,
-            include: [
-              {
-                model: MenuCategory,
-                attributes: ["id", "name"],
-              },
-            ],
+            model: MenuCategory,
+            attributes: ["id", "name"],
           },
         ],
         offset,
@@ -818,9 +859,15 @@ const RestaurantService = {
       data = allRestaurants.rows.map((restaurant) => {
         const plain = restaurant.get({ plain: true });
         plain.location = plain.mainBranch?.Location || null;
+        plain.menu_categories = plain.MenuCategories.map((cat) => ({
+          id: cat.id,
+          name: cat.name.split(" - ")[0],
+        }));
         delete plain.mainBranch;
+        delete plain.MenuCategories;
         return plain;
       });
+
       totalItems = allRestaurants.count;
     }
 
