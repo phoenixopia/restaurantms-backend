@@ -2,7 +2,7 @@
 
 const path = require("path");
 const fs = require("fs");
-const { MenuItem, MenuCategory, sequelize } = require("../../models");
+const { MenuItem, MenuCategory, Branch, sequelize } = require("../../models");
 const { Op } = require("sequelize");
 const throwError = require("../../utils/throwError");
 const cleanupUploadedFiles = require("../../utils/cleanUploadedFiles");

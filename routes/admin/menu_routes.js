@@ -162,7 +162,7 @@ router.get(
 );
 
 router.get(
-  "/menu-item/list/:id",
+  "/menu-item/list",
   protect("user"),
   permissionCheck("view_menu_item"),
   RestaurantStatus.checkRestaurantStatus,

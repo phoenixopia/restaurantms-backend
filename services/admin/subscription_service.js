@@ -7,7 +7,6 @@ const { getFileUrl } = require("../../utils/file");
 const cleanupUploadedFiles = require("../../utils/cleanUploadedFiles");
 
 const SubscriptionService = {
-  // to subscribe when it expires
   async subscribe(data, user_id, receiptFile) {
     const t = await sequelize.transaction();
 
@@ -29,6 +28,7 @@ const SubscriptionService = {
         where: { restaurant_id: restaurant.id, status: "active" },
         transaction: t,
       });
+
       if (existing) throwError("Active subscription already exists", 409);
 
       const now = new Date();
@@ -44,7 +44,9 @@ const SubscriptionService = {
           start_date: now.toISOString().split("T")[0],
           end_date: end.toISOString().split("T")[0],
           payment_method: data.billing_provider?.toLowerCase() || null,
-          receipt: receiptFile ? getFileUrl(receiptFile.filename) : null,
+          receipt: receiptFile
+            ? getFileUrl("receipts", receiptFile.filename)
+            : null,
           user_id,
           status: "pending",
         },
@@ -66,7 +68,6 @@ const SubscriptionService = {
     const t = await sequelize.transaction();
     try {
       const subscription = await Subscription.findByPk(id, { transaction: t });
-
       if (!subscription) throwError("Subscription not found", 404);
 
       subscription.status = newStatus;
@@ -96,14 +97,10 @@ const SubscriptionService = {
 
     const where = {};
 
-    if (status) {
-      where.status = status;
-    }
-
+    if (status) where.status = status;
     if (user.role_name === "restaurant_admin" && payment_method) {
       where.payment_method = payment_method;
     }
-
     if (user.role_name === "restaurant_admin") {
       where.restaurant_id = user.restaurant_id;
     }
@@ -141,15 +138,51 @@ const SubscriptionService = {
     };
   },
 
-  async exportToCSV(filters) {
-    const subscriptions = await this.getFilteredSubscriptions(filters, {
-      raw: true,
+  async getFilteredSubscriptions(filters = {}, options = {}) {
+    const where = {};
+
+    if (filters.status) where.status = filters.status;
+    if (filters.payment_method) where.payment_method = filters.payment_method;
+    if (filters.expiry_date) where.end_date = { [Op.lte]: filters.expiry_date };
+    if (filters.payment_date)
+      where.start_date = { [Op.gte]: filters.payment_date };
+
+    const subscriptions = await Subscription.findAll({
+      where,
+      include: [
+        { model: Restaurant, attributes: ["restaurant_name"] },
+        { model: Plan, attributes: ["name"] },
+      ],
+      ...options,
     });
+
+    return subscriptions.map((sub) => ({
+      id: sub.id,
+      restaurant_id: sub.restaurant_id,
+      restaurant_name: sub.Restaurant?.restaurant_name || "",
+      plan_id: sub.plan_id,
+      plan_name: sub.Plan?.name || "",
+      start_date: sub.start_date,
+      end_date: sub.end_date,
+      payment_method: sub.payment_method,
+      status: sub.status,
+    }));
+  },
+
+  async exportToCSV(filters) {
+    const data = await this.getFilteredSubscriptions(filters);
+
+    const dataWithSequentialIds = data.map((item, index) => ({
+      ...item,
+      id: index + 1,
+    }));
 
     const fields = [
       { label: "Subscription ID", value: "id" },
       { label: "Restaurant ID", value: "restaurant_id" },
+      { label: "Restaurant Name", value: "restaurant_name" },
       { label: "Plan ID", value: "plan_id" },
+      { label: "Plan Name", value: "plan_name" },
       { label: "Start Date", value: "start_date" },
       { label: "End Date", value: "end_date" },
       { label: "Payment Method", value: "payment_method" },
@@ -157,7 +190,7 @@ const SubscriptionService = {
     ];
 
     const parser = new Parser({ fields });
-    const csv = parser.parse(subscriptions.data);
+    const csv = parser.parse(dataWithSequentialIds);
 
     return {
       csvData: csv,

@@ -16,8 +16,8 @@ router.post(
   "/create",
   protect("user"),
   authorize("restaurant_admin"),
-  Upload.uploadReceiptFile,
   validateUploadedFiles("receipt"),
+  Upload.uploadReceiptFile,
   createSubscriptionValidator,
   validateRequest,
   SubscriptionController.subscribe

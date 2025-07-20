@@ -58,16 +58,17 @@ const MenuService = {
 
     const menu = await Menu.findOne({
       where: { restaurant_id: restaurantId },
+      attributes: { exclude: ["createdAt", "updatedAt"] },
       include: [
         {
           model: MenuCategory,
           required: false,
           where: Object.keys(categoryWhere).length ? categoryWhere : undefined,
-          attributes: { exclude: ["created_at", "updated_at"] },
+          attributes: { exclude: ["createdAt", "updatedAt"] },
           include: [
             {
               model: MenuItem,
-              attributes: { exclude: ["created_at", "updated_at"] },
+              attributes: { exclude: ["createdAt", "updatedAt"] },
             },
           ],
         },
@@ -77,7 +78,6 @@ const MenuService = {
     if (!menu) throwError("No menu found for this restaurant", 404);
     return menu;
   },
-
   async updateMenu(id, user, { name, description, is_active }) {
     const t = await sequelize.transaction();
 

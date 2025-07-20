@@ -67,6 +67,7 @@ const MenuCategoryService = {
       const category = await MenuCategory.create(
         {
           menu_id: menu.id,
+          restaurant_id: restaurantId,
           branch_id: finalBranchId,
           name,
           description,
@@ -324,16 +325,10 @@ const MenuCategoryService = {
     }
 
     const category = await MenuCategory.findByPk(id, {
+      attributes: { exclude: ["createdAt", "updatedAt"] },
       include: {
-        model: Menu,
-        required: true,
-        where: { restaurant_id: restaurantId },
-        include: [
-          {
-            model: MenuItem,
-            attributes: { exclude: ["created_at", "updated_at"] },
-          },
-        ],
+        model: MenuItem,
+        attributes: { exclude: ["createdAt", "updatedAt"] },
       },
     });
 
