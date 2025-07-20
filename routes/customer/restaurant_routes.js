@@ -1,5 +1,6 @@
 const express = require("express");
 const RestaurantController = require("../../controllers/admin/restaurant_controller");
+const MenuController = require("../../controllers/admin/menu_controller");
 
 const router = express.Router();
 
@@ -9,6 +10,8 @@ router.get(
   "/cheapest-items",
   RestaurantController.getAllRestaurantWithCheapestItems
 );
+
+router.get("/menu-category-tags/list", MenuController.listCategoryTags);
 
 router.get("/search", RestaurantController.searchRestaurants);
 

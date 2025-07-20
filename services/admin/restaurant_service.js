@@ -455,7 +455,7 @@ const RestaurantService = {
       offset,
       limit,
       order,
-      attributes: { exclude: ["created_at", "updated_at"] },
+      attributes: ["id", "restaurant_name"],
       include: [
         {
           model: Branch,
@@ -493,7 +493,7 @@ const RestaurantService = {
       const plain = r.get({ plain: true });
       plain.MenuCategories = plain.MenuCategories?.map((cat) => ({
         id: cat.id,
-        name: cat.name.split(" - ")[0],
+        name: cat.name,
       }));
       plain.location = (plain.Branches && plain.Branches[0]?.Location) || null;
       delete plain.Branches;
@@ -534,6 +534,7 @@ const RestaurantService = {
         },
         {
           model: Branch,
+          as: "mainBranch",
           required: false,
           where: { main_branch: true },
           attributes: ["id", "name"],
@@ -546,7 +547,7 @@ const RestaurantService = {
         },
         {
           model: Branch,
-          required: true,
+          required: false,
           attributes: ["id", "name"],
           include: [
             {
@@ -575,6 +576,12 @@ const RestaurantService = {
     const plain = restaurant.get({ plain: true });
     plain.location = plain.mainBranch?.Location || null;
     delete plain.mainBranch;
+
+    const branches = plain.Branches || [];
+    branches.sort(
+      (a, b) =>
+        (b.main_branch === true ? 1 : 0) - (a.main_branch === true ? 1 : 0)
+    );
 
     return {
       restaurant: {
@@ -634,13 +641,8 @@ const RestaurantService = {
             {
               model: MenuCategory,
               required: true,
-              include: [
-                {
-                  model: Menu,
-                  required: true,
-                  where: { restaurant_id: restaurant.id },
-                },
-              ],
+              where: { restaurant_id: restaurant.id },
+              attributes: { exclude: ["createdAt", "updatedAt"] },
             },
           ],
           order: [["unit_price", "ASC"]],
@@ -684,6 +686,7 @@ const RestaurantService = {
       },
     };
   },
+
   // for customer
   async searchRestaurants({
     query,

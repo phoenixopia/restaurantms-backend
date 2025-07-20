@@ -129,8 +129,8 @@ exports.getRestaurantWithSubscriptionById = asyncHandler(async (req, res) => {
 });
 
 exports.getRestaurantsByCategoryTagId = asyncHandler(async (req, res) => {
-  const { categoryTagId, page = 1, limit = 10 } = req.query;
-
+  const { page = 1, limit = 10 } = req.query;
+  const categoryTagId = req.params.id;
   if (!categoryTagId) {
     throwError("Category tag ID is required", 400);
   }

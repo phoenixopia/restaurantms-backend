@@ -6,6 +6,7 @@ const {
   Menu,
   Branch,
   Restaurant,
+  SystemSetting,
   MenuItem,
   CategoryTag,
   sequelize,
@@ -344,7 +345,7 @@ const MenuCategoryService = {
   async listAllCategoriesTags(page = 1, limit = 10) {
     const offset = (page - 1) * limit;
 
-    const { count, rows } = await categoryTags.findAndCountAll({
+    const { count, rows } = await CategoryTag.findAndCountAll({
       attributes: ["id", "name"],
       limit,
       offset,
@@ -353,8 +354,8 @@ const MenuCategoryService = {
 
     return {
       totalItems: count,
-      currentPage: page,
       totalPages: Math.ceil(count / limit),
+      currentPage: page,
       data: rows,
     };
   },
@@ -364,24 +365,24 @@ const MenuCategoryService = {
 
     const { count, rows } = await Restaurant.findAndCountAll({
       distinct: true,
-      attributes: ["id", "restaurant_name", "logo_url"],
+      attributes: ["id", "restaurant_name"],
       include: [
         {
-          model: Menu,
+          model: SystemSetting,
+          attributes: ["logo_url", "images"],
+          required: false,
+        },
+
+        {
+          model: MenuCategory,
           attributes: ["id", "name"],
           include: [
             {
-              model: MenuCategory,
+              model: CategoryTag,
+              where: { id: categoryTagId },
               attributes: ["id", "name"],
-              include: [
-                {
-                  association: "CategoryTag",
-                  where: { id: categoryTagId },
-                  attributes: ["id", "name"],
-                  required: true,
-                },
-              ],
               required: true,
+              through: { attributes: [] },
             },
           ],
           required: true,

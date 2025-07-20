@@ -28,7 +28,7 @@ exports.protect = (type = "user") => {
 
       if (type === "customer") {
         const user = await Customer.findByPk(decoded.id, {
-          include: [{ model: TwoFA }],
+          include: [{ model: TwoFA, as: "twoFA" }],
         });
 
         if (!user) {

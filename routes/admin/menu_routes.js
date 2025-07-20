@@ -69,7 +69,11 @@ router.get(
   MenuController.getMenuCategory
 );
 
-router.get("menu-category-tags/list", protect, MenuController.listCategoryTags);
+router.get(
+  "/menu-category-tags/list",
+  protect("user"),
+  MenuController.listCategoryTags
+);
 
 router.post(
   "/menu-category/create",

@@ -67,3 +67,25 @@ exports.uploadReceiptFile = multer({
   },
   limits: { fileSize: 2 * 1024 * 1024 },
 }).single("receipt");
+
+//==========
+const PROFILE_DIR = path.resolve(__dirname, "../../uploads/profile");
+
+const profileStorage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, PROFILE_DIR),
+  filename: (req, file, cb) => {
+    const unique = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    cb(null, `${file.fieldname}-${unique}${path.extname(file.originalname)}`);
+  },
+});
+
+exports.uploadProfilePicture = multer({
+  storage: profileStorage,
+  fileFilter: (req, file, cb) => {
+    const allowed = ["image/jpeg", "image/png", "image/jpg"];
+    allowed.includes(file.mimetype)
+      ? cb(null, true)
+      : cb(new Error("Invalid file type. Only JPEG/PNG allowed"), false);
+  },
+  limits: { fileSize: 5 * 1024 * 1024 },
+}).single("profile");

@@ -82,7 +82,7 @@ const AuthService = {
 
       const customer = await Customer.findOne({
         where: { [identifierField]: emailOrPhone },
-        include: [{ model: TwoFA }],
+        include: [{ model: TwoFA, as: "twoFA" }],
         transaction: t,
       });
 

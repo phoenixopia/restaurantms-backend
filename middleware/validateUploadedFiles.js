@@ -57,6 +57,19 @@ exports.validateUploadedFiles = (type) => {
       }
     }
 
+    if (type === "profile") {
+      const image = req.file;
+      if (!image) return next();
+
+      if (!image.mimetype.startsWith("image/")) {
+        errors.push("Profile picture must be an image file");
+      }
+
+      if (image.size > 5 * 1024 * 1024) {
+        errors.push("Profile picture must be less than 5MB");
+      }
+    }
+
     if (errors.length > 0) {
       return res.status(400).json({
         success: false,
