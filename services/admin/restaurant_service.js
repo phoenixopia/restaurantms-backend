@@ -484,7 +484,9 @@ const RestaurantService = {
         {
           model: MenuCategory,
           required: false,
-          attributes: ["id", "name"],
+          distinct: true,
+          limit: 3,
+          attributes: ["name"],
         },
       ],
     });
@@ -631,6 +633,11 @@ const RestaurantService = {
           attributes: ["logo_url", "images"],
           required: false,
         },
+        {
+          model: Menu,
+          attributes: ["id", "name"],
+          required: false,
+        },
       ],
     });
 
@@ -666,6 +673,8 @@ const RestaurantService = {
           restaurant_name: restaurant.restaurant_name,
           restaurant_logo: restaurant.SystemSetting?.logo_url || null,
           restaurant_image: restaurantImage,
+          menu_id: restaurant.Menu?.menu_id || null,
+          menu_name: restaurant.Menu?.menu_name || null,
           cheapest_menu_item: cheapestItem
             ? {
                 ...cheapestItem.get({ plain: true }),
@@ -794,7 +803,7 @@ const RestaurantService = {
           where: {
             restaurant_id: restaurantIds,
           },
-          attributes: ["id", "name", "restaurant_id"],
+          attributes: ["name", "restaurant_id"],
           order: [["name", "ASC"]],
         });
 
@@ -803,17 +812,32 @@ const RestaurantService = {
           if (!categoriesByRestaurant[cat.restaurant_id]) {
             categoriesByRestaurant[cat.restaurant_id] = [];
           }
-          const cleanName = cat.name.split(" - ")[0];
+          const cleanName = cat.name;
           categoriesByRestaurant[cat.restaurant_id].push({
             id: cat.id,
             name: cleanName,
           });
         });
 
-        data = data.map((restaurant) => ({
-          ...restaurant,
-          menu_categories: categoriesByRestaurant[restaurant.id] || [],
-        }));
+        data = data.map((restaurant) => {
+          const allCategories = categoriesByRestaurant[restaurant.id] || [];
+
+          const seen = new Set();
+          const top3 = [];
+
+          for (const cat of allCategories) {
+            if (!seen.has(cat.name)) {
+              seen.add(cat.name);
+              top3.push(cat);
+            }
+            if (top3.length === 3) break;
+          }
+
+          return {
+            ...restaurant,
+            menu_categories: top3,
+          };
+        });
       } else {
         data = data.map((restaurant) => ({
           ...restaurant,
@@ -840,8 +864,7 @@ const RestaurantService = {
             model: Branch,
             as: "mainBranch",
             where: { main_branch: true },
-            required: false,
-            attributes: [],
+            required: true,
             include: [
               {
                 model: Location,
@@ -851,7 +874,9 @@ const RestaurantService = {
           },
           {
             model: MenuCategory,
-            attributes: ["id", "name"],
+            distinct: true,
+            limit: 3,
+            attributes: ["name"],
           },
         ],
         offset,
@@ -863,8 +888,7 @@ const RestaurantService = {
         const plain = restaurant.get({ plain: true });
         plain.location = plain.mainBranch?.Location || null;
         plain.menu_categories = plain.MenuCategories.map((cat) => ({
-          id: cat.id,
-          name: cat.name.split(" - ")[0],
+          name: cat.name,
         }));
         delete plain.mainBranch;
         delete plain.MenuCategories;
@@ -875,7 +899,7 @@ const RestaurantService = {
     }
 
     return {
-      data,
+      restaurants: data,
       pagination: {
         totalItems,
         totalPages: Math.ceil(totalItems / limit),
