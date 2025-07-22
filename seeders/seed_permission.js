@@ -37,6 +37,10 @@ module.exports = async () => {
       name: "toggle_menu_item_activation",
       description: "Can toggle menu item activation",
     },
+    {
+      name: "upload_video",
+      description: "Can upload video"
+    },
   ]);
   console.log("✅ Permissions seeded");
   return permissions;

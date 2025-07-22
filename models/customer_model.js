@@ -112,6 +112,7 @@ module.exports = (sequelize, DataTypes) => {
           key: "id",
         },
       },
+
       full_name: {
         type: DataTypes.VIRTUAL,
         get() {
@@ -241,6 +242,15 @@ module.exports = (sequelize, DataTypes) => {
     });
     Customer.hasMany(models.VideoLike, {
       foreignKey: "customer_id",
+    });
+    Customer.hasMany(models.RestaurantFollower, {
+      foreignKey: "customer_id",
+    });
+
+    Customer.belongsToMany(models.Restaurant, {
+      through: models.RestaurantFollower,
+      foreignKey: "customer_id",
+      otherKey: "restaurant_id",
     });
   };
 

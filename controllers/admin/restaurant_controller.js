@@ -5,7 +5,10 @@ const MenuCategoryService = require("../../services/admin/menuCategory_service")
 const { success } = require("../../utils/apiResponse");
 const throwError = require("../../utils/throwError");
 
-// Restaurant Admin
+// =========================
+// ===== RESTAURANT CRUD ===
+// =========================
+
 exports.getRestaurant = asyncHandler(async (req, res) => {
   const userId = req.user.id;
   const restaurant = await RestaurantService.getUserRestaurants(userId);
@@ -36,39 +39,6 @@ exports.deleteRestaurant = asyncHandler(async (req, res) => {
   return success(res, "Restaurant deleted successfully");
 });
 
-exports.addContactInfo = asyncHandler(async (req, res) => {
-  const { restaurant_id, module_type, type, value, is_primary, module_id } =
-    req.body;
-
-  if (!["restaurant", "branch"].includes(module_type)) {
-    return throwError(
-      "Invalid module_type. Must be 'restaurant' or 'branch'",
-      400
-    );
-  }
-
-  if (module_type === "branch" && !module_id) {
-    return throwError(
-      "module_id is required when module_type is 'branch'",
-      400
-    );
-  }
-
-  const resolvedModuleId =
-    module_type === "restaurant" ? restaurant_id : module_id;
-
-  const contactInfo = await RestaurantService.addContactInfo({
-    restaurant_id,
-    module_type,
-    module_id: resolvedModuleId,
-    type,
-    value,
-    is_primary: is_primary || false,
-  });
-
-  return success(res, "Contact info added successfully", contactInfo);
-});
-
 exports.changeRestaurantStatus = asyncHandler(async (req, res) => {
   const restaurant = await RestaurantService.changeRestaurantStatus(
     req.params.id,
@@ -76,6 +46,10 @@ exports.changeRestaurantStatus = asyncHandler(async (req, res) => {
   );
   return success(res, "Restaurant status updated", restaurant);
 });
+
+// ===============================
+// ===== RESTAURANT RETRIEVAL ====
+// ===============================
 
 exports.getAllRestaurants = asyncHandler(async (req, res) => {
   const result = await RestaurantService.getAllRestaurants(req.query);
@@ -128,9 +102,33 @@ exports.getRestaurantWithSubscriptionById = asyncHandler(async (req, res) => {
   return success(res, "Restaurant fetched successfully", restaurant);
 });
 
+exports.getRestaurantProfileWithVideos = asyncHandler(async (req, res) => {
+  const restaurantId = req.params.id;
+  const customerId = req.user?.id || null;
+  const { page = 1, limit = 10, filter = "latest" } = req.query;
+
+  const result = await RestaurantService.getRestaurantProfileWithVideos(
+    restaurantId,
+    customerId,
+    {
+      page: parseInt(page),
+      limit: parseInt(limit),
+      filter,
+    }
+  );
+
+  return success(res, "Restaurant profile fetched successfully", result);
+});
+
+exports.searchRestaurants = asyncHandler(async (req, res) => {
+  const result = await RestaurantService.searchRestaurants(req.query);
+  return success(res, "Restaurants fetched successfully", result);
+});
+
 exports.getRestaurantsByCategoryTagId = asyncHandler(async (req, res) => {
   const { page = 1, limit = 10 } = req.query;
   const categoryTagId = req.params.id;
+
   if (!categoryTagId) {
     throwError("Category tag ID is required", 400);
   }
@@ -148,12 +146,47 @@ exports.getRestaurantsByCategoryTagId = asyncHandler(async (req, res) => {
   );
 });
 
-exports.searchRestaurants = asyncHandler(async (req, res) => {
-  const result = await RestaurantService.searchRestaurants(req.query);
-  return success(res, "Restaurants fetched successfully", result);
+// ==============================
+// ===== RESTAURANT CONTACT =====
+// ==============================
+
+exports.addContactInfo = asyncHandler(async (req, res) => {
+  const { restaurant_id, module_type, type, value, is_primary, module_id } =
+    req.body;
+
+  if (!["restaurant", "branch"].includes(module_type)) {
+    return throwError(
+      "Invalid module_type. Must be 'restaurant' or 'branch'",
+      400
+    );
+  }
+
+  if (module_type === "branch" && !module_id) {
+    return throwError(
+      "module_id is required when module_type is 'branch'",
+      400
+    );
+  }
+
+  const resolvedModuleId =
+    module_type === "restaurant" ? restaurant_id : module_id;
+
+  const contactInfo = await RestaurantService.addContactInfo({
+    restaurant_id,
+    module_type,
+    module_id: resolvedModuleId,
+    type,
+    value,
+    is_primary: is_primary || false,
+  });
+
+  return success(res, "Contact info added successfully", contactInfo);
 });
 
-//===================== Branch Management
+// ==========================
+// ===== BRANCH MANAGEMENT ==
+// ==========================
+
 exports.createBranch = asyncHandler(async (req, res) => {
   const { restaurantId, branchLimit } = req.restaurantData;
 
@@ -165,12 +198,6 @@ exports.createBranch = asyncHandler(async (req, res) => {
   );
 
   return success(res, "Branch created successfully", branch, 201);
-});
-
-exports.deleteBranch = asyncHandler(async (req, res) => {
-  const { branchId } = req.params;
-  await BranchService.deleteBranch(branchId, req.user.id);
-  return success(res, "Branch deleted successfully");
 });
 
 exports.getAllBranches = asyncHandler(async (req, res) => {
@@ -212,26 +239,10 @@ exports.updateBranch = asyncHandler(async (req, res) => {
   return success(res, "Branch updated successfully", updatedBranch);
 });
 
-exports.updateBranchContactInfo = asyncHandler(async (req, res) => {
-  const { branchId, contactInfoId } = req.params;
-  const updated = await BranchService.updateBranchContactInfo(
-    branchId,
-    contactInfoId,
-    req.body,
-    req.user
-  );
-
-  return success(res, "Branch contact info updated successfully", updated);
-});
-
-exports.addBranchContactInfo = asyncHandler(async (req, res) => {
+exports.deleteBranch = asyncHandler(async (req, res) => {
   const { branchId } = req.params;
-  const contactInfo = await BranchService.addBranchContactInfo(
-    branchId,
-    req.body,
-    req.user
-  );
-  return success(res, "Branch contact info added successfully", contactInfo);
+  await BranchService.deleteBranch(branchId, req.user.id);
+  return success(res, "Branch deleted successfully");
 });
 
 exports.toggleBranchStatus = asyncHandler(async (req, res) => {
@@ -245,4 +256,30 @@ exports.toggleBranchStatus = asyncHandler(async (req, res) => {
   );
 
   return success(res, "Branch status updated successfully", updatedBranch);
+});
+
+// ===============================
+// ===== BRANCH CONTACT INFO =====
+// ===============================
+
+exports.addBranchContactInfo = asyncHandler(async (req, res) => {
+  const { branchId } = req.params;
+  const contactInfo = await BranchService.addBranchContactInfo(
+    branchId,
+    req.body,
+    req.user
+  );
+  return success(res, "Branch contact info added successfully", contactInfo);
+});
+
+exports.updateBranchContactInfo = asyncHandler(async (req, res) => {
+  const { branchId, contactInfoId } = req.params;
+  const updated = await BranchService.updateBranchContactInfo(
+    branchId,
+    contactInfoId,
+    req.body,
+    req.user
+  );
+
+  return success(res, "Branch contact info updated successfully", updated);
 });

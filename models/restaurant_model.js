@@ -122,6 +122,15 @@ module.exports = (sequelize) => {
     Restaurant.hasMany(models.Video, {
       foreignKey: "restaurant_id",
     });
+    Restaurant.hasMany(models.RestaurantFollower, {
+      foreignKey: "restaurant_id",
+    });
+
+    Restaurant.belongsToMany(models.Customer, {
+      through: models.RestaurantFollower,
+      foreignKey: "restaurant_id",
+      otherKey: "customer_id",
+    });
   };
 
   Restaurant.paginate = async function (page = 1, limit = 10, filter = {}) {

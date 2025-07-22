@@ -1,6 +1,6 @@
 "use strict";
 
-const { Op, QueryTypes, where } = require("sequelize");
+const { Op, fn, col, literal, QueryTypes, where } = require("sequelize");
 const validator = require("validator");
 const fs = require("fs");
 const path = require("path");
@@ -13,6 +13,8 @@ const {
   SystemSetting,
   ContactInfo,
   Restaurant,
+  VideoLike,
+  VideoView,
   Plan,
   Location,
   Subscription,
@@ -21,6 +23,7 @@ const {
   MenuCategory,
   MenuItem,
   sequelize,
+  Video,
 } = require("../../models");
 
 const UPLOADS_DIR = path.resolve(__dirname, "../../../uploads");
@@ -34,6 +37,8 @@ const getFileUrl = (filename) => {
 };
 
 const getFilePath = (filename) => path.join(UPLOADS_DIR, filename);
+
+const FollowService = require("./follow_service");
 
 const RestaurantService = {
   // ===================
@@ -905,6 +910,141 @@ const RestaurantService = {
         totalPages: Math.ceil(totalItems / limit),
         currentPage: page,
         pageSize: limit,
+      },
+    };
+  },
+
+  // for customer
+  async getRestaurantProfileWithVideos(
+    restaurantId,
+    customerId,
+    { page = 1, limit = 10, filter = "latest" }
+  ) {
+    const restaurant = await Restaurant.findByPk(restaurantId, {
+      attributes: ["id", "restaurant_name"],
+      include: [
+        {
+          model: SystemSetting,
+          attributes: ["logo_url"],
+        },
+        {
+          model: Branch,
+          as: "mainBranch",
+          required: false,
+          where: { main_branch: true },
+          attributes: ["id", "name"],
+          include: [
+            {
+              model: Location,
+              attributes: ["address", "latitude", "longitude"],
+            },
+          ],
+        },
+        {
+          model: ContactInfo,
+          where: {
+            module_type: "restaurant",
+            module_id: restaurantId,
+          },
+          attributes: ["type", "value", "is_primary"],
+          required: false,
+        },
+      ],
+    });
+
+    const total_followers = await FollowService.getFollowerCount(restaurantId);
+    const is_following = await FollowService.isFollowing(
+      customerId,
+      restaurantId
+    );
+
+    const total_posts = await Video.count({
+      where: {
+        restaurant_id: restaurantId,
+        status: "approved",
+      },
+    });
+
+    const total_likes_result = await VideoLike.findAll({
+      where: { "$Video.restaurant_id$": restaurantId },
+      include: [{ model: Video, as: "Video", attributes: [] }],
+      attributes: [[fn("COUNT", col("VideoLike.id")), "total_likes"]],
+      raw: true,
+    });
+    const total_likes = parseInt(total_likes_result[0]?.total_likes || 0);
+
+    const offset = (page - 1) * limit;
+
+    const orderOptions = {
+      latest: [["created_at", "DESC"]],
+      most_viewed: [[literal("total_views"), "DESC"]],
+      most_liked: [[literal("total_likes"), "DESC"]],
+    };
+
+    const videos = await Video.findAll({
+      where: {
+        restaurant_id: restaurantId,
+        status: "approved",
+      },
+      attributes: {
+        include: [
+          [fn("COUNT", literal(`DISTINCT("VideoLikes"."id")`)), "total_likes"],
+          [fn("COUNT", literal(`DISTINCT("VideoViews"."id")`)), "total_views"],
+        ],
+      },
+      include: [
+        { model: VideoLike, as: "VideoLikes", attributes: [], required: false },
+        { model: VideoView, as: "VideoViews", attributes: [], required: false },
+      ],
+      group: ["Video.id"],
+      order: orderOptions[filter] || orderOptions.latest,
+      offset,
+      limit: parseInt(limit),
+      subQuery: false,
+    });
+
+    return {
+      restaurant: {
+        id: restaurant.id,
+        name: restaurant.restaurant_name,
+        logo_url: restaurant.SystemSetting?.logo_url || null,
+        main_branch: restaurant.mainBranch
+          ? {
+              id: restaurant.mainBranch.id,
+              name: restaurant.mainBranch.name,
+              location: restaurant.mainBranch.Location
+                ? {
+                    address: restaurant.mainBranch.Location.address,
+                    latitude: restaurant.mainBranch.Location.latitude,
+                    longitude: restaurant.mainBranch.Location.longitude,
+                  }
+                : null,
+            }
+          : null,
+        contacts: (restaurant.ContactInfos || []).map((contact) => ({
+          type: contact.type,
+          value: contact.value,
+          is_primary: contact.is_primary,
+        })),
+      },
+      stats: {
+        total_posts,
+        total_likes,
+        total_followers,
+        is_following,
+      },
+      videos: videos.map((video) => ({
+        id: video.id,
+        title: video.title,
+        video_url: video.video_url,
+        thumbnail_url: video.thumbnail_url,
+        total_likes: Number(video.getDataValue("total_likes") || 0),
+        total_views: Number(video.getDataValue("total_views") || 0),
+        created_at: video.created_at,
+      })),
+      pagination: {
+        page: Number(page),
+        limit: Number(limit),
       },
     };
   },

@@ -1,17 +1,23 @@
 const express = require("express");
 const router = express.Router();
+
 const VideoController = require("../../controllers/admin/video_controller");
 const {
   uploadVideoFile,
   validateVideoThumbnailSizes,
 } = require("../../middleware/videoUploadMiddleware");
+
 const { protect } = require("../../middleware/protect");
 const { authorize } = require("../../middleware/authorize");
 const { permissionCheck } = require("../../middleware/permissionCheck");
 
-// Upload video . . . . . . . . add permission upload_video
+// ================================
+// 🔹 Admin Video Management Routes
+// ================================
+
+// Upload a new video
 router.post(
-  "/upload",
+  "/videos",
   protect("user"),
   permissionCheck("upload_video"),
   uploadVideoFile,
@@ -19,8 +25,9 @@ router.post(
   VideoController.uploadVideo
 );
 
+// Update an existing video
 router.put(
-  "/update-video/:id",
+  "/videos/:id",
   protect("user"),
   permissionCheck("edit_video"),
   uploadVideoFile,
@@ -28,8 +35,9 @@ router.put(
   VideoController.updateVideo
 );
 
-router.put(
-  "/update-video/:id",
+// Delete a video
+router.delete(
+  "/videos/:id",
   protect("user"),
   permissionCheck("delete_video"),
   uploadVideoFile,
@@ -37,26 +45,12 @@ router.put(
   VideoController.deleteVideo
 );
 
-// Approve or reject video (super admin only)
+// Approve or reject a video (super admin only)
 router.patch(
-  "/:videoId/status",
+  "/videos/:videoId/status",
   protect("user"),
   authorize("super_admin"),
   VideoController.updateVideoStatus
 );
-
-// Get all approved videos (for customer)
-router.get("/customer/list", protect, VideoController.listCustomerVideos);
-
-// // Like, comment, favorite
-// router.post("/:videoId/like", protect, VideoController.likeVideo);
-// router.post("/:videoId/comment", protect, VideoController.commentVideo);
-// router.post("/:videoId/favorite", protect, VideoController.favoriteVideo);
-
-// // Track view
-// router.post("/:videoId/view", protect, VideoController.viewVideo);
-
-// // Optional: Get my favorites
-// router.get("/favorites", protect, VideoController.getFavorites);
 
 module.exports = router;

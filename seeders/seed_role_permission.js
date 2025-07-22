@@ -44,6 +44,7 @@ module.exports = async () => {
     "edit_menu_item",
     "delete_menu_item",
     "toggle_menu_item_activation",
+    "upload_video",
   ];
 
   for (const perm of allowed) {
