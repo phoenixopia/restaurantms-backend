@@ -126,7 +126,7 @@ const ProfileService = {
   },
 
   async updateProfile(customerId, body, files = []) {
-    const { first_name, last_name, type, emailOrPhone } = body;
+    const { first_name, last_name, type, emailOrPhone, dob, notes } = body;
     const profileFile = files.find((file) => file.fieldname === "profile");
 
     const t = await sequelize.transaction();
@@ -153,6 +153,9 @@ const ProfileService = {
         customer.phone = emailOrPhone;
       }
 
+      if (dob !== undefined) customer.dob = dob;
+      if (notes !== undefined) customer.notes = notes;
+
       if (profileFile) customer.profile_picture = profileFile.filename;
 
       await customer.save({ transaction: t });
@@ -166,6 +169,8 @@ const ProfileService = {
           last_name: customer.last_name,
           phone_number: customer.phone,
           email: customer.email,
+          dob: customer.dob,
+          notes: customer.notes,
           profile: getFileUrl(UPLOAD_FOLDER, customer.profile_picture),
         },
       };
