@@ -45,6 +45,9 @@ module.exports = (sequelize, DataTypes) => {
     MenuItem.hasMany(models.Promotion, {
       foreignKey: "menu_item_id",
     });
+    MenuItem.hasMany(models.Video, {
+      foreignKey: "menu_item_id",
+    });
   };
 
   sequelizePaginate.paginate(MenuItem);

@@ -236,6 +236,9 @@ module.exports = (sequelize, DataTypes) => {
     User.hasMany(models.Notification, {
       foreignKey: "user_id",
     });
+    User.hasMany(models.Video, {
+      foreignKey: "uploaded_by",
+    });
   };
   return User;
 };

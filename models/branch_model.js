@@ -165,6 +165,9 @@ module.exports = (sequelize, DataTypes) => {
     Branch.hasMany(models.Promotion, {
       foreignKey: "branch_id",
     });
+    Branch.hasMany(models.Video, {
+      foreignKey: "branch_id",
+    });
   };
 
   return Branch;
