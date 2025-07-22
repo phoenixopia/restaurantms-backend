@@ -3,7 +3,7 @@ const FollowService = require("../../services/admin/follow_service");
 const { success } = require("../../utils/apiResponse");
 
 exports.toggleFollow = asyncHandler(async (req, res) => {
-  const { restaurant_id } = req.body;
+  const restaurant_id = req.params.id;
   const result = await FollowService.toggleFollow(req.user.id, restaurant_id);
   return success(res, result.isFollowing ? "Followed" : "Unfollowed", result);
 });
