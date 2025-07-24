@@ -30,7 +30,7 @@ module.exports = async () => {
     { plan: "Basic", key: "max_branches", value: 2, data_type: "number" },
     { plan: "Basic", key: "max_locations", value: 1, data_type: "number" },
     { plan: "Basic", key: "max_staff", value: 5, data_type: "number" },
-    { plan: "Basic", key: "kds_enabled", value: false, data_type: "boolean" },
+    { plan: "Basic", key: "kds_enabled", value: true, data_type: "boolean" },
 
     { plan: "Pro", key: "max_branches", value: 5, data_type: "number" },
     { plan: "Pro", key: "max_locations", value: 5, data_type: "number" },

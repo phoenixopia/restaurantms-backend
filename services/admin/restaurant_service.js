@@ -525,7 +525,7 @@ const RestaurantService = {
     const offset = (page - 1) * limit;
 
     const restaurant = await Restaurant.findByPk(id, {
-      attributes: { exclude: ["createdAt", "updatedAt"] },
+      attributes: ["id", "restaurant_name"],
       include: [
         {
           model: SystemSetting,
