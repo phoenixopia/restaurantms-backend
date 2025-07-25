@@ -27,9 +27,20 @@ exports.registerValidator = [
     .withMessage("Email or phone is required.")
     .bail()
     .custom((value, { req }) => {
-      if (req.body.signupMethod === "email" && !/\S+@\S+\.\S+/.test(value)) {
-        throw new Error("Invalid email format.");
+      const signupMethod = req.body.signupMethod;
+
+      if (signupMethod === "email") {
+        if (!/\S+@\S+\.\S+/.test(value)) {
+          throw new Error("Invalid email format.");
+        }
+      } else if (signupMethod === "phone_number") {
+        if (!/^\+251[0-9]{9}$/.test(value)) {
+          throw new Error(
+            "Invalid Ethiopian phone number. It must start with +251 and be 12 digits long."
+          );
+        }
       }
+
       return true;
     }),
 
@@ -52,7 +63,7 @@ exports.loginValidator = [
     .notEmpty()
     .withMessage("Signup method is required.")
     .bail()
-    .isIn(["email", "phone"])
+    .isIn(["email", "phone_number"])
     .withMessage("Invalid signup method."),
 
   body("password")

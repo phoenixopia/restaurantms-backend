@@ -150,7 +150,7 @@ const ProfileService = {
       if (type === "email" && emailOrPhone !== undefined) {
         customer.email = emailOrPhone;
       } else if (type === "phone" && emailOrPhone !== undefined) {
-        customer.phone = emailOrPhone;
+        customer.phone_number = emailOrPhone;
       }
 
       if (dob !== undefined) customer.dob = dob;
@@ -167,7 +167,7 @@ const ProfileService = {
           id: customer.id,
           first_name: customer.first_name,
           last_name: customer.last_name,
-          phone_number: customer.phone,
+          phone_number: customer.phone_number,
           email: customer.email,
           dob: customer.dob,
           notes: customer.notes,

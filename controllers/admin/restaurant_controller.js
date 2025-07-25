@@ -95,6 +95,20 @@ exports.getRestaurantById = asyncHandler(async (req, res) => {
   return success(res, "Restaurant fetched successfully", restaurant);
 });
 
+exports.getBranchMenus = asyncHandler(async (req, res) => {
+  const { restaurantId, branchId } = req.params;
+  const { page = 1, limit = 10 } = req.query;
+
+  const menus = await RestaurantService.getBranchMenus(
+    restaurantId,
+    branchId,
+    parseInt(page),
+    parseInt(limit)
+  );
+
+  return success(res, "Branch menus fetched successfully", menus);
+});
+
 exports.getRestaurantWithSubscriptionById = asyncHandler(async (req, res) => {
   const restaurant = await RestaurantService.getRestaurantWithSubscriptionById(
     req.params.id

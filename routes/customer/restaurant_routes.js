@@ -20,6 +20,11 @@ router.get(
   RestaurantController.getRestaurantsByCategoryTagId
 );
 
+router.get(
+  "/:restaurantId/branches/:branchId/menus",
+  RestaurantController.getBranchMenus
+);
+
 router.get("/:id", RestaurantController.getRestaurantById);
 
 module.exports = router;

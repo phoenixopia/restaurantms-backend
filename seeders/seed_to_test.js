@@ -184,7 +184,7 @@ module.exports = async () => {
       const locations = await Location.bulkCreate([
         {
           id: uuidv4(),
-          name: `${data.name} Bole Branch Location`,
+
           address: "Bole Road, Addis Ababa",
           latitude: 8.9806 + (Math.random() * 0.01 - 0.005),
           longitude: 38.7578 + (Math.random() * 0.01 - 0.005),
@@ -193,7 +193,7 @@ module.exports = async () => {
         },
         {
           id: uuidv4(),
-          name: `${data.name} Megenagna Branch Location`,
+
           address: "Megenagna Square, Addis Ababa",
           latitude: 9.0227 + (Math.random() * 0.01 - 0.005),
           longitude: 38.7869 + (Math.random() * 0.01 - 0.005),
@@ -202,7 +202,7 @@ module.exports = async () => {
         },
         {
           id: uuidv4(),
-          name: `${data.name} Kazanchis Branch Location`,
+
           address: "Kazanchis Business District, Addis Ababa",
           latitude: 9.0185 + (Math.random() * 0.01 - 0.005),
           longitude: 38.7571 + (Math.random() * 0.01 - 0.005),
@@ -216,7 +216,7 @@ module.exports = async () => {
           id: uuidv4(),
           restaurant_id: restaurant.id,
           location_id: locations[0].id,
-          name: `${data.name} Bole Branch`,
+          name: "Bole Branch",
           manager_id: null,
           status: "active",
           main_branch: true,
@@ -229,7 +229,7 @@ module.exports = async () => {
           id: uuidv4(),
           restaurant_id: restaurant.id,
           location_id: locations[1].id,
-          name: `${data.name} Megenagna Branch`,
+          name: "Megenagna Branch",
           manager_id: null,
           status: "active",
           main_branch: false,
@@ -242,7 +242,7 @@ module.exports = async () => {
           id: uuidv4(),
           restaurant_id: restaurant.id,
           location_id: locations[2].id,
-          name: `${data.name} Kazanchis Branch`,
+          name: "Kazanchis Branch",
           manager_id: null,
           status: "active",
           main_branch: false,
@@ -337,7 +337,7 @@ module.exports = async () => {
             await MenuItem.create({
               id: uuidv4(),
               menu_category_id: menuCategory.id,
-              name: `${categories[i]} Item ${j}}`,
+              name: `${categories[i]} Item ${j}`,
               description: `Delicious ${categories[
                 i
               ].toLowerCase()} item ${j} at ${branch.name}`,

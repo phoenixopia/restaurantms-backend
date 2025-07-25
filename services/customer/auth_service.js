@@ -78,7 +78,8 @@ const AuthService = {
   async preLogin({ emailOrPhone, password, signupMethod }) {
     const t = await sequelize.transaction();
     try {
-      const identifierField = signupMethod === "email" ? "email" : "phone";
+      const identifierField =
+        signupMethod === "email" ? "email" : "phone_number";
 
       const customer = await Customer.findOne({
         where: { [identifierField]: emailOrPhone },
@@ -88,9 +89,16 @@ const AuthService = {
 
       if (!customer) throwError("User not found.", 404);
 
+      if (customer.social_provider && customer.social_provider !== "none") {
+        throwError(
+          "This account was created using a social login provider. Please log in using that method.",
+          400
+        );
+      }
+
       if (signupMethod === "email" && !customer.email_verified_at)
         throwError("Email not confirmed.", 403);
-      if (signupMethod === "phone" && !customer.phone_verified_at)
+      if (signupMethod === "phone_number" && !customer.phone_verified_at)
         throwError("Phone not confirmed.", 403);
 
       if (customer.isLocked()) {
@@ -370,7 +378,10 @@ const AuthService = {
 
       if (!created && customer.social_provider !== "google") {
         await t.rollback();
-        throwError("User account exists with a different method.", 400);
+        throwError(
+          "This account was created using a social login provider. Please log in using that method.",
+          400
+        );
       }
 
       await assignRoleToUser(customer.id, req.originalUrl, t);
@@ -434,7 +445,10 @@ const AuthService = {
 
       if (!created && customer.social_provider !== "facebook") {
         await t.rollback();
-        throwError("User account exists with a different method.", 400);
+        throwError(
+          "This account was created using a social login provider. Please log in using that method.",
+          400
+        );
       }
 
       await assignRoleToUser(customer.id, req.originalUrl, t);

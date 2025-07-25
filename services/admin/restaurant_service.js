@@ -522,8 +522,6 @@ const RestaurantService = {
 
   // for customer
   async getRestaurantById(id, page = 1, limit = 10) {
-    const offset = (page - 1) * limit;
-
     const restaurant = await Restaurant.findByPk(id, {
       attributes: ["id", "restaurant_name"],
       include: [
@@ -533,27 +531,9 @@ const RestaurantService = {
           required: false,
         },
         {
-          model: ContactInfo,
-          as: "owned_contact_info",
-          where: { module_type: "restaurant" },
-          required: false,
-          attributes: ["type", "value", "is_primary"],
-        },
-        {
           model: Branch,
           as: "mainBranch",
-          required: false,
           where: { main_branch: true },
-          attributes: ["id", "name"],
-          include: [
-            {
-              model: Location,
-              attributes: ["address", "latitude", "longitude"],
-            },
-          ],
-        },
-        {
-          model: Branch,
           required: false,
           attributes: ["id", "name"],
           include: [
@@ -564,7 +544,7 @@ const RestaurantService = {
             {
               model: MenuCategory,
               required: false,
-              attributes: { exclude: ["createdAt", "updatedAt"] },
+              attributes: ["id", "name", "branch_id"],
               include: [
                 {
                   model: MenuItem,
@@ -575,50 +555,109 @@ const RestaurantService = {
             },
           ],
         },
+        {
+          model: Branch,
+          required: false,
+          attributes: ["id", "name"],
+        },
       ],
     });
 
     if (!restaurant) throwError("Restaurant not found", 404);
 
     const plain = restaurant.get({ plain: true });
-    plain.location = plain.mainBranch?.Location || null;
-    delete plain.mainBranch;
 
-    const branches = plain.Branches || [];
-    branches.sort(
-      (a, b) =>
-        (b.main_branch === true ? 1 : 0) - (a.main_branch === true ? 1 : 0)
-    );
+    const mainBranch = plain.mainBranch || null;
+    const allBranches = plain.Branches || [];
 
     return {
-      restaurant: {
+      id: plain.id,
+      restaurant_name: plain.restaurant_name,
+      logo_url: plain.SystemSetting?.logo_url || null,
+      images: plain.SystemSetting?.images || [],
+      main_branch_location: mainBranch?.Location || null,
+      branches: allBranches.map((b) => ({
+        id: b.id,
+        name: b.name,
+      })),
+      menu_categories:
+        (mainBranch?.MenuCategories || []).map((cat) => {
+          const totalItems = cat.MenuItems.length;
+          const offset = (page - 1) * limit;
+          const paginatedItems = cat.MenuItems.slice(offset, offset + limit);
+
+          return {
+            id: cat.id,
+            name: cat.name,
+            branch_id: cat.branch_id,
+            menu_items: paginatedItems,
+            pagination: {
+              totalItems,
+              totalPages: Math.ceil(totalItems / limit),
+              currentPage: page,
+              pageSize: limit,
+            },
+          };
+        }) || [],
+    };
+  },
+  async getBranchMenus(restaurantId, branchId, page = 1, limit = 10) {
+    const branch = await Branch.findOne({
+      where: {
+        id: branchId,
+        restaurant_id: restaurantId,
+      },
+      attributes: ["id", "name"],
+      include: [
+        {
+          model: Location,
+          attributes: ["address", "latitude", "longitude"],
+        },
+        {
+          model: MenuCategory,
+          required: false,
+          attributes: ["id", "name", "branch_id"],
+          include: [
+            {
+              model: MenuItem,
+              required: false,
+              attributes: { exclude: ["createdAt", "updatedAt"] },
+            },
+          ],
+        },
+      ],
+    });
+
+    if (!branch) throwError("Branch not found", 404);
+
+    const plain = branch.get({ plain: true });
+
+    return {
+      branch: {
         id: plain.id,
         name: plain.name,
-        description: plain.description,
-        logo: plain.SystemSetting?.logo_url || null,
-        images: plain.SystemSetting?.images || [],
-        contact_info: plain.owned_contact_info || [],
-        location: plain.location,
+        location: plain.Location || null,
       },
-      branches: (plain.Branches || []).map((branch) => ({
-        id: branch.id,
-        name: branch.name,
-        location: branch.Location || null,
-        menu_categories: (branch.MenuCategories || []).map((cat) => ({
+      menu_categories: (plain.MenuCategories || []).map((cat) => {
+        const totalItems = cat.MenuItems.length;
+        const offset = (page - 1) * limit;
+        const paginatedItems = cat.MenuItems.slice(offset, offset + limit);
+
+        return {
           id: cat.id,
           name: cat.name,
           branch_id: cat.branch_id,
-          menu_items: cat.MenuItems || [],
-        })),
-      })),
-      pagination: {
-        page,
-        limit,
-        offset,
-      },
+          menu_items: paginatedItems,
+          pagination: {
+            totalItems,
+            totalPages: Math.ceil(totalItems / limit),
+            currentPage: page,
+            pageSize: limit,
+          },
+        };
+      }),
     };
   },
-
   // for customer
   async getAllRestaurantsWithCheapestItem({ page = 1, limit = 10 }) {
     const offset = (page - 1) * limit;
