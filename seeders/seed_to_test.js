@@ -47,7 +47,6 @@ module.exports = async () => {
       updated_at: now,
     });
 
-    // Create restaurant admins and restaurants
     const restaurantData = [
       {
         name: "Gourmet Delight",
@@ -352,12 +351,12 @@ module.exports = async () => {
       }
     }
 
-    const customers = await sequelize.models.Customer.bulkCreate([
+    const customerData = [
       {
         id: uuidv4(),
         first_name: "John",
         last_name: "Doe",
-        email: "john.doe@example.com",
+        email: "johndoe@gmail.com",
         password: "12345678",
         profile_picture:
           "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRij6dtiHizH96qpCOe8WeXXP3yLyQJkPdGVg&s",
@@ -371,134 +370,109 @@ module.exports = async () => {
         id: uuidv4(),
         first_name: "Jane",
         last_name: "Smith",
-        email: "jane.smith@example.com",
-
+        email: "janesmith@gmail.com",
         password: "12345678",
         profile_picture:
           "https://cdn.pixabay.com/photo/2023/02/17/16/25/man-7796384_1280.jpg",
         dob: new Date(1991, 1, 2),
         email_verified_at: now,
-
-        created_at: now,
-        updated_at: now,
       },
       {
         id: uuidv4(),
         first_name: "Michael",
         last_name: "Johnson",
-        email: "michael.johnson@example.com",
-
+        email: "michaeljohnson@gmail.com",
         password: "12345678",
         profile_picture:
           "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTvJaoIeJQU_V9rL_ZII61whWyqSFbmMgTgwQ&s",
         dob: new Date(1992, 2, 3),
         email_verified_at: now,
-
-        created_at: now,
-        updated_at: now,
       },
       {
         id: uuidv4(),
         first_name: "Emily",
         last_name: "Williams",
-        email: "emily.williams@example.com",
-
+        email: "emilywilliams@gmail.com",
         password: "12345678",
         profile_picture:
           "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRij6dtiHizH96qpCOe8WeXXP3yLyQJkPdGVg&s",
         dob: new Date(1993, 3, 4),
         email_verified_at: now,
-
-        created_at: now,
-        updated_at: now,
       },
       {
         id: uuidv4(),
         first_name: "David",
         last_name: "Brown",
-        email: "david.brown@example.com",
-
+        email: "davidbrown@gmaail.com",
         password: "12345678",
         profile_picture: "https://randomuser.me/api/portraits/men/5.jpg",
         dob: new Date(1994, 4, 5),
         email_verified_at: now,
-
-        created_at: now,
-        updated_at: now,
       },
       {
         id: uuidv4(),
         first_name: "Sarah",
         last_name: "Jones",
-        email: "sarah.jones@example.com",
-
+        email: "sarahjones@gmail.com",
         password: "12345678",
         profile_picture: "https://randomuser.me/api/portraits/women/6.jpg",
         dob: new Date(1995, 5, 6),
         email_verified_at: now,
-
-        created_at: now,
-        updated_at: now,
       },
       {
         id: uuidv4(),
         first_name: "Robert",
         last_name: "Garcia",
-        email: "robert.garcia@example.com",
-
+        email: "robertgarcia@gmail.com",
         password: "12345678",
         profile_picture: "https://randomuser.me/api/portraits/men/7.jpg",
         dob: new Date(1996, 6, 7),
         email_verified_at: now,
-
-        created_at: now,
-        updated_at: now,
       },
       {
         id: uuidv4(),
         first_name: "Jennifer",
         last_name: "Martinez",
-        email: "jennifer.martinez@example.com",
-
+        email: "jennifermartinez@gmail.com",
         password: "12345678",
         profile_picture: "https://randomuser.me/api/portraits/women/8.jpg",
         dob: new Date(1997, 7, 8),
         email_verified_at: now,
-
-        created_at: now,
-        updated_at: now,
       },
       {
         id: uuidv4(),
         first_name: "Thomas",
         last_name: "Wilson",
-        email: "thomas.wilson@example.com",
-
+        email: "thomaswilson@gmail.com",
         password: "12345678",
         profile_picture: "https://randomuser.me/api/portraits/men/9.jpg",
         dob: new Date(1998, 8, 9),
         email_verified_at: now,
-
-        created_at: now,
-        updated_at: now,
       },
       {
         id: uuidv4(),
         first_name: "Lisa",
         last_name: "Anderson",
-        email: "lisa.anderson@example.com",
+        email: "lisaanderson@gmail.com",
 
         password: "12345678",
         profile_picture: "https://randomuser.me/api/portraits/women/10.jpg",
         dob: new Date(1999, 9, 10),
         email_verified_at: now,
+      },
+    ];
 
+    const customers = [];
+    for (const data of customerData) {
+      const customer = await sequelize.models.Customer.create({
+        id: uuidv4(),
+        ...data,
         created_at: now,
         updated_at: now,
-      },
-    ]);
+      });
+      customers.push(customer);
+    }
 
-    // Video-related data
     const videoTitles = [
       "Delicious Food Experience",
       "Our Special Dish",
@@ -551,8 +525,6 @@ module.exports = async () => {
       "https://www.shutterstock.com/image-photo/ginger-picture-curry-recipe-bowlgarlic-260nw-2483629083.jpg",
     ];
 
-    // Get all restaurants with their admins, staff, branches and menu items
-    // Get all restaurants with their branches
     const restaurants = await sequelize.models.Restaurant.findAll({
       include: [
         {
@@ -561,17 +533,14 @@ module.exports = async () => {
       ],
     });
 
-    // Get all restaurant admins
     const restaurantAdmins = await sequelize.models.User.findAll({
       where: { role_id: restaurantAdminRole.id },
     });
 
-    // Get all staff members
     const staffMembers = await sequelize.models.User.findAll({
       where: { role_id: staffRole.id },
     });
 
-    // Get all menu categories with their items and branch info
     const menuCategories = await sequelize.models.MenuCategory.findAll({
       include: [
         {
@@ -584,26 +553,21 @@ module.exports = async () => {
       ],
     });
 
-    // Create videos for each restaurant
     for (const restaurant of restaurants) {
-      // Get restaurant admin
       const restaurantAdmin = restaurantAdmins.find(
         (admin) => admin.restaurant_id === restaurant.id
       );
       if (!restaurantAdmin) continue;
 
-      // Get staff for this restaurant's branches
       const restaurantStaff = staffMembers.filter((staff) =>
         restaurant.Branches.some((branch) => branch.id === staff.branch_id)
       );
       if (restaurantStaff.length === 0) continue;
 
-      // Get menu categories for this restaurant
       const restaurantMenuCategories = menuCategories.filter(
         (category) => category.restaurant_id === restaurant.id
       );
 
-      // Collect all menu items for this restaurant with their branch info
       const menuItems = [];
       for (const category of restaurantMenuCategories) {
         for (const item of category.MenuItems) {
@@ -614,7 +578,6 @@ module.exports = async () => {
         }
       }
 
-      // Create 5 videos for this restaurant
       const videos = [];
       for (let i = 0; i < 5; i++) {
         const randomTitleIndex = Math.floor(Math.random() * videoTitles.length);
@@ -625,7 +588,7 @@ module.exports = async () => {
         const randomThumbnailIndex = Math.floor(
           Math.random() * thumbnailUrls.length
         );
-        const randomDuration = Math.floor(Math.random() * 120) + 30; // 30-150 seconds
+        const randomDuration = Math.floor(Math.random() * 120) + 30;
 
         const videoData = {
           id: uuidv4(),
@@ -641,18 +604,15 @@ module.exports = async () => {
         };
 
         if (i < 2) {
-          // First 2 videos - created by admin, no branch, no menu item
           videoData.uploaded_by = restaurantAdmin.id;
           videoData.branch_id = null;
         } else {
-          // Last 3 videos - created by staff, with branch and menu item
           const staffIndex = (i - 2) % restaurantStaff.length;
           const staffMember = restaurantStaff[staffIndex];
 
           videoData.uploaded_by = staffMember.id;
           videoData.branch_id = staffMember.branch_id;
 
-          // Associate with a random menu item from the staff's branch
           if (menuItems.length > 0) {
             const branchMenuItems = menuItems.filter(
               (item) => item.branch_id === staffMember.branch_id
@@ -673,15 +633,12 @@ module.exports = async () => {
 
       const createdVideos = await sequelize.models.Video.bulkCreate(videos);
 
-      // Create interactions (views, likes, favorites) for these videos
       for (const video of createdVideos) {
-        // Random number of views (5-20)
         const viewCount = Math.floor(Math.random() * 16) + 5;
         const views = [];
         const likes = [];
         const favorites = [];
 
-        // Select random customers for interactions
         const shuffledCustomers = [...customers].sort(
           () => 0.5 - Math.random()
         );
@@ -695,7 +652,6 @@ module.exports = async () => {
           Math.floor(viewCount * 0.3)
         );
 
-        // Create views
         for (const customer of viewingCustomers) {
           views.push({
             id: uuidv4(),
@@ -705,7 +661,6 @@ module.exports = async () => {
           });
         }
 
-        // Create likes
         for (const customer of likingCustomers) {
           likes.push({
             id: uuidv4(),
@@ -715,7 +670,6 @@ module.exports = async () => {
           });
         }
 
-        // Create favorites
         for (const customer of favoritingCustomers) {
           favorites.push({
             id: uuidv4(),
@@ -725,20 +679,17 @@ module.exports = async () => {
           });
         }
         for (const video of createdVideos) {
-          // Random number of views (5-20)
           const viewCount = Math.floor(Math.random() * 16) + 5;
           const views = [];
           const likes = [];
           const favorites = [];
           const comments = [];
 
-          // Select random customers for interactions
           const shuffledCustomers = [...customers].sort(
             () => 0.5 - Math.random()
           );
           const interactingCustomers = shuffledCustomers.slice(0, viewCount);
 
-          // Only include customers who have interacted in views
           for (const customer of interactingCustomers) {
             views.push({
               id: uuidv4(),
@@ -747,7 +698,6 @@ module.exports = async () => {
               created_at: now,
             });
 
-            // Random chance to like (70%)
             if (Math.random() < 0.7) {
               likes.push({
                 id: uuidv4(),
@@ -757,7 +707,6 @@ module.exports = async () => {
               });
             }
 
-            // Random chance to favorite (30%)
             if (Math.random() < 0.3) {
               favorites.push({
                 id: uuidv4(),
@@ -767,7 +716,6 @@ module.exports = async () => {
               });
             }
 
-            // Random chance to comment (40%)
             if (Math.random() < 0.4) {
               const commentTexts = [
                 "Great video!",
@@ -797,7 +745,7 @@ module.exports = async () => {
 
           await Promise.all([
             sequelize.models.VideoView.bulkCreate(views, {
-              ignoreDuplicates: true, // This will skip duplicate entries
+              ignoreDuplicates: true,
             }),
             sequelize.models.VideoLike.bulkCreate(likes, {
               ignoreDuplicates: true,
