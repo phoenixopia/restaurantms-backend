@@ -19,7 +19,7 @@ sequelize
 
     const io = new Server(server, {
       cors: {
-        origin: "*", // add frontend url ..... don't forget
+        origin: "*",
       },
     });
 

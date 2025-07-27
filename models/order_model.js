@@ -51,7 +51,14 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
       },
       status: {
-        type: DataTypes.ENUM("Pending", "InProgress", "Completed", "Cancelled"),
+        type: DataTypes.ENUM(
+          "Pending",
+          "InProgress",
+          "Preparing",
+          "Ready",
+          "Served",
+          "Cancelled"
+        ),
         defaultValue: "Pending",
       },
       total_amount: {
@@ -89,8 +96,8 @@ module.exports = (sequelize, DataTypes) => {
       foreignKey: "order_id",
     });
     Order.hasOne(models.Payment, {
-      foreignKey: "order_id"
-    })
+      foreignKey: "order_id",
+    });
   };
 
   return Order;

@@ -35,13 +35,14 @@ module.exports = (sequelize, DataTypes) => {
       },
       status: {
         type: DataTypes.ENUM(
-          "pending",
-          "preparing",
-          "ready",
-          "served",
-          "cancelled"
+          "Pending",
+          "InProgress",
+          "Preparing",
+          "Ready",
+          "Served",
+          "Cancelled"
         ),
-        defaultValue: "pending",
+        defaultValue: "Pending",
       },
     },
     {

@@ -1,0 +1,35 @@
+const OrderService = require("../../services/admin/order_service");
+const asyncHandler = require("../../middleware/asyncHandler");
+const { success } = require("../../utils/apiResponse");
+
+exports.createOrder = asyncHandler(async (req, res) => {
+  const order = await OrderService.createOrder(req.body, req.user);
+  return success(res, "Order created successfully.", order);
+});
+
+exports.cancelOrder = asyncHandler(async (req, res) => {
+  const canceled = await OrderService.cancelOrder(req.params.id, req.user);
+  return success(res, "Order cancelled successfully.", canceled);
+});
+
+exports.getActiveOrders = asyncHandler(async (req, res) => {
+  const customerId = req.user.id;
+
+  const activeOrders = await OrderService.getActiveOrders(customerId);
+
+  return success(res, "Active orders fetched successfully", activeOrders);
+});
+
+exports.getOrderHistory = asyncHandler(async (req, res) => {
+  const orders = await OrderService.getCustomerOrderHistory(req.user);
+  return success(res, "Order history fetched successfully.", orders);
+});
+
+exports.getOrderById = asyncHandler(async (req, res) => {
+  const customerId = req.user.id;
+  const { id: orderId } = req.params;
+
+  const order = await OrderService.getOrderByIdForCustomer(orderId, customerId);
+
+  return success(res, "Order fetched successfully", order);
+});

@@ -119,6 +119,11 @@ module.exports = (sequelize) => {
     Restaurant.hasMany(models.Promotion, {
       foreignKey: "restaurant_id",
     });
+    Restaurant.hasMany(models.RestaurantBankAccount, {
+      foreignKey: "restaurant_id",
+      onDelete: "CASCADE",
+      onUpdate: "CASCADE",
+    });
     Restaurant.hasMany(models.Video, {
       foreignKey: "restaurant_id",
     });

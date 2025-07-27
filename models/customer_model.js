@@ -85,7 +85,6 @@ module.exports = (sequelize, DataTypes) => {
       social_provider_id: {
         type: DataTypes.STRING,
         allowNull: true,
-        defaultValue: null,
       },
       last_login_at: {
         type: DataTypes.DATE,

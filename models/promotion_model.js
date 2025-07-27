@@ -100,9 +100,9 @@ module.exports = (sequelize, DataTypes) => {
       foreignKey: "menu_item_id",
     });
 
-    Promotion.hasMany(models.Payment, {
-      foreignKey: "promotion_id",
-    });
+    // Promotion.hasMany(models.Payment, {
+    //   foreignKey: "promotion_id",
+    // });
   };
 
   return Promotion;

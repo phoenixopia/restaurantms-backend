@@ -53,23 +53,33 @@ module.exports = (sequelize, DataTypes) => {
       },
 
       payment_method: {
-        type: DataTypes.ENUM("cash", "telebirr", "CBE", "other"),
+        type: DataTypes.ENUM("cash", "telebirr", "CBE", "arifpay", "other"),
         allowNull: false,
       },
       transaction_id: {
         type: DataTypes.STRING,
       },
-
-      promotion_id: {
-        type: DataTypes.UUID,
+      session_id: {
+        type: DataTypes.STRING,
         allowNull: true,
-        references: {
-          model: "promotions",
-          key: "id",
-        },
       },
+
+      // promotion_id: {
+      //   type: DataTypes.UUID,
+      //   allowNull: true,
+      //   references: {
+      //     model: "promotions",
+      //     key: "id",
+      //   },
+      // },
       status: {
-        type: DataTypes.ENUM("pending", "completed", "failed", "refunded"),
+        type: DataTypes.ENUM(
+          "pending",
+          "completed",
+          "failed",
+          "cancelled",
+          "refunded"
+        ),
         defaultValue: "pending",
       },
       payment_date: {
@@ -97,9 +107,9 @@ module.exports = (sequelize, DataTypes) => {
       foreignKey: "customer_id",
     });
 
-    Payment.belongsTo(models.Promotion, {
-      foreignKey: "promotion_id",
-    });
+    // Payment.belongsTo(models.Promotion, {
+    //   foreignKey: "promotion_id",
+    // });
   };
 
   return Payment;
