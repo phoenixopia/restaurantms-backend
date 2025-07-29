@@ -117,3 +117,46 @@ exports.sendUserCredentialsEmail = async (
     throw new Error("Error sending credentials email.");
   }
 };
+
+exports.sendNotificationEmail = async (
+  to,
+  firstName,
+  lastName,
+  title,
+  body
+) => {
+  const mailOptions = {
+    from: `"Phoenixopia Solutions" <${process.env.USER_1}>`,
+    to,
+    subject: title,
+    html: `
+     <html>
+        <body style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
+          <p style="font-size: 16px;">Hello ${firstName} ${lastName},</p>
+
+          <h2 style="color: #1a73e8;">${title}</h2>
+
+          <div style="font-size: 16px; margin: 20px 0;">
+            ${body}
+          </div>
+
+          <p>Please log in to your registered platform to view more details.</p>
+
+          <p>Thanks,<br/><strong>Phoenixopia Team</strong></p>
+
+          <footer style="font-size: 13px; color: #aaa; text-align: center; margin-top: 40px;">
+            <p>© ${new Date().getFullYear()} Phoenixopia Solutions. All rights reserved.</p>
+          </footer>
+        </body>
+      </html>
+    `,
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    console.log("📩 Notification email sent to:", to);
+  } catch (err) {
+    console.error("❌ Failed to send notification email:", err);
+    throw new Error("Failed to send notification email.");
+  }
+};

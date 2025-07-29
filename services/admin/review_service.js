@@ -1,0 +1,171 @@
+const { Review, Order, Restaurant, sequelize } = require("../../models");
+
+const ReviewService = {
+  async createReview(
+    { order_id, restaurant_id, rating, comment },
+    customer_id
+  ) {
+    const t = await sequelize.transaction();
+    try {
+      const order = await Order.findOne({
+        where: {
+          id: order_id,
+          customer_id,
+          restaurant_id,
+        },
+        transaction: t,
+      });
+
+      if (!order) {
+        throwError("Order not found or not associated with this customer", 404);
+      }
+
+      if (order.status !== "Served") {
+        throwError("Only served orders can be reviewed", 400);
+      }
+
+      const alreadyReviewed = await Review.findOne({
+        where: { order_id },
+        transaction: t,
+      });
+
+      if (alreadyReviewed) {
+        throwError("This order has already been reviewed", 409);
+      }
+
+      const review = await Review.create(
+        {
+          order_id,
+          restaurant_id,
+          customer_id,
+          rating,
+          comment,
+        },
+        { transaction: t }
+      );
+
+      await t.commit();
+      return review;
+    } catch (err) {
+      await t.rollback();
+      throw err;
+    }
+  },
+
+  async updateReview({ review_id, rating, comment }, customer_id) {
+    const t = await sequelize.transaction();
+    try {
+      const review = await Review.findOne({
+        where: { id: review_id, customer_id },
+        transaction: t,
+      });
+
+      if (!review) {
+        throwError(
+          "Review not found or not associated with this customer",
+          404
+        );
+      }
+
+      review.rating = rating ?? review.rating;
+      review.comment = comment ?? review.comment;
+
+      await review.save({ transaction: t });
+      await t.commit();
+      return review;
+    } catch (err) {
+      await t.rollback();
+      throw err;
+    }
+  },
+
+  async deleteReview(review_id, customer_id) {
+    const t = await sequelize.transaction();
+    try {
+      const review = await Review.findOne({
+        where: { id: review_id, customer_id },
+        transaction: t,
+      });
+
+      if (!review) {
+        throwError(
+          "Review not found or not associated with this customer",
+          404
+        );
+      }
+
+      await review.destroy({ transaction: t });
+      await t.commit();
+      return { message: "Review deleted successfully" };
+    } catch (err) {
+      await t.rollback();
+      throw err;
+    }
+  },
+
+  async getReviewsByRestaurant(restaurantId, page = 1, limit = 10) {
+    if (!restaurantId) throwError("Restaurant ID is required", 400);
+
+    const offset = (page - 1) * limit;
+
+    const { count: total, rows: reviews } = await Review.findAndCountAll({
+      where: { restaurant_id: restaurantId },
+      include: [
+        {
+          model: Customer,
+          attributes: ["first_name", "last_name", "profile_picture"],
+        },
+      ],
+      order: [["created_at", "DESC"]],
+      limit,
+      offset,
+    });
+
+    const formattedReviews = reviews.map((review) => ({
+      comment: review.comment,
+      rating: parseInt(review.rating),
+      created_at: review.created_at,
+      customer: {
+        first_name: review.Customer.first_name,
+        last_name: review.Customer.last_name,
+        profile_picture: review.Customer.profile_picture,
+      },
+    }));
+
+    return {
+      total,
+      page,
+      limit,
+      total_pages: Math.ceil(total / limit),
+      reviews: formattedReviews,
+    };
+  },
+
+  async calculateRestaurantRating(restaurantId) {
+    const reviews = await Review.findAll({
+      where: { restaurant_id: restaurantId },
+      attributes: ["rating"],
+    });
+
+    const totalReviews = reviews.length;
+    if (totalReviews === 0) {
+      return {
+        rating: 0,
+        total_reviews: 0,
+      };
+    }
+
+    const sum = reviews.reduce(
+      (acc, review) => acc + parseInt(review.rating),
+      0
+    );
+    const average = parseFloat((sum / totalReviews).toFixed(1));
+
+    return {
+      rating: average,
+      total_reviews: totalReviews,
+    };
+  },
+};
+
+module.exports = ReviewService;

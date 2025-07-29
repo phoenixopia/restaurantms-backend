@@ -85,7 +85,7 @@ const OrderService = {
 
       const orderItems = items.map((item) => ({
         order_id: order.id,
-        menu_item_id: item.menu_id,
+        menu_item_id: item.menu_item_id,
         quantity: item.quantity,
         unit_price: item.price,
       }));

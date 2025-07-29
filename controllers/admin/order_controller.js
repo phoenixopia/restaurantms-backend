@@ -35,7 +35,7 @@ exports.updateOrderStatus = asyncHandler(async (req, res) => {
 
   const updated = await OrderService.updateOrderStatus(id, status, req.user);
 
-  const io = req.app.locals.io;
+  const io = req.app.get("io");
 
   io.to(`branch:${updated.branch_id}`).emit("orderStatusUpdated", {
     order_id: updated.id,

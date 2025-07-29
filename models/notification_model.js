@@ -11,7 +11,7 @@ module.exports = (sequelize, DataTypes) => {
       },
       user_id: {
         type: DataTypes.UUID,
-        allowNull: false,
+        allowNull: true,
         references: {
           model: "users",
           key: "id",
@@ -19,7 +19,7 @@ module.exports = (sequelize, DataTypes) => {
       },
       customer_id: {
         type: DataTypes.UUID,
-        allowNull: false,
+        allowNull: true,
         references: {
           model: "customers",
           key: "id",
@@ -29,7 +29,12 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.ENUM("Email", "SMS", "In-App"),
         allowNull: false,
       },
-      message: {
+
+      title: {
+        type: DataTypes.TEXT,
+        allowNull: false,
+      },
+      body: {
         type: DataTypes.TEXT,
         allowNull: false,
       },
@@ -37,6 +42,19 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.ENUM("Pending", "Sent", "Failed"),
         allowNull: false,
         defaultValue: "Pending",
+      },
+      retry_count: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 0,
+      },
+      sent_at: {
+        type: DataTypes.DATE,
+        allowNull: true,
+      },
+      failed_at: {
+        type: DataTypes.DATE,
+        allowNull: true,
       },
       created_at: {
         type: DataTypes.DATE,
@@ -52,12 +70,8 @@ module.exports = (sequelize, DataTypes) => {
   );
 
   Notification.associate = (models) => {
-    Notification.belongsTo(models.User, {
-      foreignKey: "user_id",
-    });
-    Notification.belongsTo(models.Customer, {
-      foreignKey: "customer_id",
-    });
+    Notification.belongsTo(models.User, { foreignKey: "user_id" });
+    Notification.belongsTo(models.Customer, { foreignKey: "customer_id" });
   };
 
   return Notification;

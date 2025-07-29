@@ -46,7 +46,8 @@ exports.updateVideoStatus = asyncHandler(async (req, res) => {
     req.user
   );
 
-  req.app.locals.io.to(updatedVideo.restaurant_id).emit("videoStatusUpdated", {
+  const io = req.app.get("io");
+  io.to(updatedVideo.restaurant_id).emit("videoStatusUpdated", {
     videoId: updatedVideo.id,
     newStatus: status,
   });

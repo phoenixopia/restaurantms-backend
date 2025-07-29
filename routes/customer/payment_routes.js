@@ -6,11 +6,7 @@ const PaymentController = require("../../controllers/admin/payment_controller");
 
 router.post("/checkout", protect("customer"), PaymentController.createCheckout);
 
-router.post(
-  "/notification",
-  protect("customer"),
-  PaymentController.handleNotification
-);
+router.post("/notification", PaymentController.handleNotification);
 
 router.delete(
   "/cancel/:sessionId",

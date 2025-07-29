@@ -4,6 +4,7 @@ const { Op, fn, col, literal, QueryTypes, where } = require("sequelize");
 const validator = require("validator");
 const fs = require("fs");
 const path = require("path");
+const ReviewService = require("./review_service");
 const throwError = require("../../utils/throwError");
 const cleanupUploadedFiles = require("../../utils/cleanUploadedFiles");
 
@@ -496,16 +497,27 @@ const RestaurantService = {
       ],
     });
 
-    const restaurants = rows.map((r) => {
-      const plain = r.get({ plain: true });
-      plain.MenuCategories = plain.MenuCategories?.map((cat) => ({
-        id: cat.id,
-        name: cat.name,
-      }));
-      plain.location = (plain.Branches && plain.Branches[0]?.Location) || null;
-      delete plain.Branches;
-      return plain;
-    });
+    const restaurants = await Promise.all(
+      rows.map(async (r) => {
+        const plain = r.get({ plain: true });
+
+        plain.MenuCategories = plain.MenuCategories?.map((cat) => ({
+          id: cat.id,
+          name: cat.name,
+        }));
+
+        plain.location =
+          (plain.Branches && plain.Branches[0]?.Location) || null;
+        delete plain.Branches;
+
+        const { rating, total_reviews } =
+          await ReviewService.calculateRestaurantRating(plain.id);
+        plain.rating = rating;
+        plain.total_reviews = total_reviews;
+
+        return plain;
+      })
+    );
 
     const totalPages = Math.ceil(totalItems / limit);
 
@@ -570,11 +582,16 @@ const RestaurantService = {
     const mainBranch = plain.mainBranch || null;
     const allBranches = plain.Branches || [];
 
+    const { rating, total_reviews } =
+      await ReviewService.calculateRestaurantRating(plain.id);
+
     return {
       id: plain.id,
       restaurant_name: plain.restaurant_name,
       logo_url: plain.SystemSetting?.logo_url || null,
       images: plain.SystemSetting?.images || [],
+      rating,
+      total_reviews,
       main_branch_location: mainBranch?.Location || null,
       branches: allBranches.map((b) => ({
         id: b.id,
@@ -601,6 +618,7 @@ const RestaurantService = {
         }) || [],
     };
   },
+
   async getBranchMenus(restaurantId, branchId, page = 1, limit = 10) {
     const branch = await Branch.findOne({
       where: {

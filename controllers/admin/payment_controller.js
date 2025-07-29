@@ -1,5 +1,5 @@
-const asyncHandler = require("../middleware/asyncHandler");
-const { success } = require("../utils/apiResponse");
+const asyncHandler = require("../../middleware/asyncHandler");
+const { success } = require("../../utils/apiResponse");
 const ArifpayService = require("../../services/admin/payment_service");
 const { Order, KdsOrder } = require("../../models");
 
@@ -24,7 +24,7 @@ exports.handleNotification = asyncHandler(async (req, res) => {
     });
 
     if (order) {
-      const io = req.app.locals.io;
+      const io = req.app.get("io");
 
       io.to(`branch:${order.branch_id}`).emit("orderStatusUpdated", {
         order_id: order.id,

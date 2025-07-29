@@ -18,7 +18,7 @@ const ArifpayService = {
       customer_id: customer.id,
       amount: order.totalAmount,
       status: "pending",
-      payment_method: "arifpay",
+      payment_method: "arifpay", // for test change don't forget
     });
 
     const bankAccount = await RestaurantBankAccount.findOne({
@@ -81,15 +81,17 @@ const ArifpayService = {
         payload,
         {
           headers: {
-            "x-arifpay-key": arifpayConfig.apiKey,
             "Content-Type": "application/json",
+            "x-arifpay-key": arifpayConfig.apiKey,
           },
+          timeout: 10000,
         }
       );
 
       const resData = response.data;
 
       if (resData.error) {
+        await payment.update({ status: "failed" });
         throwError(resData.msg || "Failed to initiate payment session", 400);
       }
 
@@ -107,8 +109,10 @@ const ArifpayService = {
         let message = "Arifpay Error";
         if (status === 400)
           message = "Invalid payload or missing required fields";
-        else if (status === 404) message = "Missing or invalid API Key";
-        else if (status === 415)
+        else if (status === 404) {
+          message = "Missing or invalid API Key";
+          console.log(err);
+        } else if (status === 415)
           message = "Missing or invalid Content-Type header";
         else if (status === 500) message = "Invalid or missing phone number";
         else message = data?.msg || "Unexpected error from Arifpay";

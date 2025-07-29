@@ -1,9 +1,20 @@
 const OrderService = require("../../services/admin/order_service");
+const NotificationService = require("../../services/admin/notification_service");
 const asyncHandler = require("../../middleware/asyncHandler");
 const { success } = require("../../utils/apiResponse");
 
 exports.createOrder = asyncHandler(async (req, res) => {
-  const order = await OrderService.createOrder(req.body, req.user);
+  const io = req.app.get("io");
+  const customer = req.user;
+
+  const order = await OrderService.createOrder(req.body, customer);
+
+  await NotificationService.handleOrderPlacedNotification({
+    order,
+    customer,
+    io,
+  });
+
   return success(res, "Order created successfully.", order);
 });
 

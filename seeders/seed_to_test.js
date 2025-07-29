@@ -370,7 +370,7 @@ module.exports = async () => {
         id: uuidv4(),
         first_name: "John",
         last_name: "Doe",
-        email: "johndoe@gmail.com",
+        email: "nathnaelkeleme88@gmail.com",
         password: "12345678",
         profile_picture:
           "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRij6dtiHizH96qpCOe8WeXXP3yLyQJkPdGVg&s",

@@ -23,7 +23,7 @@ sequelize
       },
     });
 
-    app.locals.io = io;
+    app.set("io", io);
 
     io.on("connection", (socket) => {
       console.log(`Socket connected: ${socket.id}`);
