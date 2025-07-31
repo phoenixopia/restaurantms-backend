@@ -29,6 +29,8 @@ const OrderService = {
         start_time,
         end_time,
         table_id,
+        typeAddress,
+        address_id,
         address,
         latitude,
         longitude,
@@ -90,21 +92,47 @@ const OrderService = {
       }
 
       if (type === "delivery") {
-        if (!address || !latitude || !longitude) {
+        if (!typeAddress) {
+          throwError("Address type is required for delivery orders", 400);
+        }
+
+        let location;
+
+        if (["home", "office"].includes(typeAddress)) {
+          if (!address_id) {
+            throwError(
+              `address id is required when address type is '${typeAddress}'`,
+              400
+            );
+          }
+
+          location = await Location.findByPk(address_id, { transaction: t });
+
+          if (!location) {
+            throwError("Address not found", 404);
+          }
+        } else if (typeAddress === "custom") {
+          if (!address || !latitude || !longitude) {
+            throwError(
+              "Custom address, latitude, and longitude are required",
+              400
+            );
+          }
+
+          location = await Location.create(
+            {
+              address,
+              latitude,
+              longitude,
+            },
+            { transaction: t }
+          );
+        } else {
           throwError(
-            "Address, latitude, and longitude are required for delivery orders",
+            "Invalid address type. Must be 'home', 'office', or 'custom'",
             400
           );
         }
-
-        const location = await Location.create(
-          {
-            address,
-            latitude,
-            longitude,
-          },
-          { transaction: t }
-        );
 
         orderPayload.delivery_location_id = location.id;
       }
@@ -151,6 +179,7 @@ const OrderService = {
       throw error;
     }
   },
+
   async cancelOrder(orderId, user) {
     const t = await sequelize.transaction();
     try {
