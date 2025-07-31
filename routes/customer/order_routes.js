@@ -15,7 +15,11 @@ router.get(
   OrderController.getActiveOrders
 );
 
-router.get("/order-history", OrderController.getOrderHistory);
+router.get(
+  "/order-history",
+  protect("customer"),
+  OrderController.getOrderHistory
+);
 
 router.get("/:id/order", protect("customer"), OrderController.getOrderById);
 

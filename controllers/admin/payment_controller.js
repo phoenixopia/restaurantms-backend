@@ -20,6 +20,17 @@ exports.createCheckout = asyncHandler(async (req, res) => {
   return success(res, "Checkout session created", data);
 });
 
+exports.handleSuccess = asyncHandler(async (req, res) => {
+  return res.status(200).json({
+    success: true,
+    message: "Payment successful",
+    data: {
+      note: "Thank you for your payment.",
+      status: "Paid",
+    },
+  });
+});
+
 exports.handleNotification = asyncHandler(async (req, res) => {
   const { orderId } = req.params;
   const notificationData = req.body;

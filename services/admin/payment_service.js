@@ -77,6 +77,8 @@ const ArifpayService = {
       },
     });
 
+    console.log(bankAccount.account_number);
+
     if (!bankAccount) {
       throwError(
         "No active default bank account found for this restaurant",
@@ -91,7 +93,7 @@ const ArifpayService = {
       cancelUrl: `${arifpayConfig.cancelUrl}/${order.id}`,
       errorUrl: `${arifpayConfig.errorUrl}/${order.id}`,
       notifyUrl: `${arifpayConfig.notifyUrl}/${order.id}`,
-      successUrl: arifpayConfig.successUrl,
+      successUrl: `${arifpayConfig.successUrl}/${order.id}`,
       lang: "EN",
       expireDate: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
       paymentMethods: [

@@ -12,26 +12,6 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         primaryKey: true,
       },
-      two_factor_enabled: {
-        type: DataTypes.BOOLEAN,
-        defaultValue: false,
-      },
-      office_address_id: {
-        type: DataTypes.UUID,
-        allowNull: true,
-        references: {
-          model: "locations",
-          key: "id",
-        },
-      },
-      home_address_id: {
-        type: DataTypes.UUID,
-        allowNull: true,
-        references: {
-          model: "locations",
-          key: "id",
-        },
-      },
       first_name: {
         type: DataTypes.STRING(255),
         allowNull: false,
@@ -102,6 +82,26 @@ module.exports = (sequelize, DataTypes) => {
       locked_until: {
         type: DataTypes.DATE,
         allowNull: true,
+      },
+      two_factor_enabled: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
+      },
+      office_address_id: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        references: {
+          model: "locations",
+          key: "id",
+        },
+      },
+      home_address_id: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        references: {
+          model: "locations",
+          key: "id",
+        },
       },
       role_id: {
         type: DataTypes.UUID,
@@ -232,9 +232,6 @@ module.exports = (sequelize, DataTypes) => {
     });
 
     Customer.hasMany(models.CateringRequest, {
-      foreignKey: "customer_id",
-    });
-    Customer.hasOne(models.CateringQuoteResponse, {
       foreignKey: "customer_id",
     });
 

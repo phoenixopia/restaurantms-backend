@@ -154,19 +154,17 @@ module.exports = async () => {
         updated_at: now,
       });
 
-      if (index === 0) {
-        await sequelize.models.RestaurantBankAccount.create({
-          id: uuidv4(),
-          restaurant_id: restaurant.id,
-          bank_name: "Commercial Bank of Ethiopia",
-          account_number: "1000445824201",
-          account_name: "Natnael Kelemie",
-          is_default: true,
-          is_active: true,
-          created_at: now,
-          updated_at: now,
-        });
-      }
+      await sequelize.models.RestaurantBankAccount.create({
+        id: uuidv4(),
+        restaurant_id: restaurant.id,
+        bank_name: "Commercial Bank of Ethiopia",
+        account_number: "1000445824201",
+        account_name: "Natnael Kelemie",
+        is_default: true,
+        is_active: true,
+        created_at: now,
+        updated_at: now,
+      });
 
       await Subscription.create({
         restaurant_id: restaurant.id,
