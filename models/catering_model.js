@@ -16,8 +16,6 @@ module.exports = (sequelize, DataTypes) => {
           model: "restaurants",
           key: "id",
         },
-        onUpdate: "CASCADE",
-        onDelete: "CASCADE",
       },
       title: {
         type: DataTypes.STRING(255),
@@ -42,6 +40,10 @@ module.exports = (sequelize, DataTypes) => {
       min_advance_days: {
         type: DataTypes.INTEGER,
       },
+      prepayment_percentage: {
+        type: DataTypes.DECIMAL(5, 2),
+        allowNull: false,
+      },
       include_service: {
         type: DataTypes.BOOLEAN,
         defaultValue: false,
@@ -51,14 +53,16 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: false,
       },
       service_area_description: {
-        type: DataTypes.STRING(255),
+        type: DataTypes.TEXT,
       },
       cover_image_url: {
         type: DataTypes.STRING,
       },
-      gallery_url: {
-        type: DataTypes.ARRAY(DataTypes.STRING),
+      gallery_image_ids: {
+        type: DataTypes.ARRAY(DataTypes.UUID),
+        allowNull: true,
       },
+
       contact_person: {
         type: DataTypes.STRING(100),
       },
@@ -88,6 +92,9 @@ module.exports = (sequelize, DataTypes) => {
     });
 
     Catering.hasMany(models.CateringRequest, {
+      foreignKey: "catering_id",
+    });
+    Catering.hasMany(models.CateringQuote, {
       foreignKey: "catering_id",
     });
 

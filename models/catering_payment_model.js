@@ -9,11 +9,11 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
       },
-      catering_request_id: {
+      catering_quote_id: {
         type: DataTypes.UUID,
         allowNull: false,
         references: {
-          model: "catering_requests",
+          model: "catering_quotes",
           key: "id",
         },
       },
@@ -22,17 +22,14 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
       },
       payment_method: {
-        type: DataTypes.STRING,
+        type: DataTypes.STRING(20),
       },
       payment_status: {
-        type: DataTypes.ENUM("pending", "paid", "failed"),
+        type: DataTypes.ENUM("pending", "completed", "cancelled", "failed"),
         defaultValue: "pending",
       },
       transaction_id: {
         type: DataTypes.STRING,
-      },
-      paid_at: {
-        type: DataTypes.DATE,
       },
     },
     {
@@ -43,8 +40,8 @@ module.exports = (sequelize, DataTypes) => {
   );
 
   CateringPayment.associate = (models) => {
-    CateringPayment.belongsTo(models.CateringRequest, {
-      foreignKey: "catering_request_id",
+    CateringPayment.belongsTo(models.CateringQuote, {
+      foreignKey: "catering_quote_id",
       onDelete: "CASCADE",
       onUpdate: "CASCADE",
     });

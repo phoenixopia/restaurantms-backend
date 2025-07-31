@@ -74,10 +74,6 @@ module.exports = (sequelize, DataTypes) => {
     CateringRequest.hasOne(models.CateringQuote, {
       foreignKey: "catering_request_id",
     });
-
-    CateringRequest.hasOne(models.CateringPayment, {
-      foreignKey: "catering_request_id",
-    });
   };
 
   return CateringRequest;

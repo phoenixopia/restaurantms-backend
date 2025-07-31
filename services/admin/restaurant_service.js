@@ -27,7 +27,7 @@ const {
   Video,
 } = require("../../models");
 
-const UPLOADS_DIR = path.resolve(__dirname, "../../../uploads");
+const UPLOADS_DIR = path.resolve(__dirname, "../../../uploads/restaurant");
 const SERVER_URL = process.env.SERVER_URL || "http://127.0.0.1:8000";
 const MAX_NEARBY_DISTANCE_KM = 5;
 

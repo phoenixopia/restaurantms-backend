@@ -101,16 +101,13 @@ const OrderService = {
         if (["home", "office"].includes(typeAddress)) {
           if (!address_id) {
             throwError(
-              `address id is required when address type is '${typeAddress}'`,
+              `Address ID is required when address type is '${typeAddress}'`,
               400
             );
           }
 
           location = await Location.findByPk(address_id, { transaction: t });
-
-          if (!location) {
-            throwError("Address not found", 404);
-          }
+          if (!location) throwError("Address not found", 404);
         } else if (typeAddress === "custom") {
           if (!address || !latitude || !longitude) {
             throwError(
@@ -179,7 +176,6 @@ const OrderService = {
       throw error;
     }
   },
-
   async cancelOrder(orderId, user) {
     const t = await sequelize.transaction();
     try {

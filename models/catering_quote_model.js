@@ -17,6 +17,14 @@ module.exports = (sequelize, DataTypes) => {
           key: "id",
         },
       },
+      catering_id: {
+        type: DataTypes.UUID,
+        allowNull: false,
+        references: {
+          model: "caterings",
+          key: "id",
+        },
+      },
       estimated_price: {
         type: DataTypes.DECIMAL(10, 2),
         allowNull: false,
@@ -47,6 +55,12 @@ module.exports = (sequelize, DataTypes) => {
       foreignKey: "catering_request_id",
       onDelete: "CASCADE",
       onUpdate: "CASCADE",
+    });
+    CateringQuote.belongsTo(models.Catering, {
+      foreignKey: "catering_id",
+    });
+    CateringQuote.hasOne(models.CateringPayment, {
+      foreignKey: "catering_quote_id",
     });
   };
 
