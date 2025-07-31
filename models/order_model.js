@@ -68,6 +68,18 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.ENUM("Paid", "Unpaid"),
         defaultValue: "Unpaid",
       },
+      delivery_location_id: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        references: {
+          model: "locations",
+          key: "id",
+        },
+      },
+      is_seen_by_customer: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
+      },
     },
     {
       tableName: "orders",
@@ -86,6 +98,11 @@ module.exports = (sequelize, DataTypes) => {
     Order.belongsTo(models.Customer, { foreignKey: "customer_id" });
 
     Order.belongsTo(models.Table, { foreignKey: "table_id" });
+
+    Order.belongsTo(models.Location, {
+      foreignKey: "delivery_location_id",
+    });
+
     Order.hasMany(models.OrderItem, {
       foreignKey: "order_id",
     });

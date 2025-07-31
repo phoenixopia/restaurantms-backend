@@ -735,8 +735,7 @@ const RestaurantService = {
           restaurant_name: restaurant.restaurant_name,
           restaurant_logo: restaurant.SystemSetting?.logo_url || null,
           restaurant_image: restaurantImage,
-          menu_id: restaurant.Menu?.menu_id || null,
-          menu_name: restaurant.Menu?.menu_name || null,
+          menu_name: restaurant.Menu?.name || null,
           cheapest_menu_item: cheapestItem
             ? {
                 ...cheapestItem.get({ plain: true }),
@@ -768,18 +767,11 @@ const RestaurantService = {
     order = "DESC",
     page = 1,
     limit = 10,
+    filter,
   }) {
     page = parseInt(page);
     limit = parseInt(limit);
     const offset = (page - 1) * limit;
-
-    const filterCondition = {
-      status: "active",
-    };
-
-    if (query) {
-      filterCondition.restaurant_name = { [Op.iLike]: `%${query}%` };
-    }
 
     let data = [];
     let totalItems = 0;
@@ -793,10 +785,14 @@ const RestaurantService = {
         offset,
       };
 
+      const baseCondition = query ? "AND r.restaurant_name ILIKE :query" : "";
+
       const selectQuery = `
       WITH nearby_restaurants AS (
         SELECT
           r.*,
+          ss.logo_url,
+          ss.images,
           l.address,
           l.latitude,
           l.longitude,
@@ -808,10 +804,11 @@ const RestaurantService = {
             )
           ) AS distance
         FROM restaurants r
+        LEFT JOIN system_settings ss ON ss.restaurant_id = r.id
         JOIN branches b ON r.id = b.restaurant_id AND b.main_branch = TRUE
         JOIN locations l ON b.location_id = l.id
         WHERE r.status = 'active'
-        ${query ? "AND r.restaurant_name ILIKE :query" : ""}
+        ${baseCondition}
       )
       SELECT *
       FROM nearby_restaurants
@@ -819,14 +816,6 @@ const RestaurantService = {
       ORDER BY distance ASC
       LIMIT :limit OFFSET :offset
     `;
-
-      data = await sequelize.query(selectQuery, {
-        replacements: {
-          ...replacements,
-          ...(query ? { query: `%${query}%` } : {}),
-        },
-        type: QueryTypes.SELECT,
-      });
 
       const countQuery = `
       WITH nearby_restaurants AS (
@@ -843,72 +832,97 @@ const RestaurantService = {
         JOIN branches b ON r.id = b.restaurant_id AND b.main_branch = TRUE
         JOIN locations l ON b.location_id = l.id
         WHERE r.status = 'active'
-        ${query ? "AND r.restaurant_name ILIKE :query" : ""}
+        ${baseCondition}
       )
       SELECT COUNT(*) FROM nearby_restaurants WHERE distance <= :maxDistance
     `;
 
+      const replacementsWithQuery = {
+        ...replacements,
+        ...(query ? { query: `%${query}%` } : {}),
+      };
+
+      const rawRestaurants = await sequelize.query(selectQuery, {
+        replacements: replacementsWithQuery,
+        type: QueryTypes.SELECT,
+      });
+
       const countResult = await sequelize.query(countQuery, {
-        replacements: {
-          ...replacements,
-          ...(query ? { query: `%${query}%` } : {}),
-        },
+        replacements: replacementsWithQuery,
         type: QueryTypes.SELECT,
       });
 
       totalItems = parseInt(countResult[0].count);
 
-      const restaurantIds = data.map((r) => r.id);
+      const restaurantIds = rawRestaurants.map((r) => r.id);
 
-      if (restaurantIds.length) {
-        const menuCategories = await sequelize.models.MenuCategory.findAll({
-          where: {
-            restaurant_id: restaurantIds,
-          },
-          attributes: ["name", "restaurant_id"],
-          order: [["name", "ASC"]],
-        });
+      const menuCategories = await sequelize.models.MenuCategory.findAll({
+        where: {
+          restaurant_id: restaurantIds,
+        },
+        attributes: ["id", "name", "restaurant_id"],
+        order: [["name", "ASC"]],
+      });
 
-        const categoriesByRestaurant = {};
-        menuCategories.forEach((cat) => {
-          if (!categoriesByRestaurant[cat.restaurant_id]) {
-            categoriesByRestaurant[cat.restaurant_id] = [];
-          }
-          const cleanName = cat.name;
+      const categoriesByRestaurant = {};
+      menuCategories.forEach((cat) => {
+        if (!categoriesByRestaurant[cat.restaurant_id]) {
+          categoriesByRestaurant[cat.restaurant_id] = [];
+        }
+        if (
+          !categoriesByRestaurant[cat.restaurant_id].some(
+            (c) => c.name === cat.name
+          )
+        ) {
           categoriesByRestaurant[cat.restaurant_id].push({
             id: cat.id,
-            name: cleanName,
+            name: cat.name,
           });
-        });
+        }
+      });
 
-        data = data.map((restaurant) => {
-          const allCategories = categoriesByRestaurant[restaurant.id] || [];
+      data = await Promise.all(
+        rawRestaurants.map(async (r) => {
+          const categories = categoriesByRestaurant[r.id] || [];
 
-          const seen = new Set();
-          const top3 = [];
-
-          for (const cat of allCategories) {
-            if (!seen.has(cat.name)) {
-              seen.add(cat.name);
-              top3.push(cat);
-            }
-            if (top3.length === 3) break;
-          }
+          const { rating, total_reviews } =
+            await ReviewService.calculateRestaurantRating(r.id);
 
           return {
-            ...restaurant,
-            menu_categories: top3,
+            id: r.id,
+            restaurant_name: r.restaurant_name,
+            location: {
+              address: r.address,
+              latitude: r.latitude,
+              longitude: r.longitude,
+            },
+            menu_categories: categories.slice(0, 3),
+            rating,
+            total_reviews,
+            logo_url: r.logo_url || null,
+            images: r.images || [],
           };
-        });
-      } else {
-        data = data.map((restaurant) => ({
-          ...restaurant,
-          menu_categories: [],
-        }));
+        })
+      );
+
+      if (filter === "top_rated") {
+        data.sort((a, b) => b.rating - a.rating);
       }
     } else {
-      const allRestaurants = await Restaurant.findAndCountAll({
-        where: filterCondition,
+      const { rows, count } = await Restaurant.findAndCountAll({
+        where: {
+          status: "active",
+          ...(query
+            ? {
+                restaurant_name: {
+                  [Op.iLike]: `%${query}%`,
+                },
+              }
+            : {}),
+        },
+        offset,
+        limit,
+        order: [[sort, order]],
         include: [
           {
             model: SystemSetting,
@@ -938,39 +952,53 @@ const RestaurantService = {
             model: MenuCategory,
             distinct: true,
             limit: 3,
-            attributes: ["name"],
+            attributes: ["id", "name"],
           },
         ],
-        offset,
-        limit,
-        order: [[sort, order]],
       });
 
-      data = allRestaurants.rows.map((restaurant) => {
-        const plain = restaurant.get({ plain: true });
-        plain.location = plain.mainBranch?.Location || null;
-        plain.menu_categories = plain.MenuCategories.map((cat) => ({
-          name: cat.name,
-        }));
-        delete plain.mainBranch;
-        delete plain.MenuCategories;
-        return plain;
-      });
+      totalItems = count;
 
-      totalItems = allRestaurants.count;
+      data = await Promise.all(
+        rows.map(async (r) => {
+          const plain = r.get({ plain: true });
+
+          const { rating, total_reviews } =
+            await ReviewService.calculateRestaurantRating(plain.id);
+
+          return {
+            id: plain.id,
+            restaurant_name: plain.restaurant_name,
+            logo_url: plain.SystemSetting?.logo_url || null,
+            images: plain.SystemSetting?.images || [],
+            location: plain.mainBranch?.Location || null,
+            menu_categories: (plain.MenuCategories || []).map((cat) => ({
+              id: cat.id,
+              name: cat.name,
+            })),
+            rating,
+            total_reviews,
+          };
+        })
+      );
+
+      if (filter === "top_rated") {
+        data.sort((a, b) => b.rating - a.rating);
+      }
     }
+
+    const totalPages = Math.ceil(totalItems / limit);
 
     return {
       restaurants: data,
       pagination: {
         totalItems,
-        totalPages: Math.ceil(totalItems / limit),
+        totalPages,
         currentPage: page,
         pageSize: limit,
       },
     };
   },
-
   // for customer
   async getRestaurantProfileWithVideos(
     restaurantId,

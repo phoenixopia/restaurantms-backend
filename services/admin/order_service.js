@@ -7,6 +7,9 @@ const {
   Table,
   Reservation,
   KdsOrder,
+  Location,
+  Restaurant,
+  MenuItem,
   sequelize,
 } = require("../../models");
 const throwError = require("../../utils/throwError");
@@ -24,6 +27,9 @@ const OrderService = {
         start_time,
         end_time,
         table_id,
+        address,
+        latitude,
+        longitude,
       } = data;
 
       if (!items || items.length === 0) {
@@ -81,14 +87,48 @@ const OrderService = {
         orderPayload.guest_count = table.capacity;
       }
 
+      if (type === "delivery") {
+        if (!address || !latitude || !longitude) {
+          throwError(
+            "Address, latitude, and longitude are required for delivery orders",
+            400
+          );
+        }
+
+        const location = await Location.create(
+          {
+            address,
+            latitude,
+            longitude,
+          },
+          { transaction: t }
+        );
+
+        orderPayload.delivery_location_id = location.id;
+      }
+
       const order = await Order.create(orderPayload, { transaction: t });
 
-      const orderItems = items.map((item) => ({
-        order_id: order.id,
-        menu_item_id: item.menu_item_id,
-        quantity: item.quantity,
-        unit_price: item.price,
-      }));
+      const groupedItems = {};
+      for (const item of items) {
+        const key = item.menu_item_id;
+        if (!groupedItems[key]) {
+          groupedItems[key] = {
+            quantity: 0,
+            price: item.price,
+          };
+        }
+        groupedItems[key].quantity += item.quantity;
+      }
+
+      const orderItems = Object.entries(groupedItems).map(
+        ([menu_item_id, value]) => ({
+          order_id: order.id,
+          menu_item_id,
+          quantity: value.quantity,
+          unit_price: value.price,
+        })
+      );
 
       await OrderItem.bulkCreate(orderItems, { transaction: t });
 
@@ -109,7 +149,6 @@ const OrderService = {
       throw error;
     }
   },
-
   async cancelOrder(orderId, user) {
     const t = await sequelize.transaction();
     try {
@@ -119,11 +158,12 @@ const OrderService = {
       });
 
       if (!order) throwError("Order not found", 404);
+
       if (order.status !== "Pending")
         throwError("Only pending orders can be cancelled", 400);
-      if (order.customer_id !== user.id) {
+
+      if (order.customer_id !== user.id)
         throwError("Unauthorized to cancel this order", 403);
-      }
 
       if (order.type === "dine-in" && order.table_id) {
         await Table.update(
@@ -148,6 +188,13 @@ const OrderService = {
         }
       }
 
+      if (order.type === "delivery" && order.delivery_location_id) {
+        await Location.destroy({
+          where: { id: order.delivery_location_id },
+          transaction: t,
+        });
+      }
+
       await OrderItem.destroy({
         where: { order_id: order.id },
         transaction: t,
@@ -158,7 +205,10 @@ const OrderService = {
         transaction: t,
       });
 
-      await Order.destroy({ where: { id: order.id }, transaction: t });
+      await Order.destroy({
+        where: { id: order.id },
+        transaction: t,
+      });
 
       await t.commit();
       return { message: "Order cancelled and deleted successfully." };
@@ -167,12 +217,29 @@ const OrderService = {
       throw err;
     }
   },
+  async getActiveOrders(customerId, page = 1, limit = 10) {
+    page = parseInt(page);
+    limit = parseInt(limit);
+    const offset = (page - 1) * limit;
 
-  async getActiveOrders(customerId) {
-    const orders = await Order.findAll({
+    const activeStatuses = [
+      "Pending",
+      "InProgress",
+      "Preparing",
+      "Ready",
+      "Served",
+    ];
+
+    const { count, rows: orders } = await Order.findAndCountAll({
       where: {
         customer_id: customerId,
-        status: ["Pending", "InProgress"],
+        [Op.or]: [
+          { status: { [Op.in]: activeStatuses.slice(0, -1) } },
+          {
+            status: "Served",
+            is_seen_by_customer: false,
+          },
+        ],
       },
       include: [
         {
@@ -191,6 +258,8 @@ const OrderService = {
         },
       ],
       order: [["created_at", "DESC"]],
+      limit,
+      offset,
     });
 
     const formatted = orders.map((order) => {
@@ -211,28 +280,85 @@ const OrderService = {
       };
     });
 
-    return formatted;
+    const servedOrderIds = orders
+      .filter((order) => order.status === "Served")
+      .map((order) => order.id);
+
+    if (servedOrderIds.length > 0) {
+      await Order.update(
+        { is_seen_by_customer: true },
+        {
+          where: {
+            id: { [Op.in]: servedOrderIds },
+          },
+        }
+      );
+    }
+
+    return {
+      totalItems: count,
+      currentPage: page,
+      totalPages: Math.ceil(count / limit),
+      data: formatted,
+    };
   },
 
-  async getCustomerOrderHistory(user) {
-    const t = await sequelize.transaction();
-    try {
-      const orders = await Order.findAll({
-        where: {
-          customer_id: user.id,
-          status: ["Served"],
-        },
-        include: [{ model: OrderItem }],
-        order: [["created_at", "DESC"]],
-        transaction: t,
-      });
+  async getCustomerOrderHistory(user, page = 1, limit = 10) {
+    page = parseInt(page);
+    limit = parseInt(limit);
+    const offset = (page - 1) * limit;
 
-      await t.commit();
-      return orders;
-    } catch (error) {
-      await t.rollback();
-      throw error;
-    }
+    const { count, rows: orders } = await Order.findAndCountAll({
+      where: {
+        customer_id: user.id,
+        status: "Served",
+        is_seen_by_customer: true,
+      },
+      include: [
+        {
+          model: Restaurant,
+          attributes: ["restaurant_name"],
+          include: [
+            {
+              model: SystemSetting,
+              attributes: ["logo_url"],
+            },
+          ],
+        },
+        {
+          model: OrderItem,
+          attributes: ["quantity"],
+        },
+      ],
+      order: [["created_at", "DESC"]],
+      limit,
+      offset,
+    });
+
+    const formatted = orders.map((order) => {
+      const totalItems = order.OrderItems.reduce(
+        (sum, item) => sum + item.quantity,
+        0
+      );
+
+      return {
+        id: order.id,
+        restaurant_name: order.Restaurant?.restaurant_name,
+        logo_url: order.Restaurant?.SystemSetting?.logo_url || null,
+        total_amount: order.total_amount,
+        total_items: totalItems,
+        type: order.type,
+        status: order.status,
+        created_at: order.createdAt,
+      };
+    });
+
+    return {
+      totalItems: count,
+      currentPage: page,
+      totalPages: Math.ceil(count / limit),
+      data: formatted,
+    };
   },
 
   async listOrders(user) {
@@ -353,59 +479,143 @@ const OrderService = {
   },
 
   async getOrderByIdForCustomer(orderId, customerId) {
-    const order = await Order.findOne({
-      where: {
-        id: orderId,
-        customer_id: customerId,
+    const baseOrder = await Order.findOne({
+      where: { id: orderId, customer_id: customerId },
+      attributes: ["id", "type", "status"],
+    });
+
+    if (!baseOrder) throwError("Order not found", 404);
+
+    const isDineIn = baseOrder.type === "dine-in";
+    const isDelivery = baseOrder.type === "delivery";
+    const isServed = baseOrder.status === "Served";
+
+    let deliveryLocation = null;
+    if (isDelivery && baseOrder.delivery_location_id) {
+      deliveryLocation = await Location.findByPk(
+        baseOrder.delivery_location_id,
+        {
+          attributes: ["address", "latitude", "longitude"],
+        }
+      );
+    }
+
+    const include = [
+      {
+        model: Restaurant,
+        attributes: ["restaurant_name"],
+        include: [
+          {
+            model: SystemSetting,
+            attributes: ["logo_url"],
+          },
+        ],
       },
-      include: [
-        {
-          model: Restaurant,
-          attributes: ["restaurant_name"],
-          include: [
-            {
-              model: SystemSetting,
-              attributes: ["logo_url"],
-            },
-          ],
-        },
-        {
-          model: OrderItem,
-          attributes: ["id", "menu_item_id", "quantity", "price"],
-          include: [
-            {
-              model: MenuItem,
-              attributes: ["name", "image_url"],
-            },
-          ],
-        },
-      ],
+      {
+        model: Branch,
+        attributes: ["name"],
+        include: [
+          {
+            model: Location,
+            attributes: ["address", "latitude", "longitude"],
+          },
+        ],
+      },
+      {
+        model: OrderItem,
+        attributes: ["id", "menu_item_id", "quantity", "unit_price"],
+        include: [
+          {
+            model: MenuItem,
+            attributes: [
+              "id",
+              "name",
+              "image",
+              ...(isServed ? ["is_active"] : []),
+            ],
+          },
+        ],
+      },
+    ];
+
+    if (isDineIn) {
+      include.push({
+        model: Table,
+        attributes: [
+          "id",
+          "table_number",
+          "capacity",
+          ...(isServed ? ["is_active"] : []),
+        ],
+      });
+    }
+
+    const order = await Order.findOne({
+      where: { id: orderId, customer_id: customerId },
+      include,
     });
 
     if (!order) throwError("Order not found", 404);
 
-    const totalItems = order.OrderItems.reduce(
-      (sum, item) => sum + item.quantity,
-      0
-    );
+    const groupedItemsMap = new Map();
+    for (const item of order.OrderItems) {
+      const existing = groupedItemsMap.get(item.menu_item_id);
+      if (existing) {
+        existing.quantity += item.quantity;
+      } else {
+        groupedItemsMap.set(item.menu_item_id, {
+          id: item.id,
+          menu_item_id: item.menu_item_id,
+          name: item.MenuItem?.name,
+          image: item.MenuItem?.image,
+          is_active: isServed ? item.MenuItem?.is_active ?? null : undefined,
+          quantity: item.quantity,
+          unit_price: item.unit_price,
+        });
+      }
+    }
 
-    return {
+    const items = Array.from(groupedItemsMap.values());
+
+    const result = {
       id: order.id,
       restaurant_name: order.Restaurant?.restaurant_name,
       logo_url: order.Restaurant?.SystemSetting?.logo_url || null,
       total_amount: order.total_amount,
-      total_items: totalItems,
+      total_items: items.reduce((sum, item) => sum + item.quantity, 0),
       status: order.status,
       type: order.type,
       created_at: order.createdAt,
-      items: order.OrderItems.map((item) => ({
-        id: item.id,
-        name: item.MenuItem?.name,
-        image_url: item.MenuItem?.image_url,
-        quantity: item.quantity,
-        price: item.price,
-      })),
+      items,
+      branch: {
+        name: order.Branch?.name,
+        location: order.Branch?.Location
+          ? {
+              address: order.Branch.Location.address,
+              latitude: order.Branch.Location.latitude,
+              longitude: order.Branch.Location.longitude,
+            }
+          : null,
+      },
     };
+
+    if (isDelivery && deliveryLocation) {
+      result.delivery_location = {
+        address: deliveryLocation.address,
+        latitude: deliveryLocation.latitude,
+        longitude: deliveryLocation.longitude,
+      };
+    }
+
+    if (isDineIn && order.Table) {
+      result.table_info = {
+        table_number: order.Table.table_number,
+        capacity: order.Table.capacity,
+        ...(isServed && { is_active: order.Table.is_active }),
+      };
+    }
+
+    return result;
   },
 };
 

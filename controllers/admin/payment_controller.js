@@ -1,20 +1,32 @@
 const asyncHandler = require("../../middleware/asyncHandler");
 const { success } = require("../../utils/apiResponse");
 const ArifpayService = require("../../services/admin/payment_service");
-const { Order, KdsOrder } = require("../../models");
+const { Order } = require("../../models");
 
 exports.createCheckout = asyncHandler(async (req, res) => {
-  const { order, customer } = req.body;
+  const { orderId, phoneNumber } = req.body;
+  const customerId = req.user.id;
 
-  const data = await ArifpayService.createCheckoutSession(order, customer);
+  if (!orderId) {
+    throwError("Order ID is required", 400);
+  }
 
-  return success("Checkout session created", data, res);
+  const data = await ArifpayService.createCheckoutSession(
+    orderId,
+    phoneNumber,
+    customerId
+  );
+
+  return success(res, "Checkout session created", data);
 });
 
 exports.handleNotification = asyncHandler(async (req, res) => {
+  const { orderId } = req.params;
   const notificationData = req.body;
+  console.log(req.body);
 
   const updatedPayment = await ArifpayService.handleNotification(
+    orderId,
     notificationData
   );
 
@@ -43,13 +55,21 @@ exports.handleNotification = asyncHandler(async (req, res) => {
     }
   }
 
-  return success("Payment notification processed", {}, res);
+  return success(res, "Payment notification processed", {});
 });
 
-exports.cancelCheckout = asyncHandler(async (req, res) => {
-  const { sessionId } = req.params;
+exports.handleCancel = asyncHandler(async (req, res) => {
+  const { orderId } = req.params;
 
-  const result = await ArifpayService.cancelCheckoutSession(sessionId);
+  const result = await ArifpayService.cancelCheckoutSession(orderId);
 
-  return success("Checkout session cancelled", result, res);
+  return success(res, "Cancelled", result);
+});
+
+exports.handleError = asyncHandler(async (req, res) => {
+  const { orderId } = req.params;
+
+  const result = await ArifpayService.errorCheckoutSession(orderId);
+
+  return success(res, "Cancelled", result);
 });

@@ -61,7 +61,10 @@ module.exports = (sequelize, DataTypes) => {
     Location.hasMany(models.Customer, {
       foreignKey: "home_address_id",
     });
-    // Location.hasMany(models.Table, { foreignKey: "location_id" });
+
+    Location.hasMany(models.Customer, {
+      foreignKey: "delivery_location_id",
+    });
   };
 
   return Location;

@@ -354,7 +354,7 @@ module.exports = async () => {
               description: `Delicious ${categories[
                 i
               ].toLowerCase()} item ${j} at ${branch.name}`,
-              unit_price: (10 + j + i).toFixed(2),
+              unit_price: (j + i).toFixed(2),
               image: randomImage,
               is_active: true,
               created_at: now,
@@ -371,6 +371,7 @@ module.exports = async () => {
         first_name: "John",
         last_name: "Doe",
         email: "nathnaelkeleme88@gmail.com",
+
         password: "12345678",
         profile_picture:
           "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRij6dtiHizH96qpCOe8WeXXP3yLyQJkPdGVg&s",

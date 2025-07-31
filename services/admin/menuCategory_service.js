@@ -9,10 +9,12 @@ const {
   SystemSetting,
   MenuItem,
   CategoryTag,
+  Location,
   sequelize,
 } = require("../../models");
 const throwError = require("../../utils/throwError");
 const { buildPagination } = require("../../utils/pagination");
+const ReviewService = require("./review_service");
 
 const MenuCategoryService = {
   async createMenuCategory({
@@ -355,21 +357,55 @@ const MenuCategoryService = {
     };
   },
 
-  async getRestaurantsByCategoryTagId(categoryTagId, page = 1, limit = 10) {
-    const offset = (page - 1) * limit;
+  async getRestaurantsByCategoryTagId(categoryTagId, query = {}) {
+    const { page, limit, offset, order } = buildPagination(query);
 
-    const { count, rows } = await Restaurant.findAndCountAll({
+    const totalItems = await Restaurant.count({
       distinct: true,
+      include: [
+        {
+          model: MenuCategory,
+          required: true,
+          include: [
+            {
+              model: CategoryTag,
+              where: { id: categoryTagId },
+              required: true,
+              through: { attributes: [] },
+            },
+          ],
+        },
+      ],
+      where: { status: { [Op.in]: ["active"] } },
+    });
+
+    const rows = await Restaurant.findAll({
+      where: { status: { [Op.in]: ["active"] } },
+      offset,
+      limit,
+      order,
       attributes: ["id", "restaurant_name"],
       include: [
+        {
+          model: Branch,
+          required: false,
+          where: { main_branch: true },
+          attributes: ["id", "name"],
+          include: [
+            {
+              model: Location,
+              attributes: ["address", "latitude", "longitude"],
+            },
+          ],
+        },
         {
           model: SystemSetting,
           attributes: ["logo_url", "images"],
           required: false,
         },
-
         {
           model: MenuCategory,
+          required: true,
           attributes: ["id", "name"],
           include: [
             {
@@ -380,23 +416,41 @@ const MenuCategoryService = {
               through: { attributes: [] },
             },
           ],
-          required: true,
         },
       ],
-      where: {
-        status: {
-          [Op.or]: ["active", "trial"],
-        },
-      },
-      offset,
-      limit,
     });
 
+    const restaurants = await Promise.all(
+      rows.map(async (r) => {
+        const plain = r.get({ plain: true });
+        plain.MenuCategories = plain.MenuCategories?.map((cat) => ({
+          id: cat.id,
+          name: cat.name,
+        }));
+
+        plain.location =
+          (plain.Branches && plain.Branches[0]?.Location) || null;
+        delete plain.Branches;
+
+        const { rating, total_reviews } =
+          await ReviewService.calculateRestaurantRating(plain.id);
+        plain.rating = rating;
+        plain.total_reviews = total_reviews;
+
+        return plain;
+      })
+    );
+
+    const totalPages = Math.ceil(totalItems / limit);
+
     return {
-      totalItems: count,
-      totalPages: Math.ceil(count / limit),
-      currentPage: page,
-      data: rows,
+      restaurants,
+      pagination: {
+        totalItems,
+        totalPages,
+        currentPage: page,
+        pageSize: limit,
+      },
     };
   },
 };

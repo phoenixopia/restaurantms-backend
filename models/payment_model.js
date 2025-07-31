@@ -53,15 +53,11 @@ module.exports = (sequelize, DataTypes) => {
       },
 
       payment_method: {
-        type: DataTypes.ENUM("cash", "telebirr", "CBE", "arifpay", "other"),
-        allowNull: false,
+        type: DataTypes.STRING(20),
+        allowNull: true,
       },
       transaction_id: {
         type: DataTypes.STRING,
-      },
-      session_id: {
-        type: DataTypes.STRING,
-        allowNull: true,
       },
 
       // promotion_id: {
