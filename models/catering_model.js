@@ -23,9 +23,11 @@ module.exports = (sequelize, DataTypes) => {
       },
       description: {
         type: DataTypes.TEXT,
+        allowNull: false,
       },
       menu_summary: {
         type: DataTypes.TEXT,
+        allowNull: false,
       },
       base_price: {
         type: DataTypes.DECIMAL(10, 2),
@@ -33,12 +35,15 @@ module.exports = (sequelize, DataTypes) => {
       },
       min_guest_count: {
         type: DataTypes.INTEGER,
+        allowNull: false,
       },
       max_guest_count: {
         type: DataTypes.INTEGER,
+        allowNull: false,
       },
       min_advance_days: {
         type: DataTypes.INTEGER,
+        allowNull: false,
       },
       prepayment_percentage: {
         type: DataTypes.DECIMAL(5, 2),
@@ -65,6 +70,7 @@ module.exports = (sequelize, DataTypes) => {
 
       contact_person: {
         type: DataTypes.STRING(100),
+        allowNull: false,
       },
       contact_phone: {
         type: DataTypes.STRING(50),

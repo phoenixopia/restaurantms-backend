@@ -18,6 +18,8 @@ module.exports = async () => {
     const MenuCategory = sequelize.models.MenuCategory;
     const MenuItem = sequelize.models.MenuItem;
     const CategoryTag = sequelize.models.CategoryTag;
+    const Catering = sequelize.models.Catering;
+    const ImageGallery = sequelize.models.ImageGallery;
 
     const now = new Date();
 
@@ -474,6 +476,144 @@ module.exports = async () => {
         email_verified_at: now,
       },
     ];
+
+    const restaurantImageUrls = [
+      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTnZdUss5DhALhw9_I6q3XotKqA7I2_GV3CzA&s",
+      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSsdlgoziREgZGNsvL0Gnxc0ag3dBMlG9wb8g&s",
+      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTpRZO-5Ct5Zx_Hh68fvlfBaqxEcSh70_hm1A&s",
+      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQi5OEZ_MIeFPifX40L_zfayS0OhITE7c4X9Q&s",
+      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSfe89IXX1erbQI0gzMXE6MbTWEMz-G2WN8PQ&s",
+      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcStK6B8CiXi7LR1taneiIiM4bR2XOHANBYIjw&s",
+      "https://images.unsplash.com/photo-1544025162-d76694265947?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2h8MTZ8fGZvb2R8ZW58MHx8MHx8&auto=format&fit=crop&w=800&q=60",
+      "https://images.unsplash.com/photo-1563379926898-05f4575a45d8?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2h8MTh8fGZvb2R8ZW58MHx8MHx8&auto=format&fit=crop&w=800&q=60",
+      "https://images.unsplash.com/photo-1563805042-7684c019e1cb?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2h8MjB8fGZvb2R8ZW58MHx8MHx8&auto=format&fit=crop&w=800&q=60",
+      "https://images.unsplash.com/photo-1565299507177-b0ac66763828?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2h8MjJ8fGZvb2R8ZW58MHx8MHx8&auto=format&fit=crop&w=800&q=60",
+      "https://images.unsplash.com/photo-1484723091739-30a097e8f929?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2h8MjV8fGZvb2R8ZW58MHx8MHx8&auto=format&fit=crop&w=800&q=60",
+      "https://images.unsplash.com/photo-1490645935967-10de6ba17061?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2h8Mjl8fGZvb2R8ZW58MHx8MHx8&auto=format&fit=crop&w=800&q=60",
+      "https://images.unsplash.com/photo-1504674900247-0877df9cc836?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2h8MzB8fGZvb2R8ZW58MHx8MHx8&auto=format&fit=crop&w=800&q=60",
+      "https://images.unsplash.com/photo-1547592180-85f173990554?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2h8MzN8fGZvb2R8ZW58MHx8MHx8&auto=format&fit=crop&w=800&q=60",
+      "https://images.unsplash.com/photo-1473093295043-cdd812d0e601?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2h8Mzl8fGZvb2R8ZW58MHx8MHx8&auto=format&fit=crop&w=800&q=60",
+      "https://images.unsplash.com/photo-1544025162-d76694265947?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2h8NDB8fGZvb2R8ZW58MHx8MHx8&auto=format&fit=crop&w=800&q=60",
+      "https://images.unsplash.com/photo-1504754524776-8f4f37790ca0?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2h8NDJ8fGZvb2R8ZW58MHx8MHx8&auto=format&fit=crop&w=800&q=60",
+      "https://images.unsplash.com/photo-1481070555726-e2fe8357725c?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2h8NDV8fGZvb2R8ZW58MHx8MHx8&auto=format&fit=crop&w=800&q=60",
+      "https://images.unsplash.com/photo-1490645935967-10de6ba17061?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2h8NDh8fGZvb2R8ZW58MHx8MHx8&auto=format&fit=crop&w=800&q=60",
+      "https://images.unsplash.com/photo-1504674900247-0877df9cc836?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2h8NTB8fGZvb2R8ZW58MHx8MHx8&auto=format&fit=crop&w=800&q=60",
+    ];
+
+    const cateringCoverImages = [
+      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS9OvcIK_jAgWsC61ypc8X6bhTXU4oTb_Kn-Q&s",
+      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSJluVEGYWiMwbJ15E1P26vWH-DOAoX2eUCpA&s",
+      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTfkJJt5-5EerqiWeIJkqteYMBEJgq7hR6GOg&s",
+      "https://marketplace.canva.com/EAFhZhahkPs/1/0/1131w/canva-saddle-brown-professional-catering-menu-lQdnJVdstc4.jpg",
+      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTezKYC3RZxneUxTYXThzS1x7EfrXmt3JM0Gw&s",
+    ];
+
+    const allRestaurants = await Restaurant.findAll();
+
+    for (const restaurant of allRestaurants) {
+      const galleryImages = [];
+
+      for (let i = 0; i < 20; i++) {
+        const randomImageUrl =
+          restaurantImageUrls[
+            Math.floor(Math.random() * restaurantImageUrls.length)
+          ];
+        const image = await ImageGallery.create({
+          id: uuidv4(),
+          restaurant_id: restaurant.id,
+          image_url: randomImageUrl,
+          caption: `Beautiful ${restaurant.restaurant_name} setting ${i + 1}`,
+          created_at: now,
+          updated_at: now,
+        });
+        galleryImages.push(image);
+      }
+
+      const cateringTitles = [
+        "Premium Wedding Package",
+        "Corporate Event Special",
+        "Birthday Celebration Package",
+        "Anniversary Dinner Service",
+        "Graduation Party Package",
+        "Holiday Gathering Special",
+        "Family Reunion Package",
+        "Cocktail Reception Service",
+        "Buffet Style Gathering",
+        "Formal Sit-down Dinner",
+        "Casual Get-together Package",
+        "Themed Party Service",
+        "Gourmet Tasting Menu",
+        "Brunch Celebration Package",
+        "Outdoor Picnic Service",
+      ];
+
+      const menuDescriptions = [
+        "Three-course meal with appetizers, main dishes, and desserts",
+        "Buffet style with a variety of international cuisines",
+        "Family-style serving with shared plates",
+        "Plated dinner with multiple entree options",
+        "Interactive food stations with chefs",
+        "Cocktail party with passed hors d'oeuvres",
+        "BBQ style with grilled meats and sides",
+        "Vegetarian and vegan focused menu",
+        "Seafood extravaganza with fresh catches",
+        "Steakhouse experience with premium cuts",
+        "Italian themed with pasta and antipasti",
+        "Asian fusion with sushi and stir-fry",
+        "Mediterranean mezze and grilled dishes",
+        "American classics with modern twists",
+        "Farm-to-table seasonal offerings",
+      ];
+
+      for (let i = 0; i < 15; i++) {
+        const shuffledGallery = [...galleryImages].sort(
+          () => 0.5 - Math.random()
+        );
+        const selectedGalleryImages = shuffledGallery.slice(
+          0,
+          Math.floor(Math.random() * 3) + 3
+        );
+        const galleryImageIds = selectedGalleryImages.map((img) => img.id);
+
+        const randomCoverImage =
+          cateringCoverImages[
+            Math.floor(Math.random() * cateringCoverImages.length)
+          ];
+
+        await Catering.create({
+          id: uuidv4(),
+          restaurant_id: restaurant.id,
+          title: cateringTitles[i],
+          description: `Our premium catering service for ${cateringTitles[
+            i
+          ].toLowerCase()} perfect for your special occasion at ${
+            restaurant.restaurant_name
+          }. Our expert chefs will prepare delicious meals tailored to your event needs.`,
+          menu_summary: menuDescriptions[i],
+          base_price: (Math.random() * 2000 + 500).toFixed(2), // $500-$2500
+          min_guest_count: Math.floor(Math.random() * 20) + 10, // 10-30
+          max_guest_count: Math.floor(Math.random() * 100) + 50, // 50-150
+          min_advance_days: Math.floor(Math.random() * 7) + 3, // 3-10 days
+          prepayment_percentage: (Math.random() * 30 + 20).toFixed(2), // 20-50%
+          include_service: Math.random() > 0.5,
+          delivery_available: Math.random() > 0.3,
+          service_area_description:
+            "Available within 30 miles of our restaurant. Additional fees may apply for locations beyond 15 miles.",
+          cover_image_url: randomCoverImage,
+          gallery_image_ids: galleryImageIds,
+          contact_person: `Event Manager ${i + 1}`,
+          contact_phone: `+1${Math.floor(
+            1000000000 + Math.random() * 9000000000
+          )}`,
+          contact_email: `events${i + 1}@${restaurant.restaurant_name
+            .toLowerCase()
+            .replace(/\s/g, "")}.com`,
+          is_active: true,
+          created_at: now,
+          updated_at: now,
+        });
+      }
+    }
 
     const customers = [];
     for (const data of customerData) {
