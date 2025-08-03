@@ -1,7 +1,7 @@
 "use strict";
 
 const TwoFAService = require("../../services/customer/twoFA_service");
-const catchAsync = require("../../middleware/asyncHandler");
+const catchAsync = require("../../utils/asyncHandler");
 const { success } = require("../../utils/apiResponse");
 
 exports.setup2FA = catchAsync(async (req, res) => {

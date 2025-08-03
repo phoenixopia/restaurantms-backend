@@ -1,4 +1,4 @@
-const asyncHandler = require("../../middleware/asyncHandler");
+const asyncHandler = require("../../utils/asyncHandler");
 const AuthService = require("../../services/customer/auth_service");
 const { success } = require("../../utils/apiResponse");
 const { sendTokenResponse } = require("../../utils/sendTokenResponse");

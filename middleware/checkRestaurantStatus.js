@@ -20,7 +20,7 @@ exports.checkRestaurantStatus = async (req, res, next) => {
       });
     }
 
-    if (["active", "trial"].includes(restaurant.status)) {
+    if (["active"].includes(restaurant.status)) {
       req.restaurant = restaurant;
       return next();
     }

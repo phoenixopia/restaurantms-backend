@@ -2,7 +2,7 @@ const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
 
-const VIDEO_DIR = path.resolve(__dirname, "../../uploads/videos");
+const VIDEO_DIR = path.resolve(__dirname, "../uploads/videos");
 
 const videoStorage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, VIDEO_DIR),

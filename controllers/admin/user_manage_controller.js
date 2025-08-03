@@ -1,5 +1,5 @@
 const UserService = require("../../services/admin/manageUser_service");
-const asyncHandler = require("../../middleware/asyncHandler");
+const asyncHandler = require("../../utils/asyncHandler");
 const { success } = require("../../utils/apiResponse");
 
 exports.createRestaurantAdmin = asyncHandler(async (req, res) => {

@@ -1,4 +1,4 @@
-const asyncHandler = require("../../middleware/asyncHandler");
+const asyncHandler = require("../../utils/asyncHandler");
 const ProfileService = require("../../services/customer/profile_service");
 const { success } = require("../../utils/apiResponse");
 

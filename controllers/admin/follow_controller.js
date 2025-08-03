@@ -1,4 +1,4 @@
-const asyncHandler = require("../../middleware/asyncHandler");
+const asyncHandler = require("../../utils/asyncHandler");
 const FollowService = require("../../services/admin/follow_service");
 const { success } = require("../../utils/apiResponse");
 

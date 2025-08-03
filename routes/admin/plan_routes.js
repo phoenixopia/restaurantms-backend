@@ -11,20 +11,18 @@ const validateRequest = require("../../middleware/validateRequest");
 
 const router = express.Router();
 
-// ---------- PLAN ROUTES ----------
+router.get("/get-all", PlanController.listPlans);
 
-// List all plans (paginated)
-router.get("/", PlanController.listPlans);
+// for landing page
+router.get("/get-grouped-plan", PlanController.listGroupedPlans);
 
-// Get plan by name and billing cycle
-router.get("/by-name", PlanController.getPlanByName);
+router.get("/search-plan", PlanController.getPlanByName);
 
-// Get a plan by ID
-router.get("/:id", PlanController.getPlanById);
+router.get("/get-byId/:id", PlanController.getPlanById);
 
 // Create a new plan
 router.post(
-  "/create",
+  "/create-plan",
   protect("user"),
   authorize("super_admin"),
   createPlanValidator,
@@ -34,7 +32,7 @@ router.post(
 
 // Update a plan and its limits
 router.put(
-  "/update/:id",
+  "/update-plan/:id",
   protect("user"),
   authorize("super_admin"),
   updatePlanValidator,
@@ -44,7 +42,7 @@ router.put(
 
 // Delete a plan and its limits
 router.delete(
-  "/delete/:id",
+  "/delete-plan/:id",
   protect("user"),
   authorize("super_admin"),
   PlanController.deletePlan
@@ -54,7 +52,7 @@ router.delete(
 
 // List all plan limits (without assigned plans)
 router.get(
-  "/plan-limit",
+  "/get-all-plan-limit",
   protect("user"),
   authorize("super_admin"),
   PlanController.listPlanLimits
@@ -62,7 +60,7 @@ router.get(
 
 // List all plan limits with assigned plans
 router.get(
-  "/plan-limit/with-plans",
+  "/plan-limit-with-plan",
   protect("user"),
   authorize("super_admin"),
   PlanController.listPlanLimitsWithPlans
@@ -70,7 +68,7 @@ router.get(
 
 // Create and assign a plan limit to multiple plans
 router.post(
-  "/plan-limit/create-and-assign",
+  "/create-and-assign/plan-limit",
   protect("user"),
   authorize("super_admin"),
   createAndAssignPlanLimitValidator,

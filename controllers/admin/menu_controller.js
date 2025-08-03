@@ -1,6 +1,6 @@
 "use strict";
 
-const asyncHandler = require("../../middleware/asyncHandler");
+const asyncHandler = require("../../utils/asyncHandler");
 const MenuService = require("../../services/admin/menu_service");
 const MenuCategoryService = require("../../services/admin/menuCategory_service");
 const MenuItemService = require("../../services/admin/menuItem_service");

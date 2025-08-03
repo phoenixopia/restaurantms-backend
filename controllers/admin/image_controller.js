@@ -1,5 +1,5 @@
 const ImageGalleryService = require("../../services/admin/image_gallery_serivce");
-const asyncHandler = require("../../middleware/asyncHandler");
+const asyncHandler = require("../../utils/asyncHandler");
 const { success } = require("../../utils/apiResponse");
 
 exports.uploadImageGalleryFiles = asyncHandler(async (req, res) => {
@@ -27,7 +27,7 @@ exports.getImageGalleryById = asyncHandler(async (req, res) => {
 
   return success(res, "Image fetched successfully", image);
 });
-
+// what is the
 exports.listImageGallery = asyncHandler(async (req, res) => {
   const restaurantId = req.user.restaurant_id;
   const page = req.query.page || 1;

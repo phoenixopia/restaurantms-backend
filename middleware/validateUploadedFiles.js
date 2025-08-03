@@ -10,24 +10,31 @@ exports.validateUploadedFiles = (type) => {
       const { logo, images } = req.files || {};
 
       if (logo) {
-        const logoFile = logo[0];
-        if (!logoFile.mimetype.startsWith("image/")) {
-          errors.push("Logo must be an image file");
-        }
-        if (logoFile.size > 3 * 1024 * 1024) {
-          errors.push("Logo must be less than 3MB");
+        if (logo.length > 1) {
+          errors.push("Only one logo is allowed");
+        } else {
+          const logoFile = logo[0];
+          if (!logoFile.mimetype.startsWith("image/")) {
+            errors.push("Logo must be an image file");
+          }
+          if (logoFile.size > 5 * 1024 * 1024) {
+            errors.push("Logo must be less than 5MB");
+          }
         }
       }
 
       if (images) {
-        images.forEach((img, index) => {
+        if (images.length > 1) {
+          errors.push("Only one image is allowed");
+        } else {
+          const img = images[0];
           if (!img.mimetype.startsWith("image/")) {
-            errors.push(`Image ${index + 1} must be an image file`);
+            errors.push("Image must be an image file");
           }
           if (img.size > 5 * 1024 * 1024) {
-            errors.push(`Image ${index + 1} must be less than 5MB`);
+            errors.push("Image must be less than 5MB");
           }
-        });
+        }
       }
     }
 
@@ -52,8 +59,8 @@ exports.validateUploadedFiles = (type) => {
         errors.push("Receipt image must be an image file");
       }
 
-      if (image.size > 2 * 1024 * 1024) {
-        errors.push("Receipt image must be less than 3MB");
+      if (image.size > 5 * 1024 * 1024) {
+        errors.push("Receipt image must be less than 5MB");
       }
     }
 

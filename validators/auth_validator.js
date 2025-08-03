@@ -19,8 +19,8 @@ exports.registerValidator = [
     .notEmpty()
     .withMessage("Signup method is required.")
     .bail()
-    .isIn(["email", "phone"])
-    .withMessage("Signup method must be 'email' or 'phone'"),
+    .isIn(["email", "phone_number"])
+    .withMessage("Signup method must be 'email' or 'phone_number'"),
 
   body("emailOrPhone")
     .notEmpty()
@@ -45,9 +45,8 @@ exports.registerValidator = [
     }),
 
   body("password")
-    .if(body("signupMethod").equals("email"))
     .notEmpty()
-    .withMessage("Password is required for email signup.")
+    .withMessage("Password is required")
     .bail()
     .isLength({ min: 6 })
     .withMessage("Password must be at least 6 characters."),

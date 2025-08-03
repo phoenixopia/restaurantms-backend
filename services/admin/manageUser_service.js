@@ -14,6 +14,7 @@ const {
 } = require("../../models");
 const throwError = require("../../utils/throwError");
 const { sendUserCredentialsEmail } = require("../../utils/sendEmail");
+const { sendSMS } = require("../../utils/sendSMS");
 const { buildPagination } = require("../../utils/pagination");
 
 const UserService = {
@@ -32,8 +33,10 @@ const UserService = {
 
       if (!first_name || !last_name || !password)
         throwError("Missing required fields", 400);
+
       if (creatorMode === "email" && !email)
         throwError("Email is required for email mode", 400);
+
       if (creatorMode === "phone" && !phone_number)
         throwError("Phone number is required for phone mode", 400);
 
@@ -90,6 +93,15 @@ const UserService = {
           );
         } catch (e) {
           console.error("Email send failed:", e);
+        }
+      } else {
+        try {
+          await sendSMS(
+            phone_number,
+            `Hi ${first_name}, welcome to Phoenixopia!\nLogin with: ${phone_number}\nPassword: ${password}\nPlease change your password after login.`
+          );
+        } catch (error) {
+          console.error("SMS send failed:", error);
         }
       }
 
@@ -195,8 +207,11 @@ const UserService = {
 
       const whereClause =
         creatorMode === "email" ? { email } : { phone_number };
-      if (await User.findOne({ where: whereClause, transaction: t }))
-        throwError(`User with this ${creatorMode} already exists`, 409);
+      if (await User.findOne({ where: whereClause, transaction: t })) {
+        const conflictField =
+          creatorMode === "email" ? "email" : "phone number";
+        throwError(`User with this ${conflictField} already exists`, 409);
+      }
 
       const now = new Date();
 
@@ -229,6 +244,15 @@ const UserService = {
           );
         } catch (e) {
           console.error("Email send failed:", e);
+        }
+      } else {
+        try {
+          await sendSMS(
+            phone_number,
+            `Hi ${first_name}, welcome to Phoenixopia!\nLogin with: ${phone_number}\nPassword: ${password}\nPlease change your password after login.`
+          );
+        } catch (error) {
+          console.error("SMS send failed:", error);
         }
       }
 

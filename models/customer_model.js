@@ -59,7 +59,6 @@ module.exports = (sequelize, DataTypes) => {
       },
       social_provider: {
         type: DataTypes.ENUM("none", "google", "facebook"),
-        allowNull: true,
         defaultValue: "none",
       },
       social_provider_id: {

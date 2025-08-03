@@ -1,5 +1,6 @@
 const {
   Catering,
+  CateringRequest,
   Restaurant,
   Branch,
   Location,
@@ -332,6 +333,95 @@ const CateringService = {
       currentPage: page,
       caterings: enriched,
     };
+  },
+
+  async createCateringRequest({ customerId, data }) {
+    const {
+      catering_id,
+      event_type,
+      guest_count,
+      delivery_location,
+      event_date,
+      notes,
+    } = data;
+    const catering = await Catering.findByPk(catering_id);
+    if (!catering) throwError("Catering not found", 404);
+
+    if (delivery_location && !catering.delivery_available) {
+      throwError("This catering service does not support delivery", 400);
+    }
+
+    if (guest_count !== null && guest_count !== undefined) {
+      if (guest_count < catering.min_guest_count) {
+        throwError(
+          `Guest count is below the minimum required (${catering.min_guest_count})`,
+          400
+        );
+      }
+
+      if (guest_count > catering.max_guest_count) {
+        throwError(
+          `Guest count exceeds the maximum allowed (${catering.max_guest_count})`,
+          400
+        );
+      }
+    }
+
+    const request = await CateringRequest.create({
+      catering_id,
+      customer_id: customerId,
+      event_type,
+      guest_count,
+      delivery_location: delivery_location || null,
+      event_date,
+      notes,
+    });
+
+    return request;
+  },
+
+  async respondToCateringRequest(
+    requestId,
+    userId,
+    role,
+    restaurant_id,
+    branch_id,
+    status
+  ) {
+    const allowedStatuses = ["approved", "rejected"];
+    if (!allowedStatuses.includes(status)) {
+      throwError(
+        "Invalid status. Must be either 'approved' or 'rejected'",
+        400
+      );
+    }
+
+    const request = await CateringRequest.findByPk(requestId);
+    if (!request) throwError("Catering request not found", 404);
+
+    const catering = await Catering.findByPk(request.catering_id);
+    if (!catering) throwError("Associated catering not found", 404);
+
+    let allowedRestaurantId = null;
+
+    if (role === "restaurant_admin") {
+      allowedRestaurantId = restaurant_id;
+    } else if (role === "staff" && branch_id) {
+      const branch = await Branch.findByPk(branch_id);
+      if (!branch) throwError("Branch not found", 404);
+      allowedRestaurantId = branch.restaurant_id;
+    } else {
+      throwError("Unauthorized role to respond to catering requests", 403);
+    }
+
+    if (catering.restaurant_id !== allowedRestaurantId) {
+      throwError("Access denied: You cannot manage this catering request", 403);
+    }
+
+    request.status = status;
+    await request.save();
+
+    return request;
   },
 };
 

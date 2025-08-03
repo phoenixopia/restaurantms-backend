@@ -24,21 +24,6 @@ module.exports = (sequelize, DataTypes) => {
       value: {
         type: DataTypes.STRING,
         allowNull: false,
-        get() {
-          const rawValue = this.getDataValue("value");
-          const type = this.getDataValue("data_type");
-
-          if (type === "number") {
-            return Number(rawValue);
-          } else if (type === "boolean") {
-            if (rawValue === "true" || rawValue === "1") return true;
-            if (rawValue === "false" || rawValue === "0") return false;
-
-            return Boolean(rawValue);
-          } else {
-            return rawValue;
-          }
-        },
       },
 
       data_type: {

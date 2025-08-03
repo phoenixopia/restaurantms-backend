@@ -1,5 +1,5 @@
 const VideoService = require("../../services/admin/video_service");
-const asyncHandler = require("../../middleware/asyncHandler");
+const asyncHandler = require("../../utils/asyncHandler");
 const { success } = require("../../utils/apiResponse");
 
 exports.uploadVideo = asyncHandler(async (req, res) => {

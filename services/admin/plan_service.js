@@ -5,6 +5,8 @@ const throwError = require("../../utils/throwError");
 
 const PlanService = {
   async listPlans({ page = 1, limit = 10 }) {
+    page = Number(page);
+    limit = Number(limit);
     const offset = (page - 1) * limit;
 
     const { count, rows } = await Plan.findAndCountAll({
@@ -23,35 +25,236 @@ const PlanService = {
       offset,
     });
 
+    const transformedPlans = rows.map((plan) => {
+      const planJson = plan.toJSON();
+      planJson.price = Number(planJson.price);
+
+      const orderedPlanLimits = planJson.PlanLimits.map((limit) => {
+        let castValue;
+
+        if (limit.data_type === "number") {
+          castValue = Number(limit.value);
+        } else if (limit.data_type === "boolean") {
+          const v = limit.value;
+          if (v === "true" || v === "1") castValue = true;
+          else if (v === "false" || v === "0") castValue = false;
+          else castValue = Boolean(v);
+        } else {
+          castValue = limit.value;
+        }
+
+        return {
+          id: limit.id,
+          plan_id: limit.plan_id,
+          key: limit.key,
+          value: castValue,
+          data_type: limit.data_type,
+          description: limit.description,
+        };
+      });
+
+      return {
+        ...planJson,
+        PlanLimits: orderedPlanLimits,
+      };
+    });
+
     return {
       total: count,
       page,
       limit,
       totalPages: Math.ceil(count / limit),
-      plans: rows,
+      plans: transformedPlans,
     };
+  },
+
+  async listPlansGroupedByNameAndDuration() {
+    const plans = await Plan.findAll({
+      attributes: {
+        exclude: ["created_at", "updated_at", "createdAt", "updatedAt"],
+      },
+      include: [
+        {
+          model: PlanLimit,
+          attributes: {
+            exclude: ["created_at", "updated_at", "createdAt", "updatedAt"],
+          },
+        },
+      ],
+    });
+
+    const result = {};
+
+    plans.forEach((plan) => {
+      const planJson = plan.toJSON();
+
+      planJson.price = Number(planJson.price);
+
+      const transformedLimits = planJson.PlanLimits.map((limit) => {
+        let castValue;
+
+        if (limit.data_type === "number") {
+          castValue = Number(limit.value);
+        } else if (limit.data_type === "boolean") {
+          const v = limit.value;
+          if (v === "true" || v === "1") castValue = true;
+          else if (v === "false" || v === "0") castValue = false;
+          else castValue = Boolean(v);
+        } else {
+          castValue = limit.value;
+        }
+
+        return {
+          id: limit.id,
+          plan_id: limit.plan_id,
+          key: limit.key,
+          value: castValue,
+          data_type: limit.data_type,
+          description: limit.description,
+        };
+      });
+
+      const { name, billing_cycle } = planJson;
+
+      if (!result[name]) {
+        result[name] = {};
+      }
+
+      result[name][billing_cycle] = {
+        ...planJson,
+        PlanLimits: transformedLimits,
+      };
+    });
+
+    return result;
   },
 
   async getById(id) {
     const plan = await Plan.findByPk(id, {
-      include: [{ model: PlanLimit }],
+      attributes: {
+        exclude: ["created_at", "updated_at", "createdAt", "updatedAt"],
+      },
+      include: [
+        {
+          model: PlanLimit,
+          attributes: {
+            exclude: ["created_at", "updated_at", "createdAt", "updatedAt"],
+          },
+        },
+      ],
     });
 
     if (!plan) throwError("Plan not found", 404);
-    return plan;
+
+    const planJson = plan.toJSON();
+    planJson.price = Number(planJson.price);
+
+    const orderedPlanLimits = planJson.PlanLimits.map((limit) => {
+      let castValue;
+
+      if (limit.data_type === "number") {
+        castValue = Number(limit.value);
+      } else if (limit.data_type === "boolean") {
+        const v = limit.value;
+        if (v === "true" || v === "1") castValue = true;
+        else if (v === "false" || v === "0") castValue = false;
+        else castValue = Boolean(v);
+      } else {
+        castValue = limit.value;
+      }
+
+      return {
+        id: limit.id,
+        plan_id: limit.plan_id,
+        key: limit.key,
+        value: castValue,
+        data_type: limit.data_type,
+        description: limit.description,
+      };
+    });
+
+    return {
+      ...planJson,
+      PlanLimits: orderedPlanLimits,
+    };
   },
 
-  async getByName(name, billing_cycle) {
-    const plan = await Plan.findOne({
-      where: {
-        name: { [Op.iLike]: `%${name}%` },
-        ...(billing_cycle && { billing_cycle }),
+  async getByFilters(filters) {
+    const where = {};
+
+    if (filters.name) {
+      where.name = { [Op.iLike]: `%${filters.name}%` };
+    }
+
+    if (filters.billing_cycle) {
+      where.billing_cycle = filters.billing_cycle;
+    }
+
+    const page = parseInt(filters.page) || 1;
+    const limit = parseInt(filters.limit) || 10;
+    const offset = (page - 1) * limit;
+
+    const { count, rows } = await Plan.findAndCountAll({
+      where,
+
+      limit,
+      offset,
+      include: [
+        {
+          model: PlanLimit,
+          required: false,
+          attributes: {
+            exclude: ["created_at", "updated_at", "createdAt", "updatedAt"],
+          },
+        },
+      ],
+      attributes: {
+        exclude: ["created_at", "updated_at", "createdAt", "updatedAt"],
       },
-      include: [{ model: PlanLimit }],
     });
 
-    if (!plan) throwError("Plan not found", 404);
-    return plan;
+    if (!rows.length) throwError("No plans found", 404);
+
+    const transformedPlans = rows.map((plan) => {
+      const planJson = plan.toJSON();
+      planJson.price = Number(planJson.price);
+
+      const limits = planJson.PlanLimits.map((limit) => {
+        let castValue;
+        if (limit.data_type === "number") {
+          castValue = Number(limit.value);
+        } else if (limit.data_type === "boolean") {
+          const v = limit.value;
+          if (v === "true" || v === "1") castValue = true;
+          else if (v === "false" || v === "0") castValue = false;
+          else castValue = Boolean(v);
+        } else {
+          castValue = limit.value;
+        }
+
+        return {
+          id: limit.id,
+          plan_id: limit.plan_id,
+          key: limit.key,
+          value: castValue,
+          data_type: limit.data_type,
+          description: limit.description,
+        };
+      });
+
+      return {
+        ...planJson,
+        PlanLimits: limits,
+      };
+    });
+
+    return {
+      total: count,
+      page,
+      limit,
+      totalPages: Math.ceil(count / limit),
+      plans: transformedPlans,
+    };
   },
 
   async create(data) {
@@ -61,7 +264,7 @@ const PlanService = {
 
       const exists = await Plan.findOne({
         where: {
-          name: formattedName,
+          name: { [Op.iLike]: formattedName },
           billing_cycle: data.billing_cycle,
         },
         transaction: t,
@@ -95,7 +298,49 @@ const PlanService = {
       }
 
       await t.commit();
-      return await Plan.findByPk(plan.id, { include: [PlanLimit] });
+      const newPlan = await Plan.findByPk(plan.id, {
+        attributes: {
+          exclude: ["created_at", "updated_at", "createdAt", "updatedAt"],
+        },
+        include: [
+          {
+            model: PlanLimit,
+            attributes: {
+              exclude: ["created_at", "updated_at", "createdAt", "updatedAt"],
+            },
+          },
+        ],
+      });
+
+      const planJson = newPlan.toJSON();
+
+      const transformedLimits = planJson.PlanLimits.map((limit) => {
+        let castValue;
+        if (limit.data_type === "number") {
+          castValue = Number(limit.value);
+        } else if (limit.data_type === "boolean") {
+          const v = limit.value;
+          if (v === "true" || v === "1") castValue = true;
+          else if (v === "false" || v === "0") castValue = false;
+          else castValue = Boolean(v);
+        } else {
+          castValue = limit.value;
+        }
+
+        return {
+          id: limit.id,
+          plan_id: limit.plan_id,
+          key: limit.key,
+          value: castValue,
+          data_type: limit.data_type,
+          description: limit.description,
+        };
+      });
+
+      return {
+        ...planJson,
+        PlanLimits: transformedLimits,
+      };
     } catch (err) {
       await t.rollback();
       throw err;
@@ -176,7 +421,50 @@ const PlanService = {
       }
 
       await t.commit();
-      return await Plan.findByPk(id, { include: [PlanLimit] });
+
+      const updatedPlan = await Plan.findByPk(id, {
+        attributes: {
+          exclude: ["created_at", "updated_at", "createdAt", "updatedAt"],
+        },
+        include: [
+          {
+            model: PlanLimit,
+            attributes: {
+              exclude: ["created_at", "updated_at", "createdAt", "updatedAt"],
+            },
+          },
+        ],
+      });
+
+      const planJson = updatedPlan.toJSON();
+
+      const transformedLimits = planJson.PlanLimits.map((limit) => {
+        let castValue;
+        if (limit.data_type === "number") {
+          castValue = Number(limit.value);
+        } else if (limit.data_type === "boolean") {
+          const v = limit.value;
+          if (v === "true" || v === "1") castValue = true;
+          else if (v === "false" || v === "0") castValue = false;
+          else castValue = Boolean(v);
+        } else {
+          castValue = limit.value;
+        }
+
+        return {
+          id: limit.id,
+          plan_id: limit.plan_id,
+          key: limit.key,
+          value: castValue,
+          data_type: limit.data_type,
+          description: limit.description,
+        };
+      });
+
+      return {
+        ...planJson,
+        PlanLimits: transformedLimits,
+      };
     } catch (err) {
       await t.rollback();
       throw err;
@@ -210,12 +498,37 @@ const PlanService = {
       limit,
     });
 
+    const transformedLimits = rows.map((limit) => {
+      const limitJson = limit.toJSON();
+
+      let castValue;
+      if (limitJson.data_type === "number") {
+        castValue = Number(limitJson.value);
+      } else if (limitJson.data_type === "boolean") {
+        const v = limitJson.value;
+        if (v === "true" || v === "1") castValue = true;
+        else if (v === "false" || v === "0") castValue = false;
+        else castValue = Boolean(v);
+      } else {
+        castValue = limitJson.value;
+      }
+
+      return {
+        id: limitJson.id,
+        plan_id: limitJson.plan_id,
+        key: limitJson.key,
+        value: castValue,
+        data_type: limitJson.data_type,
+        description: limitJson.description,
+      };
+    });
+
     return {
       total: count,
       page: Number(page),
       limit: Number(limit),
       totalPages: Math.ceil(count / limit),
-      plan_limits: rows,
+      plan_limits: transformedLimits,
     };
   },
 
@@ -238,12 +551,38 @@ const PlanService = {
       limit,
     });
 
+    const transformedLimits = rows.map((limit) => {
+      const limitJson = limit.toJSON();
+
+      let castValue;
+      if (limitJson.data_type === "number") {
+        castValue = Number(limitJson.value);
+      } else if (limitJson.data_type === "boolean") {
+        const v = limitJson.value;
+        if (v === "true" || v === "1") castValue = true;
+        else if (v === "false" || v === "0") castValue = false;
+        else castValue = Boolean(v);
+      } else {
+        castValue = limitJson.value;
+      }
+
+      return {
+        id: limitJson.id,
+        plan_id: limitJson.plan_id,
+        key: limitJson.key,
+        value: castValue,
+        data_type: limitJson.data_type,
+        description: limitJson.description,
+        plan: limitJson.Plan,
+      };
+    });
+
     return {
       total: count,
       page: Number(page),
       limit: Number(limit),
       totalPages: Math.ceil(count / limit),
-      plan_limits: rows,
+      plan_limits: transformedLimits,
     };
   },
 
@@ -254,7 +593,11 @@ const PlanService = {
 
     try {
       const plans = await Plan.findAll({
-        where: { id: plan_ids },
+        where: {
+          id: {
+            [Op.in]: plan_ids,
+          },
+        },
         include: [{ model: PlanLimit }],
         transaction: t,
       });
@@ -268,10 +611,8 @@ const PlanService = {
       );
 
       if (conflictingPlans.length > 0) {
-        const conflictNames = conflictingPlans
-          .map((p) => `${p.name} (${p.id})`)
-          .join(", ");
-        throwError(`The key "${key}" already exists in: ${conflictNames}`, 400);
+        const conflictNames = conflictingPlans.map((p) => p.name).join(", ");
+        throwError(`The key ${key} already exists in: ${conflictNames}`, 400);
       }
 
       const createdLimits = [];

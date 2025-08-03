@@ -13,17 +13,22 @@ const {
 const { OAuth2Client } = require("google-auth-library");
 const { sendTokenResponse } = require("../../utils/sendTokenResponse");
 const { assignRoleToUser } = require("../../utils/roleUtils");
+const { sendSMS } = require("../../utils/sendSMS");
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 const AuthService = {
-  async register(
-    { firstName, lastName, emailOrPhone, password, signupMethod },
-    urlPath
-  ) {
+  async register({
+    firstName,
+    lastName,
+    emailOrPhone,
+    password,
+    signupMethod,
+  }) {
     const t = await sequelize.transaction();
     try {
-      const identifierField = signupMethod === "email" ? "email" : "phone";
+      const identifierField =
+        signupMethod === "email" ? "email" : "phone_number";
 
       const existingCustomer = await Customer.findOne({
         where: { [identifierField]: { [Op.iLike]: emailOrPhone } },
@@ -49,6 +54,13 @@ const AuthService = {
         customerData.confirmation_code_expires = new Date(
           Date.now() + 10 * 60 * 1000
         );
+      } else {
+        customerData.phone_number = emailOrPhone;
+        customerData.password = password;
+        customerData.confirmation_code = confirmationCode;
+        customerData.confirmation_code_expires = new Date(
+          Date.now() + 10 * 60 * 1000
+        );
       }
 
       const newCustomer = await Customer.create(customerData, {
@@ -62,11 +74,19 @@ const AuthService = {
           newCustomer.last_name,
           confirmationCode
         );
+      } else {
+        await sendSMS(
+          emailOrPhone,
+          `Hi ${customerData.first_name}, your signup confirmation code is: ${confirmationCode}`
+        );
       }
 
       await t.commit();
+      const formattedMethod =
+        signupMethod === "email" ? "Email" : "Phone Number";
+
       return {
-        message: `User registered. Please check your ${signupMethod} for the confirmation code.`,
+        message: `User registered. Please check your ${formattedMethod} for the confirmation code.`,
         data: null,
       };
     } catch (err) {
@@ -89,7 +109,11 @@ const AuthService = {
 
       if (!customer) throwError("User not found.", 404);
 
-      if (customer.social_provider && customer.social_provider !== "none") {
+      if (
+        customer.social_provider &&
+        customer.social_provider !== "none" &&
+        customer.social_provider_id
+      ) {
         throwError(
           "This account was created using a social login provider. Please log in using that method.",
           400
@@ -189,7 +213,8 @@ const AuthService = {
   async verifyCode({ emailOrPhone, signupMethod, code }, url, res) {
     const t = await sequelize.transaction();
     try {
-      const identifierField = signupMethod === "email" ? "email" : "phone";
+      const identifierField =
+        signupMethod === "email" ? "email" : "phone_number";
       const customer = await Customer.findOne({
         where: {
           [identifierField]: emailOrPhone,
@@ -201,11 +226,14 @@ const AuthService = {
 
       if (!customer) throwError("Invalid or expired code.", 400);
 
+      const verifiedField =
+        signupMethod === "email" ? "email_verified_at" : "phone_verified_at";
+
       await customer.update(
         {
           confirmation_code: null,
           confirmation_code_expires: null,
-          email_verified_at: new Date(),
+          [verifiedField]: new Date(),
         },
         { transaction: t }
       );
@@ -229,7 +257,8 @@ const AuthService = {
   async resendCode({ emailOrPhone, signupMethod }) {
     const t = await sequelize.transaction();
     try {
-      const identifierField = signupMethod === "email" ? "email" : "phone";
+      const identifierField =
+        signupMethod === "email" ? "email" : "phone_number";
       const customer = await Customer.findOne({
         where: { [identifierField]: emailOrPhone },
         transaction: t,
@@ -256,6 +285,11 @@ const AuthService = {
           customer.last_name,
           newCode
         );
+      } else {
+        await sendSMS(
+          emailOrPhone,
+          `Hi ${customer.first_name}, your signup confirmation code is: ${newCode}`
+        );
       }
 
       await t.commit();
@@ -269,7 +303,8 @@ const AuthService = {
   async forgotPassword({ emailOrPhone, signupMethod }) {
     const t = await sequelize.transaction();
     try {
-      const identifierField = signupMethod === "email" ? "email" : "phone";
+      const identifierField =
+        signupMethod === "email" ? "email" : "phone_number";
       const customer = await Customer.findOne({
         where: { [identifierField]: { [Op.iLike]: emailOrPhone } },
         transaction: t,
@@ -278,7 +313,7 @@ const AuthService = {
       if (!customer) throwError("User not found.", 404);
       if (
         (signupMethod === "email" && !customer.email_verified_at) ||
-        (signupMethod === "phone" && !customer.phone_verified_at)
+        (signupMethod === "phone_number" && !customer.phone_verified_at)
       )
         throwError(`${signupMethod} not verified.`, 400);
 
@@ -298,11 +333,19 @@ const AuthService = {
           customer.last_name,
           resetCode
         );
+      } else {
+        await sendSMS(
+          emailOrPhone,
+          `Hi ${customer.first_name}, your signup confirmation code is: ${confirmationCode}`
+        );
       }
 
       await t.commit();
+      const formattedMethod =
+        signupMethod === "email" ? "Email" : "Phone Number";
+
       return {
-        message: `Reset code sent. Please check your ${signupMethod}.`,
+        message: `Reset code sent. Please check your ${formattedMethod}.`,
         data: null,
       };
     } catch (err) {
@@ -314,7 +357,8 @@ const AuthService = {
   async resetPassword({ code, newPassword, signupMethod, emailOrPhone }) {
     const t = await sequelize.transaction();
     try {
-      const identifierField = signupMethod === "email" ? "email" : "phone";
+      const identifierField =
+        signupMethod === "email" ? "email" : "phone_number";
       const customer = await Customer.findOne({
         where: {
           [identifierField]: { [Op.iLike]: emailOrPhone },

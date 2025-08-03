@@ -1,6 +1,6 @@
 const OrderService = require("../../services/admin/order_service");
 const NotificationService = require("../../services/admin/notification_service");
-const asyncHandler = require("../../middleware/asyncHandler");
+const asyncHandler = require("../../utils/asyncHandler");
 const { success } = require("../../utils/apiResponse");
 
 exports.createOrder = asyncHandler(async (req, res) => {

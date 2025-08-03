@@ -1,11 +1,20 @@
 const PlanService = require("../../services/admin/plan_service");
-const asyncHandler = require("../../middleware/asyncHandler");
+const asyncHandler = require("../../utils/asyncHandler");
 const { success } = require("../../utils/apiResponse");
 
 // List all plans with pagination
 exports.listPlans = asyncHandler(async (req, res) => {
   const { page = 1, limit = 10 } = req.query;
   const plans = await PlanService.listPlans({ page, limit });
+  return success(res, "Plans fetched successfully", plans);
+});
+
+exports.listGroupedPlans = asyncHandler(async (req, res) => {
+  const { page = 1, limit = 10 } = req.query;
+  const plans = await PlanService.listPlansGroupedByNameAndDuration({
+    page,
+    limit,
+  });
   return success(res, "Plans fetched successfully", plans);
 });
 
@@ -16,8 +25,8 @@ exports.getPlanById = asyncHandler(async (req, res) => {
 });
 
 exports.getPlanByName = asyncHandler(async (req, res) => {
-  const { name, billing_cycle } = req.query;
-  const plan = await PlanService.getByName(name, billing_cycle);
+  const filters = req.query;
+  const plan = await PlanService.getByFilters(filters);
   return success(res, "Plan fetched successfully", plan);
 });
 

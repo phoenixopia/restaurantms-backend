@@ -1,4 +1,4 @@
-const asyncHandler = require("../../middleware/asyncHandler");
+const asyncHandler = require("../../utils/asyncHandler");
 const CateringService = require("../../services/admin/catering_service");
 const { success } = require("../../utils/apiResponse");
 
@@ -71,6 +71,39 @@ exports.listOneCateringPerRestaurant = asyncHandler(async (req, res) => {
   return success(
     res,
     "One catering per restaurant fetched successfully",
+    result
+  );
+});
+
+exports.createRequest = asyncHandler(async (req, res) => {
+  const customerId = req.user.id;
+  const data = req.body;
+
+  const result = await CateringService.createCateringRequest({
+    customerId,
+    data,
+  });
+
+  return success(res, "Catering request submitted successfully", result, 201);
+});
+
+exports.giveResponse = asyncHandler(async (req, res) => {
+  const { id } = req.params; // CateringRequest ID
+  const { status } = req.body;
+  const { id: userId, restaurant_id, branch_id, role_name } = req.user;
+
+  const result = await CateringService.respondToCateringRequest({
+    requestId: id,
+    userId,
+    role: role_name,
+    restaurant_id,
+    branch_id,
+    status,
+  });
+
+  return success(
+    res,
+    "Response to catering request recorded successfully",
     result
   );
 });

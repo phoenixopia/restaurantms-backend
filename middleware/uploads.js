@@ -8,7 +8,7 @@ const fileFilter = (req, file, cb) => {
     : cb(new Error("Invalid file type. Only JPEG/PNG allowed"), false);
 };
 
-const RESTAURANT_DIR = path.resolve(__dirname, "../../uploads");
+const RESTAURANT_DIR = path.resolve(__dirname, "../uploads/restaurant");
 
 const restaurantStorage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, RESTAURANT_DIR),
@@ -22,15 +22,15 @@ exports.uploadRestaurantFiles = multer({
   storage: restaurantStorage,
   fileFilter,
   limits: {
-    fileSize: 1 * 1024 * 1024,
-    files: 2,
+    fileSize: 5 * 1024 * 1024, // 5MB per file
+    files: 2, // max total number of files
   },
 }).fields([
   { name: "logo", maxCount: 1 },
   { name: "images", maxCount: 1 },
 ]);
 
-const MENUITEM_DIR = path.join(__dirname, "..", "..", "uploads", "menu-items");
+const MENUITEM_DIR = path.join(__dirname, "..", "uploads", "menu-items");
 
 const menuItemStorage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, MENUITEM_DIR),
@@ -46,7 +46,7 @@ exports.uploadMenuItemImage = multer({
   limits: { fileSize: 5 * 1024 * 1024 },
 }).single("image");
 
-const RECEIPT_DIR = path.resolve(__dirname, "../../uploads/receipts");
+const RECEIPT_DIR = path.resolve(__dirname, "../uploads/receipts");
 
 const receiptStorage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, RECEIPT_DIR),
@@ -64,11 +64,11 @@ exports.uploadReceiptFile = multer({
       ? cb(null, true)
       : cb(new Error("Invalid file type. Only JPEG/PNG allowed"), false);
   },
-  limits: { fileSize: 2 * 1024 * 1024 },
+  limits: { fileSize: 5 * 1024 * 1024 },
 }).single("receipt");
 
 //==========
-const PROFILE_DIR = path.resolve(__dirname, "../../uploads/profile");
+const PROFILE_DIR = path.resolve(__dirname, "../uploads/profile");
 
 const profileStorage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, PROFILE_DIR),
@@ -90,10 +90,7 @@ exports.uploadProfilePicture = multer({
 }).single("profile");
 
 // ============= Image Gallery
-const IMAGE_GALLERY_DIR = path.resolve(
-  __dirname,
-  "../../uploads/image-gallery"
-);
+const IMAGE_GALLERY_DIR = path.resolve(__dirname, "../uploads/image-gallery");
 
 const imageGalleryStorage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, IMAGE_GALLERY_DIR),
@@ -118,7 +115,7 @@ exports.uploadGalleryImages = multer({
 }).array("images", 5);
 
 // ========== Catering Card ==========
-const CATERING_DIR = path.resolve(__dirname, "../../uploads/catering-card");
+const CATERING_DIR = path.resolve(__dirname, "../uploads/catering-card");
 
 const cateringCardStorage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, CATERING_DIR),

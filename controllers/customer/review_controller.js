@@ -1,5 +1,5 @@
 const ReviewService = require("../../services/admin/review_service");
-const asyncHandler = require("../../middleware/asyncHandler");
+const asyncHandler = require("../../utils/asyncHandler");
 const { success } = require("../../utils/apiResponse");
 
 exports.createReview = asyncHandler(async (req, res) => {

@@ -1,12 +1,7 @@
-const asyncHandler = require("../../middleware/asyncHandler");
+const asyncHandler = require("../../utils/asyncHandler");
 const AuthService = require("../../services/admin/auth_service");
 const { success } = require("../../utils/apiResponse");
 const { sendTokenResponse } = require("../../utils/sendTokenResponse");
-
-// exports.register = asyncHandler(async (req, res) => {
-//   const result = await AuthService.register(req.body);
-//   return success(res, result.message, null, 201);
-// });
 
 exports.login = asyncHandler(async (req, res) => {
   const { user, requiresPasswordChange, message } = await AuthService.login({
@@ -53,28 +48,6 @@ exports.logout = asyncHandler(async (req, res) => {
   return success(res, "Logged out successfully.");
 });
 
-exports.verifyCode = asyncHandler(async (req, res) => {
-  const result = await AuthService.verifyCode(req.body, res);
-  if (result) {
-    return success(res, result.message, result.data || null);
-  }
-});
-
-exports.resendCode = asyncHandler(async (req, res) => {
-  const result = await AuthService.resendCode(req.body);
-  return success(res, result.message);
-});
-
-exports.forgotPassword = asyncHandler(async (req, res) => {
-  const result = await AuthService.forgotPassword(req.body);
-  return success(res, result.message);
-});
-
-exports.resetPassword = asyncHandler(async (req, res) => {
-  const result = await AuthService.resetPassword(req.body);
-  return success(res, result.message);
-});
-
 exports.refreshOrValidateToken = asyncHandler(async (req, res) => {
   const result = await AuthService.refreshOrValidateToken(req);
 
@@ -86,15 +59,3 @@ exports.refreshOrValidateToken = asyncHandler(async (req, res) => {
     data: result.user,
   });
 });
-
-// exports.googleLogin = asyncHandler(async (req, res) => {
-//   const { user } = await AuthService.googleLogin(req.body.idToken, req);
-//   return sendTokenResponse(user, 200, res, req.originalUrl);
-// });
-
-// exports.facebookLogin = asyncHandler(async (req, res) => {
-//   const { accessToken } = req.body;
-
-//   const { user } = await AuthService.facebookLogin(accessToken, req);
-//   return sendTokenResponse(user, 200, res, req.originalUrl);
-// });

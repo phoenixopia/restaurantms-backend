@@ -1,4 +1,4 @@
-const asyncHandler = require("../../middleware/asyncHandler");
+const asyncHandler = require("../../utils/asyncHandler");
 const RestaurantService = require("../../services/admin/restaurant_service");
 const BranchService = require("../../services/admin/branch_service");
 const MenuCategoryService = require("../../services/admin/menuCategory_service");
