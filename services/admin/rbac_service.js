@@ -375,12 +375,78 @@ const RbacService = {
   },
   // ================== ROLE-PERMISSION ==================
 
-  async togglePermissionForRole(roleId, permissionIds) {
+  // async togglePermissionForRole(roleId, permissionIds) {
+  //   if (!roleId) throwError("roleId is required", 400);
+  //   if (
+  //     !permissionIds ||
+  //     (Array.isArray(permissionIds) && permissionIds.length === 0)
+  //   ) {
+  //     throwError("At least one permissionId is required", 400);
+  //   }
+
+  //   const t = await sequelize.transaction();
+  //   try {
+  //     const ids = Array.isArray(permissionIds)
+  //       ? permissionIds
+  //       : [permissionIds];
+  //     const batchSize = 100;
+  //     const results = {
+  //       added: 0,
+  //       removed: 0,
+  //     };
+
+  //     for (let i = 0; i < ids.length; i += batchSize) {
+  //       const batch = ids.slice(i, i + batchSize);
+
+  //       const existing = await RolePermission.findAll({
+  //         where: {
+  //           role_id: roleId,
+  //           permission_id: { [Op.in]: batch },
+  //           granted: true,
+  //         },
+  //         transaction: t,
+  //       });
+
+  //       const existingIds = new Set(existing.map((p) => p.permission_id));
+
+  //       const toInsert = batch
+  //         .filter((id) => !existingIds.has(id))
+  //         .map((id) => ({
+  //           role_id: roleId,
+  //           permission_id: id,
+  //           granted: true,
+  //         }));
+
+  //       const toDelete = batch.filter((id) => existingIds.has(id));
+
+  //       if (toInsert.length > 0) {
+  //         await RolePermission.bulkCreate(toInsert, { transaction: t });
+  //         results.added += toInsert.length;
+  //       }
+
+  //       if (toDelete.length > 0) {
+  //         const deleted = await RolePermission.destroy({
+  //           where: {
+  //             role_id: roleId,
+  //             permission_id: { [Op.in]: toDelete },
+  //           },
+  //           transaction: t,
+  //         });
+  //         results.removed += deleted;
+  //       }
+  //     }
+
+  //     await t.commit();
+  //     return results;
+  //   } catch (err) {
+  //     await t.rollback();
+  //     throw err;
+  //   }
+  // },
+
+  async addPermissionsToRole(roleId, permissionIds) {
     if (!roleId) throwError("roleId is required", 400);
-    if (
-      !permissionIds ||
-      (Array.isArray(permissionIds) && permissionIds.length === 0)
-    ) {
+    if (!permissionIds || permissionIds.length === 0) {
       throwError("At least one permissionId is required", 400);
     }
 
@@ -389,55 +455,61 @@ const RbacService = {
       const ids = Array.isArray(permissionIds)
         ? permissionIds
         : [permissionIds];
-      const batchSize = 100;
-      const results = {
-        added: 0,
-        removed: 0,
-      };
 
-      for (let i = 0; i < ids.length; i += batchSize) {
-        const batch = ids.slice(i, i + batchSize);
+      const existing = await RolePermission.findAll({
+        where: {
+          role_id: roleId,
+          permission_id: { [Op.in]: ids },
+          granted: true,
+        },
+        transaction: t,
+      });
 
-        const existing = await RolePermission.findAll({
-          where: {
-            role_id: roleId,
-            permission_id: { [Op.in]: batch },
-            granted: true,
-          },
-          transaction: t,
-        });
+      const existingIds = new Set(existing.map((p) => p.permission_id));
 
-        const existingIds = new Set(existing.map((p) => p.permission_id));
+      const toInsert = ids
+        .filter((id) => !existingIds.has(id))
+        .map((id) => ({
+          role_id: roleId,
+          permission_id: id,
+          granted: true,
+        }));
 
-        const toInsert = batch
-          .filter((id) => !existingIds.has(id))
-          .map((id) => ({
-            role_id: roleId,
-            permission_id: id,
-            granted: true,
-          }));
-
-        const toDelete = batch.filter((id) => existingIds.has(id));
-
-        if (toInsert.length > 0) {
-          await RolePermission.bulkCreate(toInsert, { transaction: t });
-          results.added += toInsert.length;
-        }
-
-        if (toDelete.length > 0) {
-          const deleted = await RolePermission.destroy({
-            where: {
-              role_id: roleId,
-              permission_id: { [Op.in]: toDelete },
-            },
-            transaction: t,
-          });
-          results.removed += deleted;
-        }
+      if (toInsert.length > 0) {
+        await RolePermission.bulkCreate(toInsert, { transaction: t });
       }
 
       await t.commit();
-      return results;
+      return { added: toInsert.length };
+    } catch (err) {
+      await t.rollback();
+      throw err;
+    }
+  },
+
+  async removePermissionsFromRole(roleId, permissionIds) {
+    if (!roleId) throwError("roleId is required", 400);
+    if (!permissionIds || permissionIds.length === 0) {
+      throwError("At least one permissionId is required", 400);
+    }
+
+    const t = await sequelize.transaction();
+    try {
+      const ids = Array.isArray(permissionIds)
+        ? permissionIds
+        : [permissionIds];
+
+      const deleted = await RolePermission.destroy({
+        where: {
+          role_id: roleId,
+          permission_id: { [Op.in]: ids },
+          granted: true,
+        },
+        transaction: t,
+      });
+
+      await t.commit();
+      return { removed: deleted };
     } catch (err) {
       await t.rollback();
       throw err;

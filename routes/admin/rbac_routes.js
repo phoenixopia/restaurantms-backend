@@ -42,16 +42,16 @@ router.get(
 );
 
 router.get(
+  "/my-role",
+  protect("user"),
+  rbacController.getMyRoleWithPermissions
+);
+
+router.get(
   "/roles/:id",
   protect("user"),
   authorize("super_admin"),
   rbacController.getRoleById
-);
-
-router.get(
-  "/my-role",
-  protect("user"),
-  rbacController.getMyRoleWithPermissions
 );
 
 // retruns role info with permissions
@@ -63,13 +63,27 @@ router.get(
 );
 
 // grant or revoke permissions to role
+// router.post(
+//   "/roles/:roleId/permissions/toggle",
+//   protect("user"),
+//   authorize("super_admin"),
+//   grantOrRevokePermissionToRoleValidator,
+//   validateRequest,
+//   rbacController.togglePermissionForRole
+// );
+
 router.post(
-  "/roles/:roleId/permissions/toggle",
+  "/roles/:roleId/permissions/add",
   protect("user"),
   authorize("super_admin"),
-  grantOrRevokePermissionToRoleValidator,
-  validateRequest,
-  rbacController.togglePermissionForRole
+  rbacController.addPermissionsToRole
+);
+
+router.post(
+  "/roles/:roleId/permissions/remove",
+  protect("user"),
+  authorize("super_admin"),
+  rbacController.removePermissionsFromRole
 );
 
 // ================= PERMISSION

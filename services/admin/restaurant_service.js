@@ -619,7 +619,13 @@ const RestaurantService = {
     };
   },
 
-  async getBranchMenus(restaurantId, branchId, page = 1, limit = 10) {
+  async getBranchMenus(
+    restaurantId,
+    branchId,
+    page = 1,
+    limit = 10,
+    categoryName = ""
+  ) {
     const branch = await Branch.findOne({
       where: {
         id: branchId,
@@ -631,51 +637,98 @@ const RestaurantService = {
           model: Location,
           attributes: ["address", "latitude", "longitude"],
         },
-        {
-          model: MenuCategory,
-          required: false,
-          attributes: ["id", "name", "branch_id"],
-          include: [
-            {
-              model: MenuItem,
-              required: false,
-              attributes: { exclude: ["createdAt", "updatedAt"] },
-            },
-          ],
-        },
       ],
     });
+    if (!branch) {
+      throwError("Branch not found", 404);
+    }
 
-    if (!branch) throwError("Branch not found", 404);
+    if (categoryName) {
+      const category = await MenuCategory.findOne({
+        where: { name: categoryName, branch_id: branchId },
+        attributes: ["id", "name", "branch_id"],
+      });
 
-    const plain = branch.get({ plain: true });
-
-    return {
-      branch: {
-        id: plain.id,
-        name: plain.name,
-        location: plain.Location || null,
-      },
-      menu_categories: (plain.MenuCategories || []).map((cat) => {
-        const totalItems = cat.MenuItems.length;
-        const offset = (page - 1) * limit;
-        const paginatedItems = cat.MenuItems.slice(offset, offset + limit);
-
+      if (!category) {
         return {
-          id: cat.id,
-          name: cat.name,
-          branch_id: cat.branch_id,
-          menu_items: paginatedItems,
+          menu_items: [],
           pagination: {
-            totalItems,
-            totalPages: Math.ceil(totalItems / limit),
-            currentPage: page,
+            totalItems: 0,
+            totalPages: 0,
+            currentPage: 1,
             pageSize: limit,
           },
         };
-      }),
-    };
+      }
+
+      const totalItems = await MenuItem.count({
+        where: { menu_category_id: category.id },
+      });
+
+      const items = await MenuItem.findAll({
+        where: { menu_category_id: category.id },
+        attributes: { exclude: ["createdAt", "updatedAt"] },
+        limit: limit,
+        offset: (page - 1) * limit,
+        order: [["created_at", "ASC"]],
+      });
+
+      return {
+        menu_items: items,
+        pagination: {
+          totalItems,
+          totalPages: Math.ceil(totalItems / limit),
+          currentPage: page,
+          pageSize: limit,
+        },
+      };
+    } else {
+      const allCategories = await MenuCategory.findAll({
+        where: { branch_id: branchId },
+        attributes: ["id", "name"],
+        order: [["id", "ASC"]],
+      });
+
+      const menuCategories = await Promise.all(
+        allCategories.map(async (cat) => {
+          const totalItems = await MenuItem.count({
+            where: { menu_category_id: cat.id },
+          });
+
+          const items = await MenuItem.findAll({
+            where: { menu_category_id: cat.id },
+            attributes: { exclude: ["createdAt", "updatedAt"] },
+            limit: limit,
+            offset: (page - 1) * limit,
+            order: [["created_at", "ASC"]],
+          });
+
+          return {
+            id: cat.id,
+            name: cat.name,
+            branch_id: cat.branch_id,
+            menu_items: items,
+            pagination: {
+              totalItems,
+              totalPages: Math.ceil(totalItems / limit),
+              currentPage: page,
+              pageSize: limit,
+            },
+          };
+        })
+      );
+
+      return {
+        branch: {
+          id: branch.id,
+          name: branch.name,
+          location: branch.Location || null,
+        },
+        menu_categories: menuCategories,
+      };
+    }
   },
+
   // for customer
   async getAllRestaurantsWithCheapestItem({ page = 1, limit = 10 }) {
     const offset = (page - 1) * limit;

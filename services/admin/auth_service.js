@@ -7,6 +7,7 @@ const {
   sendConfirmationEmail,
   sendPasswordResetEmail,
 } = require("../../utils/sendEmail");
+const { forgotPassword } = require("../customer/auth_service");
 
 const AuthService = {
   async login({ emailOrPhone, password, signupMethod }) {

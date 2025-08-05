@@ -325,6 +325,15 @@ module.exports = async () => {
         "Desserts",
         "Drinks",
         "Specials",
+        "Breakfast",
+        "Lunch",
+        "Dinner",
+        "Snacks",
+        "Fast Food",
+        "Salads",
+        "Soups",
+        "Desserts",
+        "Burgers & Sandwiches",
       ];
 
       for (const branch of branches) {
@@ -344,7 +353,7 @@ module.exports = async () => {
 
           await menuCategory.addCategoryTags(getRandomTags());
 
-          for (let j = 1; j <= 10; j++) {
+          for (let j = 1; j <= 20; j++) {
             const randomImage =
               foodImages[Math.floor(Math.random() * foodImages.length)];
             await MenuItem.create({

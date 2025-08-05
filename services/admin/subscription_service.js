@@ -98,9 +98,7 @@ const SubscriptionService = {
     const where = {};
 
     if (status) where.status = status;
-    if (user.role_name === "restaurant_admin" && payment_method) {
-      where.payment_method = payment_method;
-    }
+
     if (user.role_name === "restaurant_admin") {
       where.restaurant_id = user.restaurant_id;
     }
