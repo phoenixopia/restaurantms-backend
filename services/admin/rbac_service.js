@@ -74,7 +74,6 @@ const RbacService = {
       const role = await Role.findByPk(id, { transaction: t });
       if (!role) throwError("Role not found", 404);
 
-      // Check for name uniqueness
       if (updates.name) {
         const exists = await Role.findOne({
           where: {
@@ -91,7 +90,6 @@ const RbacService = {
         }
       }
 
-      // Update role name or description
       await role.update(
         {
           ...(updates.name && { name: updates.name.toLowerCase() }),
@@ -132,11 +130,6 @@ const RbacService = {
                 },
                 { transaction: t }
               );
-            }
-          } else {
-            // Revoke if already granted
-            if (existing) {
-              await existing.destroy({ transaction: t });
             }
           }
         }

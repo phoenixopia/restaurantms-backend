@@ -148,7 +148,6 @@ const CateringService = {
 
     const restaurant_id = catering.restaurant_id;
 
-    // Fetch the restaurant name
     const restaurant = await Restaurant.findByPk(restaurant_id, {
       attributes: ["id", "restaurant_name"],
     });
