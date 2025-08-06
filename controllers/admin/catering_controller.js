@@ -49,7 +49,7 @@ exports.getCateringById = asyncHandler(async (req, res) => {
 });
 
 exports.listCaterings = asyncHandler(async (req, res) => {
-  const restaurant_id = req.params;
+  const restaurant_id = req.params.id;
   const { page = 1, limit = 10 } = req.query;
 
   const result = await CateringService.listCaterings(

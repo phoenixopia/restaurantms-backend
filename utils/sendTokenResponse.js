@@ -4,7 +4,8 @@ exports.sendTokenResponse = async (
   user,
   statusCode,
   res,
-  reqUrl = "/admin"
+  reqUrl = "/admin",
+  requiresPasswordChange = false
 ) => {
   try {
     const isCustomer = reqUrl.includes("/customer");
@@ -64,20 +65,23 @@ exports.sendTokenResponse = async (
       ...new Set([...rolePermissions, ...directPermissions]),
     ];
 
-    return res
-      .status(statusCode)
-      .cookie("token", token, cookieOptions)
-      .json({
-        success: true,
-        token,
-        data: {
-          id: user.id,
-          role: role?.name || null,
-          permissions,
-          restaurant_id: user.restaurant_id || null,
-          branch_id: user.branch_id || null,
-        },
-      });
+    const responseData = {
+      id: user.id,
+      role: role?.name || null,
+      permissions,
+      restaurant_id: user.restaurant_id || null,
+      branch_id: user.branch_id || null,
+    };
+
+    if (!isCustomer && requiresPasswordChange) {
+      responseData.requiresPasswordChange = true;
+    }
+
+    return res.status(statusCode).cookie("token", token, cookieOptions).json({
+      success: true,
+      token,
+      data: responseData,
+    });
   } catch (error) {
     console.error("Error generating token with permissions:", error);
     return res.status(500).json({

@@ -10,7 +10,10 @@ const router = express.Router();
 
 router.post("/login", loginValidator, validateRequest, authController.login);
 
-router.post("/change-temp-password", authController.changeTemporaryPassword);
+router.post(
+  "/change-temp-password/:userId",
+  authController.changeTemporaryPassword
+);
 
 router.post("/verify-token", authController.refreshOrValidateToken);
 

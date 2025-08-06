@@ -2,33 +2,27 @@ const asyncHandler = require("../../utils/asyncHandler");
 const AuthService = require("../../services/admin/auth_service");
 const { success } = require("../../utils/apiResponse");
 const { sendTokenResponse } = require("../../utils/sendTokenResponse");
-
+const throwError = require("../../utils/throwError");
 exports.login = asyncHandler(async (req, res) => {
   const { user, requiresPasswordChange, message } = await AuthService.login({
     ...req.body,
   });
 
-  if (requiresPasswordChange) {
-    return success(res, message, {
-      user: {
-        id: user.id,
-        first_name: user.first_name,
-        last_name: user.last_name,
-        email: user.email,
-        phone_number: user.phone_number,
-      },
-      requiresPasswordChange: true,
-    });
-  }
-
-  return sendTokenResponse(user, 200, res);
+  return sendTokenResponse(
+    user,
+    200,
+    res,
+    req.originalUrl,
+    requiresPasswordChange
+  );
 });
 
 exports.changeTemporaryPassword = asyncHandler(async (req, res) => {
-  const { userId, newPassword } = req.body;
+  const userId = req.params.userId;
+  const { newPassword } = req.body;
 
-  if (!userId || !newPassword) {
-    throwError("User ID and new password are required", 400);
+  if (!newPassword) {
+    throwError("New Password are required", 400);
   }
 
   const user = await AuthService.changeTemporaryPassword({
@@ -36,7 +30,7 @@ exports.changeTemporaryPassword = asyncHandler(async (req, res) => {
     newPassword,
   });
 
-  return sendTokenResponse(user.user, 200, res);
+  return sendTokenResponse(user, 200, res);
 });
 
 exports.logout = asyncHandler(async (req, res) => {

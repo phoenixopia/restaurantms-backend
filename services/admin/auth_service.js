@@ -77,6 +77,7 @@ const AuthService = {
     const t = await sequelize.transaction();
     try {
       const user = await User.findByPk(userId, { transaction: t });
+
       if (!user) throwError("User not found", 404);
 
       if (!newPassword || newPassword.length < 6) {
@@ -93,13 +94,13 @@ const AuthService = {
 
       await t.commit();
       await user.reload();
-      return { message: "Password changed successfully", user };
+
+      return user;
     } catch (err) {
       await t.rollback();
       throw err;
     }
   },
-
   async refreshOrValidateToken(req) {
     const jwt = require("jsonwebtoken");
     const token =
