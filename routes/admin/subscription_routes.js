@@ -34,13 +34,6 @@ router.get(
 );
 
 router.get(
-  "/export",
-  protect("user"),
-  authorize("super_admin", "restaurant_admin"),
-  SubscriptionController.exportSubscriptionsToCSV
-);
-
-router.get(
   "/export-excel",
   protect("user"),
   authorize("super_admin", "restaurant_admin"),

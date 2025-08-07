@@ -375,18 +375,11 @@ const UserService = {
   async getAllCreatedUsers(adminId, query = {}) {
     let { page, limit, offset, order } = buildPagination(query);
 
-    if (
-      order?.length === 1 &&
-      (order[0][0] === "created_at" || order[0][0] === "createdAt")
-    ) {
-      order = [["created_by", "ASC"]];
-    }
-
     const { count, rows } = await User.findAndCountAll({
       where: { created_by: adminId },
       limit,
       offset,
-      order,
+      order: order || [["created_at", "DESC"]],
       attributes: {
         exclude: [
           "password",
@@ -399,9 +392,7 @@ const UserService = {
           "social_provider_id",
           "email_verified_at",
           "phone_verified_at",
-          "createdAt",
           "updatedAt",
-          "created_at",
           "updated_at",
           "password_changed_at",
         ],

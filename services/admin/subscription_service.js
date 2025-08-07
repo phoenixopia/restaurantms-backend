@@ -1,8 +1,6 @@
-const { Parser } = require("json2csv");
 const ExcelJS = require("exceljs");
 
 const { Subscription, Restaurant, Plan, sequelize } = require("../../models");
-const { capitalizeName } = require("../../utils/capitalizeFirstLetter");
 const throwError = require("../../utils/throwError");
 const { getFileUrl } = require("../../utils/file");
 const cleanupUploadedFiles = require("../../utils/cleanUploadedFiles");
@@ -267,37 +265,14 @@ const SubscriptionService = {
     }));
   },
 
-  async exportToCSV(filters, user) {
-    const data = await this.getFilteredSubscriptions(filters, user);
-
-    const dataWithSequentialIds = data.map((item, index) => ({
-      ...item,
-      id: index + 1, // Sequential for readability (optional)
-    }));
-
-    const fields = [
-      { label: "Subscription ID", value: "id" },
-      { label: "Restaurant Name", value: "restaurant_name" },
-      { label: "Plan Name", value: "plan_name" },
-      { label: "Billing Cycle", value: "billing_cycle" },
-      { label: "Start Date", value: "start_date" },
-      { label: "End Date", value: "end_date" },
-      { label: "Payment Method", value: "payment_method" },
-      { label: "Receipt", value: "receipt" },
-      { label: "Status", value: "status" },
-    ];
-
-    const parser = new Parser({ fields });
-    const csv = parser.parse(dataWithSequentialIds);
-
-    return {
-      csvData: csv,
-      filename: `subscriptions_${Date.now()}.csv`,
-    };
-  },
-
   async exportToExcel(filters, user) {
-    const data = await this.getFilteredSubscriptions(filters, user);
+    const isRestaurantAdmin = user?.role === "restaurant_admin";
+
+    const subscriptions = await this.getFilteredSubscriptions(filters, {
+      ...(isRestaurantAdmin && {
+        where: { restaurant_id: user.restaurant_id },
+      }),
+    });
 
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Subscriptions");
@@ -314,39 +289,51 @@ const SubscriptionService = {
       { header: "Status", key: "status" },
     ];
 
-    data.forEach((item, index) => {
-      const rowValues = {
+    subscriptions.forEach((sub, index) => {
+      const row = worksheet.addRow({
         id: index + 1,
-        restaurant_name: item.restaurant_name,
-        plan_name: item.plan_name,
-        billing_cycle: item.billing_cycle,
-        start_date: item.start_date,
-        end_date: item.end_date,
-        payment_method: item.payment_method,
-        receipt: item.receipt
-          ? { text: "View Receipt", hyperlink: item.receipt }
+        restaurant_name: sub.restaurant_name,
+        plan_name: sub.plan_name,
+        billing_cycle: sub.billing_cycle,
+        start_date: sub.start_date
+          ? new Date(sub.start_date).toISOString().split("T")[0]
           : "",
-        status: item.status,
-      };
-      worksheet.addRow(rowValues);
+        end_date: sub.end_date
+          ? new Date(sub.end_date).toISOString().split("T")[0]
+          : "",
+        payment_method: sub.payment_method,
+        receipt: "", // Will set below
+        status: sub.status,
+      });
+
+      const receiptCell = row.getCell("receipt");
+      if (sub.receipt) {
+        receiptCell.value = {
+          text: "View Receipt",
+          hyperlink: sub.receipt,
+        };
+      } else {
+        receiptCell.value = "No receipt uploaded";
+      }
     });
 
-    worksheet.columns.forEach((column) => {
-      let maxLength = 10;
-      column.eachCell({ includeEmpty: true }, (cell) => {
-        const cellValue = cell.value?.text || cell.value || "";
-        const length = cellValue.toString().length;
-        if (length > maxLength) maxLength = length;
+    worksheet.getRow(1).font = { bold: true };
+
+    worksheet.columns.forEach((col) => {
+      let maxLength = col.header.length;
+      col.eachCell({ includeEmpty: true }, (cell) => {
+        const cellLength =
+          cell.value?.text?.length || cell.value?.toString().length || 0;
+        if (cellLength > maxLength) maxLength = cellLength;
       });
-      column.width = maxLength + 2;
+      col.width = maxLength + 2;
     });
 
     const buffer = await workbook.xlsx.writeBuffer();
 
-    return {
-      excelBuffer: buffer,
-      filename: `subscriptions_${Date.now()}.xlsx`,
-    };
+    const filename = `subscriptions_${Date.now()}.xlsx`;
+
+    return { excelBuffer: buffer, filename };
   },
 };
 

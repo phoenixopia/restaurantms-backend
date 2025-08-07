@@ -34,13 +34,10 @@ module.exports = (sequelize, DataTypes) => {
 
       end_date: DataTypes.DATEONLY,
 
-      payment_method: DataTypes.ENUM(
-        "card",
-        "walet",
-        "cash",
-        "bank_transfer",
-        "other"
-      ),
+      payment_method: {
+        type: DataTypes.ENUM("card", "walet", "cash", "bank_transfer", "other"),
+        defaultValue: "other",
+      },
 
       status: DataTypes.ENUM(
         "active",
