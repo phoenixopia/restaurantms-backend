@@ -8,17 +8,13 @@ const {
 } = require("../../middleware/validateUploadedFiles");
 const validateRequest = require("../../middleware/validateRequest");
 const SubscriptionController = require("../../controllers/admin/subscription_controller");
-const {
-  createSubscriptionValidator,
-} = require("../../validators/subscription_validator");
 
 router.post(
-  "/create",
+  "/subscribe",
   protect("user"),
   authorize("restaurant_admin"),
   validateUploadedFiles("receipt"),
   Upload.uploadReceiptFile,
-  createSubscriptionValidator,
   validateRequest,
   SubscriptionController.subscribe
 );
@@ -40,8 +36,15 @@ router.get(
 router.get(
   "/export",
   protect("user"),
-  authorize("super_admin"),
+  authorize("super_admin", "restaurant_admin"),
   SubscriptionController.exportSubscriptionsToCSV
+);
+
+router.get(
+  "/export-excel",
+  protect("user"),
+  authorize("super_admin", "restaurant_admin"),
+  SubscriptionController.exportSubscriptionsToExcel
 );
 
 module.exports = router;

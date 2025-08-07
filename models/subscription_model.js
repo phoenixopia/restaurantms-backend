@@ -7,6 +7,9 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.INTEGER,
         autoIncrement: true,
         primaryKey: true,
+        // type: DataTypes.UUID,
+        // defaultValue: DataTypes.UUIDV4,
+        // primaryKey: true,
       },
 
       restaurant_id: {
@@ -31,7 +34,13 @@ module.exports = (sequelize, DataTypes) => {
 
       end_date: DataTypes.DATEONLY,
 
-      payment_method: DataTypes.ENUM("card", "walet", "cash", "bank_transfer"),
+      payment_method: DataTypes.ENUM(
+        "card",
+        "walet",
+        "cash",
+        "bank_transfer",
+        "other"
+      ),
 
       status: DataTypes.ENUM(
         "active",

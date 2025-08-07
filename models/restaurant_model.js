@@ -21,6 +21,7 @@ module.exports = (sequelize) => {
         type: DataTypes.ENUM(
           "active",
           "trial",
+          "inactive",
           "cancelled",
           "expired",
           "pending"

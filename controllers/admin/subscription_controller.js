@@ -34,12 +34,12 @@ exports.updateSubscriptionStatus = asyncHandler(async (req, res) => {
 
   const updated = await SubscriptionService.updateStatus(id, status);
 
-  req.app.locals.io
-    .to(updated.restaurant_id)
-    .emit("subscriptionStatusUpdated", {
-      subscriptionId: id,
-      newStatus: status,
-    });
+  // req.app.locals.io
+  //   .to(updated.restaurant_id)
+  //   .emit("subscriptionStatusUpdated", {
+  //     subscriptionId: id,
+  //     newStatus: status,
+  //   });
 
   return success(res, "Subscription status updated", updated);
 });
@@ -54,9 +54,24 @@ exports.listSubscriptions = asyncHandler(async (req, res) => {
 
 exports.exportSubscriptionsToCSV = asyncHandler(async (req, res) => {
   const { csvData, filename } = await SubscriptionService.exportToCSV(
-    req.query
+    req.query,
+    req.user
   );
   res.header("Content-Type", "text/csv");
   res.attachment(filename);
   res.send(csvData);
+});
+
+exports.exportSubscriptionsToExcel = asyncHandler(async (req, res) => {
+  const { excelBuffer, filename } = await SubscriptionService.exportToExcel(
+    req.query,
+    req.user
+  );
+
+  res.setHeader(
+    "Content-Type",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+  );
+  res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+  res.send(excelBuffer);
 });
