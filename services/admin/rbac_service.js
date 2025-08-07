@@ -98,46 +98,51 @@ const RbacService = {
         { transaction: t }
       );
 
-      // Handle permissions if provided
       if (updates.permissions) {
-        const permissionUpdates = Array.isArray(updates.permissions)
-          ? updates.permissions.map((p) =>
-              typeof p === "string" ? { id: p, granted: true } : p
-            )
+        const newPermissionIds = Array.isArray(updates.permissions)
+          ? updates.permissions.map((p) => (typeof p === "string" ? p : p.id))
           : [];
 
-        // Load current RolePermissions
         const currentPermissions = await RolePermission.findAll({
-          where: { role_id: id },
+          where: { role_id: id, granted: true },
           transaction: t,
         });
 
-        const currentMap = new Map(
-          currentPermissions.map((p) => [p.permission_id, p])
+        const currentIds = new Set(
+          currentPermissions.map((p) => p.permission_id)
+        );
+        const newIdsSet = new Set(newPermissionIds);
+
+        const toAdd = newPermissionIds
+          .filter((id) => !currentIds.has(id))
+          .map((id) => ({
+            role_id: id,
+            permission_id: id,
+            granted: true,
+          }));
+
+        const toRemove = Array.from(currentIds).filter(
+          (id) => !newIdsSet.has(id)
         );
 
-        for (const p of permissionUpdates) {
-          const existing = currentMap.get(p.id);
+        if (toAdd.length > 0) {
+          await RolePermission.bulkCreate(toAdd, { transaction: t });
+        }
 
-          if (p.granted) {
-            // Grant if not already granted
-            if (!existing) {
-              await RolePermission.create(
-                {
-                  role_id: id,
-                  permission_id: p.id,
-                  granted: true,
-                },
-                { transaction: t }
-              );
-            }
-          }
+        if (toRemove.length > 0) {
+          await RolePermission.destroy({
+            where: {
+              role_id: id,
+              permission_id: { [Op.in]: toRemove },
+              granted: true,
+            },
+            transaction: t,
+          });
         }
       }
 
       await t.commit();
 
-      // Return updated role with permissions
       const updatedRole = await Role.findByPk(id, {
         include: [
           {

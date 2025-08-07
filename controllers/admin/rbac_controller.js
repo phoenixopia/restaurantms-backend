@@ -1,6 +1,7 @@
 const RbacService = require("../../services/admin/rbac_service");
 const asyncHandler = require("../../utils/asyncHandler");
 const { success } = require("../../utils/apiResponse");
+const throwError = require("../../utils/throwError");
 
 // ROLE
 
