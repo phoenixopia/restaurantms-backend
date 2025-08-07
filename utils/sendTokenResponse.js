@@ -67,6 +67,10 @@ exports.sendTokenResponse = async (
 
     const responseData = {
       id: user.id,
+      full_name: user.full_name,
+      email: user.email || null,
+      phone_number: user.phone_number || null,
+      profile_picture: user.profile_picture,
       role: role?.name || null,
       permissions,
       restaurant_id: user.restaurant_id || null,

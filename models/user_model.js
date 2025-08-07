@@ -111,18 +111,17 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.DATE,
         allowNull: true,
       },
-    },
-    {
-      tableName: "users",
-      timestamps: true,
-      underscored: true,
-
       full_name: {
         type: DataTypes.VIRTUAL,
         get() {
           return `${this.first_name} ${this.last_name}`;
         },
       },
+    },
+    {
+      tableName: "users",
+      timestamps: true,
+      underscored: true,
     }
   );
 

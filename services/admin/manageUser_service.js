@@ -382,7 +382,7 @@ const UserService = {
       order = [["created_by", "ASC"]];
     }
 
-    const result = await User.findAndCountAll({
+    const { count, rows } = await User.findAndCountAll({
       where: { created_by: adminId },
       limit,
       offset,
@@ -433,7 +433,7 @@ const UserService = {
       ],
     });
 
-    const formattedUsers = result.rows.map((user) => {
+    const formattedUsers = rows.map((user) => {
       const userJson = user.toJSON();
 
       const fromRole =
@@ -458,13 +458,13 @@ const UserService = {
     });
 
     return {
-      total: result.count,
+      total: count,
       page,
       limit,
-      users: formattedUsers,
+      totalPages: Math.ceil(count / limit),
+      data: formattedUsers,
     };
   },
-
   async assignUserToBranch(userId, branchId, currentUser) {
     const t = await sequelize.transaction();
     try {

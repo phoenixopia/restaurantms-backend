@@ -3,6 +3,7 @@ const AuthService = require("../../services/admin/auth_service");
 const { success } = require("../../utils/apiResponse");
 const { sendTokenResponse } = require("../../utils/sendTokenResponse");
 const throwError = require("../../utils/throwError");
+
 exports.login = asyncHandler(async (req, res) => {
   const { user, requiresPasswordChange, message } = await AuthService.login({
     ...req.body,

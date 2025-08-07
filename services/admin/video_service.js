@@ -609,35 +609,6 @@ const VideoService = {
     };
   },
 
-  async viewVideo(customerId, videoId) {
-    if (!customerId) throwError("Login required to track view", 401);
-
-    const video = await Video.findByPk(videoId);
-    if (!video) throwError("Video not found", 404);
-
-    const alreadyViewed = await VideoView.findOne({
-      where: {
-        video_id: videoId,
-        customer_id: customerId,
-      },
-    });
-
-    if (!alreadyViewed) {
-      await VideoView.create({
-        video_id: videoId,
-        customer_id: customerId,
-      });
-    }
-
-    return {
-      message: "Video marked as viewed.",
-      data: {
-        video_id: videoId,
-        customer_id: customerId,
-      },
-    };
-  },
-
   async toggleLike(videoId, customerId) {
     const t = await sequelize.transaction();
 
