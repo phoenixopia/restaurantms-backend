@@ -84,10 +84,6 @@ module.exports = (sequelize) => {
       foreignKey: "restaurant_id",
     });
 
-    Restaurant.hasMany(models.UserPermission, {
-      foreignKey: "restaurant_id",
-    });
-
     Restaurant.hasMany(models.MenuCategory, {
       foreignKey: "restaurant_id",
     });

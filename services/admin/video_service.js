@@ -42,7 +42,6 @@ const VideoService = {
     let duration;
     try {
       duration = await getVideoDuration(videoPath);
-
       if (duration > 180) {
         await cleanupUploadedFiles([videoFile, thumbnailFile]);
         throwError("Video must be 3 minutes or less", 400);
@@ -50,6 +49,11 @@ const VideoService = {
     } catch (err) {
       await cleanupUploadedFiles([videoFile, thumbnailFile]);
       throwError("Unable to read video duration", 500);
+    }
+
+    if (!user.restaurant_id && !user.branch_id) {
+      await cleanupUploadedFiles([videoFile, thumbnailFile].filter(Boolean));
+      throwError("Invalid user access", 403);
     }
 
     const t = await sequelize.transaction();
@@ -72,48 +76,34 @@ const VideoService = {
         }
 
         const category = menuItem.MenuCategory;
-
-        if (!category || !category.branch_id) {
+        if (!category) {
           await cleanupUploadedFiles([videoFile, thumbnailFile]);
-          throwError("Menu category or branch information is missing", 400);
+          throwError("Menu category is missing", 400);
         }
 
-        if (user.branch_id) {
-          // Staff user
-          if (category.branch_id !== user.branch_id) {
-            await cleanupUploadedFiles([videoFile, thumbnailFile]);
-            throwError("Unauthorized: menu item not in your branch", 403);
-          }
-
-          // Get branch info to find restaurant_id
-          const branch = await Branch.findByPk(user.branch_id, {
-            transaction: t,
-          });
-          if (!branch) {
-            await cleanupUploadedFiles([videoFile, thumbnailFile]);
-            throwError("Branch not found", 404);
-          }
-
-          branchId = branch.id;
-          restaurantId = branch.restaurant_id;
-        } else if (user.restaurant_id) {
-          // Restaurant admin user
+        if (user.restaurant_id) {
           if (category.restaurant_id !== user.restaurant_id) {
             await cleanupUploadedFiles([videoFile, thumbnailFile]);
             throwError("Unauthorized: menu item not in your restaurant", 403);
           }
-
-          branchId = category.branch_id;
           restaurantId = user.restaurant_id;
-        } else {
-          await cleanupUploadedFiles([videoFile, thumbnailFile]);
-          throwError(
-            "Invalid user access: must be linked to restaurant or branch",
-            403
-          );
+          branchId = category.branch_id;
+        } else if (user.branch_id) {
+          const branch = await Branch.findByPk(user.branch_id, {
+            transaction: t,
+          });
+          if (!branch) {
+            await cleanupUploadedFiles([videoFile, thumbnailFile]);
+            throwError("Branch not found", 404);
+          }
+          if (category.restaurant_id !== branch.restaurant_id) {
+            await cleanupUploadedFiles([videoFile, thumbnailFile]);
+            throwError("Unauthorized: menu item not in your restaurant", 403);
+          }
+          restaurantId = branch.restaurant_id;
+          branchId = category.branch_id;
         }
       } else {
-        // No menu item id given
         if (user.branch_id) {
           const branch = await Branch.findByPk(user.branch_id, {
             transaction: t,
@@ -122,17 +112,11 @@ const VideoService = {
             await cleanupUploadedFiles([videoFile, thumbnailFile]);
             throwError("Branch not found", 404);
           }
-          branchId = branch.id;
           restaurantId = branch.restaurant_id;
+          branchId = branch.id;
         } else if (user.restaurant_id) {
-          branchId = null;
           restaurantId = user.restaurant_id;
-        } else {
-          await cleanupUploadedFiles([videoFile, thumbnailFile]);
-          throwError(
-            "Invalid user access: must be linked to restaurant or branch",
-            403
-          );
+          branchId = null;
         }
       }
 
@@ -175,7 +159,6 @@ const VideoService = {
       throw err;
     }
   },
-
   async updateVideoStatus(videoId, newStatus, user) {
     const video = await Video.findByPk(videoId);
 

@@ -23,14 +23,6 @@ const deactivateExpiredSubscriptions = async (io) => {
       const restaurantId = subscription.restaurant_id;
 
       await subscription.update({ status: "expired" }, { transaction });
-
-      // Emit socket event
-      if (io) {
-        io.to(restaurantId).emit("subscriptionStatusUpdated", {
-          subscriptionId: subscription.id,
-          newStatus: "expired",
-        });
-      }
     }
 
     await transaction.commit();

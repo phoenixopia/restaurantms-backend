@@ -3,132 +3,102 @@ const rbacController = require("../../controllers/admin/rbac_controller");
 const validateRequest = require("../../middleware/validateRequest");
 const { protect } = require("../../middleware/protect");
 const { authorize } = require("../../middleware/authorize");
-
-const {
-  createRoleValidator,
-  updateRoleValidator,
-  createPermissionValidator,
-  updatePermissionValidator,
-  grantOrRevokePermissionToRoleValidator,
-  grantOrRevokePermissionToUserValidator,
-} = require("../../validators/rbac_validator");
+const { permissionCheck } = require("../../middleware/permissionCheck");
 
 const router = express.Router();
 
+// ================= RoleTag
+router.post(
+  "/create-role-tag",
+  protect("user"),
+  permissionCheck("create_role_tag"),
+  rbacController.createRoleTag
+);
+
+router.put(
+  "/update-role-tag/:id",
+  protect("user"),
+  permissionCheck("update_role_tag"),
+  rbacController.updateRoleTag
+);
+
+router.get(
+  "/role-tag-byId/:id",
+  protect("user"),
+  rbacController.getRoleTagById
+);
+
+router.get(
+  "/all-role-tags",
+  protect("user"),
+  permissionCheck("view_role_tag"),
+  rbacController.getAllRoleTag
+);
+
+router.delete(
+  "/delete-role-tag/:id",
+  protect("user"),
+  permissionCheck("delete_role_tag"),
+  rbacController.deleteRoleTag
+);
+
 // ================= ROLE
+
 router.post(
   "/create-role",
   protect("user"),
-  authorize("super_admin"),
-  createRoleValidator,
-  validateRequest,
+  permissionCheck("create_role"),
   rbacController.createRole
 );
 
 router.put(
   "/update-role/:id",
   protect("user"),
-  authorize("super_admin"),
-  updateRoleValidator,
-  validateRequest,
+  permissionCheck("update_role"),
   rbacController.updateRole
 );
 
 router.get(
-  "/roles",
+  "/all-roles",
   protect("user"),
-  authorize("super_admin"),
+  permissionCheck("view_role"),
   rbacController.getAllRoles
-);
-
-router.get(
-  "/my-role",
-  protect("user"),
-  rbacController.getMyRoleWithPermissions
 );
 
 router.get(
   "/roles/:id",
   protect("user"),
-  authorize("super_admin"),
+  permissionCheck("view_role"),
   rbacController.getRoleById
-);
-
-// retruns role info with permissions
-router.get(
-  "/roles/:id/permissions",
-  protect("user"),
-  authorize("super_admin", "restaurant_admin"),
-  rbacController.getRoleWithPermissions
-);
-
-// grant or revoke permissions to role
-// router.post(
-//   "/roles/:roleId/permissions/toggle",
-//   protect("user"),
-//   authorize("super_admin"),
-//   grantOrRevokePermissionToRoleValidator,
-//   validateRequest,
-//   rbacController.togglePermissionForRole
-// );
-
-router.post(
-  "/roles/:roleId/permissions/add",
-  protect("user"),
-  authorize("super_admin"),
-  rbacController.addPermissionsToRole
-);
-
-router.post(
-  "/roles/:roleId/permissions/remove",
-  protect("user"),
-  authorize("super_admin"),
-  rbacController.removePermissionsFromRole
 );
 
 // ================= PERMISSION
 router.post(
   "/create-permission",
   protect("user"),
-  authorize("super_admin"),
-  createPermissionValidator,
-  validateRequest,
+  permissionCheck("create_permission"),
   rbacController.createPermission
 );
 
 router.put(
   "/update-permission/:id",
   protect("user"),
-  authorize("super_admin"),
-  updatePermissionValidator,
-  validateRequest,
+  permissionCheck("update_permission"),
   rbacController.updatePermission
 );
 
 router.get(
-  "/permissions",
+  "/all-permission",
   protect("user"),
-  authorize("super_admin"),
+  permissionCheck("view_permission"),
   rbacController.getAllPermissions
 );
 
 router.get(
-  "/permissions/:id",
+  "/permission-byId/:id",
   protect("user"),
-  authorize("super_admin"),
+  permissionCheck("view_permission"),
   rbacController.getPermissionById
-);
-
-// USER-ROLE & PERMISSION
-
-// grant or revoke permissions to user by restaurant admins
-router.post(
-  "/users/:userId/permissions/toggle",
-  protect("user"),
-  authorize("restaurant_admin"),
-  grantOrRevokePermissionToUserValidator,
-  validateRequest,
-  rbacController.togglePermissionToUser
 );
 
 router.get(

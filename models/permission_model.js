@@ -11,8 +11,9 @@ module.exports = (sequelize, DataTypes) => {
       name: {
         type: DataTypes.STRING(100),
         allowNull: false,
+        unique: true,
       },
-      description: DataTypes.TEXT,
+      description: DataTypes.STRING(255),
     },
     {
       tableName: "permissions",
@@ -26,11 +27,6 @@ module.exports = (sequelize, DataTypes) => {
       through: models.RolePermission,
       foreignKey: "permission_id",
       otherKey: "role_id",
-    });
-    Permission.belongsToMany(models.User, {
-      through: models.UserPermission,
-      foreignKey: "permission_id",
-      otherKey: "user_id",
     });
   };
 

@@ -7,6 +7,7 @@ const {
   validateVideoThumbnailSizes,
 } = require("../../middleware/videoUploadMiddleware");
 
+const checkStorageQuota = require("../../middleware/checkStorageCapacity");
 const { protect } = require("../../middleware/protect");
 const { authorize } = require("../../middleware/authorize");
 const { permissionCheck } = require("../../middleware/permissionCheck");
@@ -17,17 +18,18 @@ const { permissionCheck } = require("../../middleware/permissionCheck");
 
 // Upload a new video
 router.post(
-  "/videos",
+  "/upload-video",
   protect("user"),
-  permissionCheck("upload_video"),
+  permissionCheck("manage_social_media"),
   uploadVideoFile,
+  checkStorageQuota,
   validateVideoThumbnailSizes,
   VideoController.uploadVideo
 );
 
 // Update an existing video
 router.put(
-  "/videos/:id",
+  "/update-video/:id",
   protect("user"),
   permissionCheck("edit_video"),
   uploadVideoFile,
@@ -37,7 +39,7 @@ router.put(
 
 // Delete a video
 router.delete(
-  "/videos/:id",
+  "/delete-video/:id",
   protect("user"),
   permissionCheck("delete_video"),
   uploadVideoFile,
@@ -47,7 +49,7 @@ router.delete(
 
 // Approve or reject a video (super admin only)
 router.patch(
-  "/videos/:videoId/status",
+  "/change-status/:videoId",
   protect("user"),
   authorize("super_admin"),
   VideoController.updateVideoStatus

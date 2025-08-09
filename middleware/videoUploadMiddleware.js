@@ -1,6 +1,7 @@
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
+const cleanUploadedFiles = require("../utils/cleanUploadedFiles");
 
 const VIDEO_DIR = path.resolve(__dirname, "../uploads/videos");
 
@@ -35,29 +36,32 @@ const uploadVideoFile = multer({
   { name: "thumbnail", maxCount: 1 },
 ]);
 
-const validateVideoThumbnailSizes = (req, res, next) => {
+const validateVideoThumbnailSizes = async (req, res, next) => {
   const MAX_VIDEO_SIZE = 200 * 1024 * 1024; // 200MB
   const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
 
   try {
     const { video, thumbnail } = req.files || {};
 
+    let shouldCleanup = false;
+
     if (video && video[0].size > MAX_VIDEO_SIZE) {
-      fs.unlinkSync(video[0].path);
-      if (thumbnail) fs.unlinkSync(thumbnail[0].path);
+      shouldCleanup = true;
       return res.status(400).json({
         success: false,
         message: "Video file size exceeds 200MB limit.",
       });
-    }
-
-    if (thumbnail && thumbnail[0].size > MAX_IMAGE_SIZE) {
-      fs.unlinkSync(thumbnail[0].path);
-      if (video) fs.unlinkSync(video[0].path);
+    } else if (thumbnail && thumbnail[0].size > MAX_IMAGE_SIZE) {
+      shouldCleanup = true;
       return res.status(400).json({
         success: false,
         message: "Thumbnail image size exceeds 5MB limit.",
       });
+    }
+
+    if (shouldCleanup) {
+      await cleanUploadedFiles(req.files);
+      return;
     }
 
     next();

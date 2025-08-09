@@ -3,39 +3,66 @@ const asyncHandler = require("../../utils/asyncHandler");
 const { success } = require("../../utils/apiResponse");
 const throwError = require("../../utils/throwError");
 
-// ROLE
+// ==================== Role Tag
+
+exports.createRoleTag = asyncHandler(async (req, res) => {
+  const roleTag = await RbacService.createRoleTag(req.body);
+  return success(res, "Role tag created successfully", roleTag, 201);
+});
+
+exports.updateRoleTag = asyncHandler(async (req, res) => {
+  const updatedRoleTag = await RbacService.updateRoleTag(
+    req.params.id,
+    req.body
+  );
+  return success(res, "Role tag updated successfully", updatedRoleTag);
+});
+
+exports.getRoleTagById = asyncHandler(async (req, res) => {
+  const roleTagWithRoles = await RbacService.getRoleTagByIdWithRoles(
+    req.params.id
+  );
+  return success(
+    res,
+    "Role tag and roles fetched successfully",
+    roleTagWithRoles
+  );
+});
+
+exports.getAllRoleTag = asyncHandler(async (req, res) => {
+  const data = await RbacService.getAllRoleTags();
+  return success(res, "Role tags fetched successfully", data);
+});
+
+exports.deleteRoleTag = asyncHandler(async (req, res) => {
+  await RbacService.deleteRoleTag(req.params.id);
+  return success(res, "Role tag deleted successfully");
+});
+
+//====================== ROLE
 
 exports.createRole = asyncHandler(async (req, res) => {
-  const role = await RbacService.createRole(req.body);
+  const role = await RbacService.createRole(req.user, req.body);
   return success(res, "Role created successfully", role, 201);
 });
 
 exports.updateRole = asyncHandler(async (req, res) => {
-  await RbacService.updateRole(req.params.id, req.body);
+  await RbacService.updateRole(req.params.id, req.user, req.body);
   return success(res, "Role updated successfully");
 });
 
 exports.getAllRoles = asyncHandler(async (req, res) => {
-  const roles = await RbacService.getAllRoles(req.query);
+  const limit = parseInt(req.query.limit, 10) || 10;
+  const page = parseInt(req.query.page, 10) || 1;
+  const offset = (page - 1) * limit;
+  const roles = await RbacService.getAllRoles(req.user, { limit, offset });
+
   return success(res, "Roles fetched successfully", roles);
 });
 
 exports.getRoleById = asyncHandler(async (req, res) => {
-  const role = await RbacService.getRoleById(req.params.id);
+  const role = await RbacService.getRoleById(req.params.id, req.user);
   return success(res, "Role fetched successfully", role);
-});
-
-exports.getMyRoleWithPermissions = asyncHandler(async (req, res) => {
-  const role = await RbacService.getMyOwnRolePermission(req.user.id);
-  return success(res, "Your role and granted permissions fetched", role);
-});
-
-exports.getRoleWithPermissions = asyncHandler(async (req, res) => {
-  const data = await RbacService.getRoleWithPermissions(
-    req.params.id,
-    req.query
-  );
-  return success(res, "Role with permissions fetched successfully", data);
 });
 
 // PERMISSION
@@ -96,15 +123,6 @@ exports.removePermissionsFromRole = asyncHandler(async (req, res) => {
 });
 
 // USER-PERMISSION
-
-exports.togglePermissionToUser = asyncHandler(async (req, res) => {
-  const result = await RbacService.togglePermissionForUser(
-    req.params.userId,
-    req.body.permissionIds,
-    req.user
-  );
-  return success(res, "Permissions toggled successfully", result);
-});
 
 exports.getUserPermissions = asyncHandler(async (req, res) => {
   const permissions = await RbacService.getUserPermissions(req.params.userId);

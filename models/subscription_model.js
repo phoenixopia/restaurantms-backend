@@ -4,12 +4,9 @@ module.exports = (sequelize, DataTypes) => {
     "Subscription",
     {
       id: {
-        type: DataTypes.INTEGER,
-        autoIncrement: true,
+        type: DataTypes.UUID,
+        defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
-        // type: DataTypes.UUID,
-        // defaultValue: DataTypes.UUIDV4,
-        // primaryKey: true,
       },
 
       restaurant_id: {

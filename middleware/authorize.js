@@ -1,14 +1,12 @@
-exports.authorize = (...allowedRoles) => {
+exports.authorize = (...allowedRoleTags) => {
   return (req, res, next) => {
-    const roleName = req.user?.Role?.name;
-    console.log(roleName);
-    if (!roleName || !allowedRoles.includes(roleName)) {
+    const roleTagName = req.user?.role_tag_name;
+    if (!roleTagName || !allowedRoleTags.includes(roleTagName)) {
       return res.status(403).json({
         success: false,
-        message: "Access denied. You do not have the required permissions.",
+        message: "Access denied. You do not have the required role tag.",
       });
     }
-
     next();
   };
 };

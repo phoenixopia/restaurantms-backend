@@ -8,13 +8,34 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
       },
-      name: DataTypes.ENUM(
-        "super_admin",
-        "restaurant_admin",
-        "staff",
-        "customer"
-      ),
-      description: DataTypes.TEXT,
+      name: {
+        type: DataTypes.STRING,
+        allowNull: false,
+      },
+      role_tag_id: {
+        type: DataTypes.UUID,
+        allowNull: false,
+        references: {
+          model: "role_tags",
+          key: "id",
+        },
+      },
+      restaurant_id: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        references: {
+          model: "restaurants",
+          key: "id",
+        },
+      },
+      description: {
+        type: DataTypes.STRING(255),
+      },
+
+      created_by: {
+        type: DataTypes.UUID,
+        allowNull: false,
+      },
     },
     {
       tableName: "roles",
@@ -34,6 +55,11 @@ module.exports = (sequelize, DataTypes) => {
       foreignKey: "role_id",
       onUpdate: "CASCADE",
     });
+
+    Role.belongsTo(models.RoleTag, {
+      foreignKey: "role_tag_id",
+    });
+
     Role.hasMany(models.Customer, {
       foreignKey: "role_id",
       onUpdate: "CASCADE",

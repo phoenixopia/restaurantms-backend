@@ -1,4 +1,4 @@
-const { RolePermission, Permission, UserPermission } = require("../models");
+const { Role, Permission } = require("../models");
 
 exports.permissionCheck = (permissionNames = []) => {
   if (!Array.isArray(permissionNames)) {
@@ -9,58 +9,49 @@ exports.permissionCheck = (permissionNames = []) => {
     try {
       const user = req.user;
 
-      if (user.role_name === "super_admin") {
+      if (user.role_tag_name === "super_admin") {
         return next();
       }
 
-      // Check role permissions
-      const rolePerms = await RolePermission.findAll({
-        where: {
-          role_id: user.role_id,
-          granted: true,
-        },
+      if (!user.role_id) {
+        return res.status(403).json({
+          success: false,
+          message: "Access denied. Your account does not have a role assigned.",
+        });
+      }
+
+      const role = await Role.findByPk(user.role_id, {
         include: [
           {
             model: Permission,
-            required: true,
-            where: {
-              name: permissionNames,
-            },
+            attributes: ["name"],
           },
         ],
       });
 
-      if (rolePerms.length > 0) {
-        return next();
+      if (!role) {
+        return res.status(403).json({
+          success: false,
+          message: "Access denied. Your role was not found in the system.",
+        });
       }
 
-      // Check user permissions
-      const userPerms = await UserPermission.findAll({
-        where: {
-          user_id: user.id,
-          granted: true,
-        },
-        include: [
-          {
-            model: Permission,
-            required: true,
-            where: {
-              name: permissionNames,
-            },
-          },
-        ],
-      });
+      const rolePermissionNames = role.Permissions.map((p) => p.name);
 
-      if (userPerms.length > 0) {
-        return next();
+      const hasPermission = permissionNames.some((perm) =>
+        rolePermissionNames.includes(perm)
+      );
+
+      if (!hasPermission) {
+        return res.status(403).json({
+          success: false,
+          message: `Access denied. You need one of the following permissions to perform this action: ${permissionNames.join(
+            ", "
+          )}.`,
+        });
       }
 
-      return res.status(403).json({
-        success: false,
-        message: `Access denied - requires one of [${permissionNames.join(
-          ", "
-        )}] permission.`,
-      });
+      next();
     } catch (err) {
       console.error("Error in permissionCheck middleware:", err);
       return res.status(500).json({

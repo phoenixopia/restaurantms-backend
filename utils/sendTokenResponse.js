@@ -1,4 +1,4 @@
-const { Role, Permission } = require("../models");
+const { Role, Permission, RoleTag } = require("../models");
 
 exports.sendTokenResponse = async (
   user,
@@ -26,44 +26,23 @@ exports.sendTokenResponse = async (
       });
     }
 
+    const roleTag = await RoleTag.findByPk(user.role_tag_id);
+
     let role = null;
     let rolePermissions = [];
-    let directPermissions = [];
 
     if (user.role_id) {
       role = await Role.findByPk(user.role_id, {
         include: [
           {
             model: Permission,
-            through: {
-              attributes: ["granted"],
-              where: { granted: true },
-            },
             attributes: ["name"],
+            through: { attributes: [] },
           },
         ],
       });
-
       rolePermissions = role?.Permissions?.map((perm) => perm.name) || [];
     }
-
-    const userWithPermissions = await user.reload({
-      include: [
-        {
-          model: Permission,
-          through: { attributes: [] },
-          attributes: ["name"],
-        },
-      ],
-    });
-
-    directPermissions = userWithPermissions.Permissions.map(
-      (perm) => perm.name
-    );
-
-    const permissions = [
-      ...new Set([...rolePermissions, ...directPermissions]),
-    ];
 
     const responseData = {
       id: user.id,
@@ -71,8 +50,9 @@ exports.sendTokenResponse = async (
       email: user.email || null,
       phone_number: user.phone_number || null,
       profile_picture: user.profile_picture,
+      role_tag: roleTag?.name || null,
       role: role?.name || null,
-      permissions,
+      permissions: rolePermissions,
       restaurant_id: user.restaurant_id || null,
       branch_id: user.branch_id || null,
     };

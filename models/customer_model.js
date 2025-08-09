@@ -110,6 +110,14 @@ module.exports = (sequelize, DataTypes) => {
           key: "id",
         },
       },
+      role_tag_id: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        references: {
+          model: "role_tags",
+          key: "id",
+        },
+      },
 
       full_name: {
         type: DataTypes.VIRTUAL,
@@ -150,6 +158,7 @@ module.exports = (sequelize, DataTypes) => {
     const tokenPayload = {
       id: this.id,
       role_id: this.role_id,
+      role_tag_id: this.role_tag_id,
     };
     return jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: "6h" });
   };
@@ -158,6 +167,7 @@ module.exports = (sequelize, DataTypes) => {
     const tokenPayload = {
       id: this.id,
       role_id: this.role_id,
+      role_tag_id: this.role_tag_id,
     };
     return jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: "10m" });
   };
@@ -188,67 +198,27 @@ module.exports = (sequelize, DataTypes) => {
     return new Date() < this.locked_until;
   };
 
+  // Associations
   Customer.associate = (models) => {
-    Customer.belongsTo(models.Location, {
-      foreignKey: "office_address_id",
-    });
+    Customer.belongsTo(models.Location, { foreignKey: "office_address_id" });
+    Customer.belongsTo(models.Location, { foreignKey: "home_address_id" });
+    Customer.belongsTo(models.Role, { foreignKey: "role_id" });
+    Customer.belongsTo(models.RoleTag, { foreignKey: "role_tag_id" });
 
-    Customer.belongsTo(models.Location, {
-      foreignKey: "home_address_id",
-    });
-
-    Customer.belongsTo(models.Role, {
-      foreignKey: "role_id",
-    });
-
-    Customer.hasMany(models.LoyaltyPoint, {
-      foreignKey: "customer_id",
-    });
-
-    Customer.hasMany(models.ActivityLog, {
-      foreignKey: "customer_id",
-    });
-
-    Customer.hasOne(models.TwoFA, {
-      foreignKey: "customer_id",
-      as: "twoFA",
-    });
-
-    Customer.hasMany(models.Order, {
-      foreignKey: "customer_id",
-    });
-    Customer.hasMany(models.Reservation, {
-      foreignKey: "customer_id",
-    });
-    Customer.hasMany(models.Review, {
-      foreignKey: "customer_id",
-    });
-    Customer.hasMany(models.Notification, {
-      foreignKey: "customer_id",
-    });
-    Customer.hasMany(models.Payment, {
-      foreignKey: "customer_id",
-    });
-
-    Customer.hasMany(models.CateringRequest, {
-      foreignKey: "customer_id",
-    });
-
-    Customer.hasMany(models.VideoView, {
-      foreignKey: "customer_id",
-    });
-    Customer.hasMany(models.VideoComment, {
-      foreignKey: "customer_id",
-    });
-    Customer.hasMany(models.VideoFavorite, {
-      foreignKey: "customer_id",
-    });
-    Customer.hasMany(models.VideoLike, {
-      foreignKey: "customer_id",
-    });
-    Customer.hasMany(models.RestaurantFollower, {
-      foreignKey: "customer_id",
-    });
+    Customer.hasMany(models.LoyaltyPoint, { foreignKey: "customer_id" });
+    Customer.hasMany(models.ActivityLog, { foreignKey: "customer_id" });
+    Customer.hasOne(models.TwoFA, { foreignKey: "customer_id", as: "twoFA" });
+    Customer.hasMany(models.Order, { foreignKey: "customer_id" });
+    Customer.hasMany(models.Reservation, { foreignKey: "customer_id" });
+    Customer.hasMany(models.Review, { foreignKey: "customer_id" });
+    Customer.hasMany(models.Notification, { foreignKey: "customer_id" });
+    Customer.hasMany(models.Payment, { foreignKey: "customer_id" });
+    Customer.hasMany(models.CateringRequest, { foreignKey: "customer_id" });
+    Customer.hasMany(models.VideoView, { foreignKey: "customer_id" });
+    Customer.hasMany(models.VideoComment, { foreignKey: "customer_id" });
+    Customer.hasMany(models.VideoFavorite, { foreignKey: "customer_id" });
+    Customer.hasMany(models.VideoLike, { foreignKey: "customer_id" });
+    Customer.hasMany(models.RestaurantFollower, { foreignKey: "customer_id" });
 
     Customer.belongsToMany(models.Restaurant, {
       through: models.RestaurantFollower,

@@ -107,6 +107,14 @@ module.exports = (sequelize, DataTypes) => {
           key: "id",
         },
       },
+      role_tag_id: {
+        type: DataTypes.UUID,
+        allowNull: false,
+        references: {
+          model: "role_tags",
+          key: "id",
+        },
+      },
       password_changed_at: {
         type: DataTypes.DATE,
         allowNull: true,
@@ -150,6 +158,7 @@ module.exports = (sequelize, DataTypes) => {
     const tokenPayload = {
       id: this.id,
       role_id: this.role_id,
+      role_tag_id: this.role_tag_id,
       restaurant_id: this.restaurant_id || null,
       branch_id: this.branch_id || null,
     };
@@ -160,6 +169,7 @@ module.exports = (sequelize, DataTypes) => {
     const tokenPayload = {
       id: this.id,
       role_id: this.role_id,
+      role_tag_id: this.role_tag_id,
     };
     return jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: "10m" });
   };
@@ -216,14 +226,8 @@ module.exports = (sequelize, DataTypes) => {
       foreignKey: "role_id",
     });
 
-    User.hasMany(models.UserPermission, {
-      foreignKey: "user_id",
-    });
-
-    User.belongsToMany(models.Permission, {
-      through: models.UserPermission,
-      foreignKey: "user_id",
-      otherKey: "permission_id",
+    User.belongsTo(models.RoleTag, {
+      foreignKey: "role_id",
     });
 
     User.hasMany(models.ActivityLog, {

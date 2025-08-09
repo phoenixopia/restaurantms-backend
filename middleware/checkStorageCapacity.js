@@ -1,13 +1,8 @@
-const {
-  Branch,
-  Subscription,
-  Plan,
-  PlanLimit,
-  UploadedFile,
-} = require("../models");
-const { fn, col } = require("sequelize");
+const { Branch } = require("../models");
+const { calculateStorageQuota } = require("../utils/storageUtils");
+const cleanupUploadedFiles = require("../utils/cleanUploadedFiles");
 
-const checkStorageQuota = async (req, res, next) => {
+checkStorageQuota = async (req, res, next) => {
   try {
     let restaurantId = req.user?.restaurant_id;
 
@@ -29,42 +24,6 @@ const checkStorageQuota = async (req, res, next) => {
       });
     }
 
-    const subscription = await Subscription.findOne({
-      where: { restaurant_id: restaurantId, status: "active" },
-      include: [
-        {
-          model: Plan,
-          include: [
-            {
-              model: PlanLimit,
-              where: { key: "storage_quota_gb" },
-              required: true,
-            },
-          ],
-        },
-      ],
-    });
-
-    if (!subscription || !subscription.Plan?.PlanLimits?.length) {
-      return res.status(403).json({
-        success: false,
-        message: "Active subscription with storage quota not found.",
-      });
-    }
-
-    const quotaGb = parseFloat(subscription.Plan.PlanLimits[0].value);
-    const quotaMb = quotaGb * 1024;
-
-    const usage = await UploadedFile.findOne({
-      where: { restaurant_id: restaurantId },
-      attributes: [[fn("SUM", col("size_mb")), "total"]],
-      raw: true,
-    });
-
-    const usedMb = parseFloat(usage.total || 0);
-
-    let incomingSizeMb = 0;
-
     const files = req.files
       ? Array.isArray(req.files)
         ? req.files
@@ -73,28 +32,20 @@ const checkStorageQuota = async (req, res, next) => {
       ? [req.file]
       : [];
 
-    for (const file of files) {
-      const sizeBytes = file.size || 0;
-      const sizeMb = sizeBytes / (1024 * 1024);
-      incomingSizeMb += sizeMb;
-    }
+    const result = await calculateStorageQuota(restaurantId, files);
 
-    const totalAfterUploadMb = usedMb + incomingSizeMb;
-
-    if (totalAfterUploadMb > quotaMb) {
-      return res.status(413).json({
+    if (result.exceeded) {
+      await cleanupUploadedFiles(files);
+      return res.status(result.status).json({
         success: false,
-        message: `Storage quota exceeded: You’ve used ${(usedMb / 1024).toFixed(
-          2
-        )}GB of ${quotaGb.toFixed(2)}GB. This upload adds ${(
-          incomingSizeMb / 1024
-        ).toFixed(2)}GB and exceeds your limit.`,
+        message: result.message,
       });
     }
 
     return next();
   } catch (err) {
     console.error("Storage quota check error:", err);
+    await cleanupUploadedFiles(req.files);
     return res.status(500).json({
       success: false,
       message: "Internal server error during storage quota check.",
