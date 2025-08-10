@@ -3,11 +3,13 @@
 const {
   User,
   Role,
+  RoleTag,
   Restaurant,
   Branch,
   Plan,
   PlanLimit,
   Permission,
+  RolePermission,
   UserPermission,
   Subscription,
   sequelize,
@@ -47,15 +49,43 @@ const UserService = {
         if (!restaurant) throwError("Restaurant not found", 400);
       }
 
-      const role = await Role.findOne({
+      let roleTag = await RoleTag.findOne({
         where: { name: "restaurant_admin" },
         transaction: t,
       });
-      if (!role) throwError("Role 'restaurant_admin' not found", 404);
+
+      if (!roleTag) {
+        roleTag = await RoleTag.create(
+          {
+            name: "restaurant_admin",
+            description:
+              "Administrator of a restaurant, manages staff and operations.",
+          },
+          { transaction: t }
+        );
+      }
+
+      let role = await Role.findOne({
+        where: {
+          role_tag_id: roleTag.id,
+        },
+        transaction: t,
+      });
+
+      if (!role) {
+        role = await Role.create(
+          {
+            name: "Restaurant Admin",
+            role_tag_id: roleTag.id,
+            description: "Full administrative access for managing a restaurant",
+            created_by: superAdminId,
+          },
+          { transaction: t }
+        );
+      }
 
       const whereClause =
         creatorMode === "email" ? { email } : { phone_number };
-
       if (await User.findOne({ where: whereClause, transaction: t })) {
         const conflictField =
           creatorMode === "email" ? "email" : "phone number";
@@ -72,6 +102,7 @@ const UserService = {
           phone_number: creatorMode === "phone" ? phone_number : null,
           password,
           role_id: role.id,
+          role_tag_id: roleTag.id,
           restaurant_id,
           branch_id: null,
           created_by: superAdminId,
@@ -112,6 +143,7 @@ const UserService = {
         email: newUser.email,
         phone_number: newUser.phone_number,
         role_id: newUser.role_id,
+        role_tag_id: newUser.role_tag_id,
         restaurant_id: newUser.restaurant_id,
         branch_id: newUser.branch_id,
         created_by: newUser.created_by,
@@ -131,6 +163,7 @@ const UserService = {
         email,
         phone_number,
         password,
+        role_id,
         branch_id = null,
         creatorMode,
       } = data;
@@ -200,10 +233,11 @@ const UserService = {
       }
 
       const role = await Role.findOne({
-        where: { name: "staff" },
+        where: { id: data.role_id, created_by: restaurantAdminId },
         transaction: t,
       });
-      if (!role) throwError("Role 'staff' not found", 404);
+      if (!role)
+        throwError("Role not found or does not belong to your restaurant", 404);
 
       const whereClause =
         creatorMode === "email" ? { email } : { phone_number };
@@ -223,6 +257,7 @@ const UserService = {
           phone_number: creatorMode === "phone" ? phone_number : null,
           password,
           role_id: role.id,
+          role_tag_id: role.role_tag_id,
           restaurant_id: null,
           branch_id,
           created_by: restaurantAdminId,
@@ -263,6 +298,7 @@ const UserService = {
         email: newUser.email,
         phone_number: newUser.phone_number,
         role_id: newUser.role_id,
+        role_tag_id: newUser.role_tag_id,
         restaurant_id: newUser.restaurant_id,
         branch_id: newUser.branch_id,
         created_by: newUser.created_by,
@@ -294,51 +330,32 @@ const UserService = {
   async getCreatedUserById(creatorId, id) {
     const user = await User.findOne({
       where: { id, created_by: creatorId },
-      attributes: {
-        exclude: [
-          "password",
-          "confirmation_code",
-          "confirmation_code_expires",
-          "locked_until",
-          "failed_login_attempts",
-          "last_login_at",
-          "social_provider",
-          "social_provider_id",
-          "email_verified_at",
-          "phone_verified_at",
-          "createdAt",
-          "updatedAt",
-          "created_at",
-          "updated_at",
-          "password_changed_at",
-        ],
-      },
+      attributes: [
+        "id",
+        "full_name",
+        "profile_picture",
+        "branch_id",
+        "restaurant_id",
+        "role_id",
+      ],
       include: [
         {
           model: Role,
-          attributes: ["id", "name"],
+          attributes: ["id", "name", "role_tag_id"],
           include: [
             {
-              model: Permission,
+              model: RoleTag,
               attributes: ["id", "name"],
-              through: {
-                where: { granted: true },
-                attributes: [],
-              },
             },
           ],
         },
         {
-          model: UserPermission,
-          where: { granted: true },
-          required: false,
-          attributes: ["permission_id"],
-          include: [
-            {
-              model: Permission,
-              attributes: ["id", "name"],
-            },
-          ],
+          model: Branch,
+          attributes: ["id", "name"],
+        },
+        {
+          model: Restaurant,
+          attributes: ["id", "restaurant_name"],
         },
       ],
     });
@@ -350,112 +367,86 @@ const UserService = {
       );
     }
 
-    const userJson = user.toJSON();
+    const rolePermissions = await RolePermission.findAll({
+      where: { role_id: user.role_id },
+      attributes: ["permission_id"],
+    });
 
-    const fromRole =
-      userJson.Role?.Permissions?.map(({ id, name }) => ({ id, name })) || [];
-    const fromUser =
-      userJson.UserPermissions?.map(({ Permission }) => ({
-        id: Permission.id,
-        name: Permission.name,
-      })) || [];
+    const permissionIds = rolePermissions.map((rp) => rp.permission_id);
 
-    delete userJson.Role;
-    delete userJson.UserPermissions;
+    const permissions = await Permission.findAll({
+      where: { id: permissionIds },
+      attributes: ["id", "name"],
+    });
 
     return {
-      ...userJson,
-      permissions: {
-        fromRole,
-        fromUser,
+      id: user.id,
+      full_name: user.full_name,
+      profile_picture: user.profile_picture,
+      role: {
+        id: user.Role.id,
+        name: user.Role.name,
+        role_tag: {
+          id: user.Role.RoleTag.id,
+          name: user.Role.RoleTag.name,
+        },
+        permissions: permissions.map((p) => ({
+          id: p.id,
+          name: p.name,
+        })),
+      },
+      branch: {
+        id: user.branch_id || null,
+        name: user.Branch?.name || null,
+      },
+      restaurant: {
+        id: user.restaurant_id || null,
+        name: user.Restaurant?.restaurant_name || null,
       },
     };
   },
 
-  async getAllCreatedUsers(adminId, query = {}) {
-    let { page, limit, offset, order } = buildPagination(query);
+  async getAllCreatedUsers(creatorId, query) {
+    const page = parseInt(query.page, 10) || 1;
+    const limit = parseInt(query.limit, 10) || 10;
+    const offset = (page - 1) * limit;
 
-    const { count, rows } = await User.findAndCountAll({
-      where: { created_by: adminId },
-      limit,
-      offset,
-      order: order || [["created_at", "DESC"]],
-      attributes: {
-        exclude: [
-          "password",
-          "confirmation_code",
-          "confirmation_code_expires",
-          "locked_until",
-          "failed_login_attempts",
-          "last_login_at",
-          "social_provider",
-          "social_provider_id",
-          "email_verified_at",
-          "phone_verified_at",
-          "updatedAt",
-          "updated_at",
-          "password_changed_at",
-        ],
-      },
+    const { rows, count } = await User.findAndCountAll({
+      where: { created_by: creatorId },
+      attributes: ["id", "profile_picture", "full_name", "created_at"],
       include: [
         {
           model: Role,
-          attributes: ["id", "name"],
-          include: [
-            {
-              model: Permission,
-              attributes: ["id", "name"],
-              through: { attributes: [] },
-            },
+          attributes: [
+            "name",
+            [
+              sequelize.literal(`(
+              SELECT COUNT(*)
+              FROM role_permissions AS rp
+              WHERE rp.role_id = Role.id
+            )`),
+              "total_permission",
+            ],
           ],
         },
         {
-          model: UserPermission,
-          where: { granted: true },
-          required: false,
-          attributes: ["permission_id"],
-          include: [
-            {
-              model: Permission,
-              attributes: ["id", "name"],
-            },
-          ],
+          model: RoleTag,
+          attributes: ["name"],
         },
       ],
-    });
-
-    const formattedUsers = rows.map((user) => {
-      const userJson = user.toJSON();
-
-      const fromRole =
-        userJson.Role?.Permissions?.map(({ id, name }) => ({ id, name })) || [];
-
-      const fromUser =
-        userJson.UserPermissions?.map(({ Permission }) => ({
-          id: Permission.id,
-          name: Permission.name,
-        })) || [];
-
-      delete userJson.Role;
-      delete userJson.UserPermissions;
-
-      return {
-        ...userJson,
-        permissions: {
-          fromRole,
-          fromUser,
-        },
-      };
+      order: [["created_at", "DESC"]],
+      limit,
+      offset,
     });
 
     return {
       total: count,
       page,
-      limit,
-      totalPages: Math.ceil(count / limit),
-      data: formattedUsers,
+      pages: Math.ceil(count / limit),
+      data: rows,
     };
   },
+
   async assignUserToBranch(userId, branchId, currentUser) {
     const t = await sequelize.transaction();
     try {
@@ -499,14 +490,20 @@ const UserService = {
     const t = await sequelize.transaction();
     try {
       const user = await User.findByPk(userId, {
-        include: [{ model: Role }],
+        include: [
+          {
+            model: Role,
+            include: [{ model: RoleTag }],
+          },
+        ],
         transaction: t,
       });
+
       if (!user) throwError("User not found", 404);
 
-      if (user.Role?.name !== "restaurant_admin") {
+      if (user.Role?.RoleTag?.name !== "restaurant_admin") {
         throwError(
-          "Only users with 'restaurant_admin' role can be assigned",
+          "Only users with role tag 'restaurant_admin' can be assigned",
           403
         );
       }
@@ -523,40 +520,10 @@ const UserService = {
       user.restaurant_id = restaurant.id;
       await user.save({ transaction: t });
 
-      const managePermission = await sequelize.models.Permission.findOne({
-        where: { name: "manage_restaurant" },
-        transaction: t,
-      });
-      if (!managePermission) {
-        throwError("Permission 'manage_restaurant' not found", 404);
-      }
-
-      const existingPermission = await sequelize.models.UserPermission.findOne({
-        where: {
-          user_id: user.id,
-          permission_id: managePermission.id,
-          restaurant_id: restaurant.id,
-          granted: true,
-        },
-        transaction: t,
-      });
-
-      if (!existingPermission) {
-        await sequelize.models.UserPermission.create(
-          {
-            user_id: user.id,
-            permission_id: managePermission.id,
-            restaurant_id: restaurant.id,
-            granted: true,
-          },
-          { transaction: t }
-        );
-      }
-
       await t.commit();
 
       return {
-        message: "User assigned to restaurant and permission granted",
+        message: "User assigned to restaurant successfully",
         userId: user.id,
         restaurantId: restaurant.id,
       };
@@ -602,42 +569,10 @@ const UserService = {
       user.branch_id = branch.id;
       await user.save({ transaction: t });
 
-      const manageBranchPermission = await sequelize.models.Permission.findOne({
-        where: { name: "manage_branches" },
-        transaction: t,
-      });
-
-      if (!manageBranchPermission) {
-        throwError("Permission 'manage_branch' not found", 404);
-      }
-
-      const existingPermission = await sequelize.models.UserPermission.findOne({
-        where: {
-          user_id: user.id,
-          permission_id: manageBranchPermission.id,
-          restaurant_id: currentUser.restaurant_id,
-          granted: true,
-        },
-        transaction: t,
-      });
-
-      if (!existingPermission) {
-        await sequelize.models.UserPermission.create(
-          {
-            user_id: user.id,
-            permission_id: manageBranchPermission.id,
-            restaurant_id: currentUser.restaurant_id,
-            granted: true,
-            granted_by: currentUser.id,
-          },
-          { transaction: t }
-        );
-      }
-
       await t.commit();
 
       return {
-        message: "User assigned as branch manager and permission granted",
+        message: "User assigned as branch manager successfully",
         userId: user.id,
         branchId: branch.id,
       };
@@ -673,22 +608,6 @@ const UserService = {
       if (user.branch_id === branch.id) {
         user.branch_id = null;
         await user.save({ transaction: t });
-      }
-
-      const manageBranchPermission = await sequelize.models.Permission.findOne({
-        where: { name: "manage_branches" },
-        transaction: t,
-      });
-
-      if (manageBranchPermission) {
-        await sequelize.models.UserPermission.destroy({
-          where: {
-            user_id: user.id,
-            permission_id: manageBranchPermission.id,
-            restaurant_id: currentUser.restaurant_id,
-          },
-          transaction: t,
-        });
       }
 
       await t.commit();

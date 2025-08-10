@@ -107,4 +107,10 @@ router.get(
   rbacController.getUserPermissions
 );
 
+router.get(
+  "/get-my-own",
+  protect("user"),
+  rbacController.getMyOwnRoleAndPermission
+);
+
 module.exports = router;

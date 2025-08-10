@@ -87,20 +87,6 @@ exports.getPermissionById = asyncHandler(async (req, res) => {
   return success(res, "Permission fetched successfully", permission);
 });
 
-// ROLE-PERMISSION
-
-// exports.togglePermissionForRole = asyncHandler(async (req, res) => {
-//   const { roleId } = req.params;
-//   const { permissionIds } = req.body;
-
-//   const result = await RbacService.togglePermissionForRole(
-//     roleId,
-//     permissionIds
-//   );
-
-//   return success(res, "Permissions toggled for role successfully", result);
-// });
-
 exports.addPermissionsToRole = asyncHandler(async (req, res) => {
   const { roleId } = req.params;
   const { permissionIds } = req.body;
@@ -125,6 +111,13 @@ exports.removePermissionsFromRole = asyncHandler(async (req, res) => {
 // USER-PERMISSION
 
 exports.getUserPermissions = asyncHandler(async (req, res) => {
-  const permissions = await RbacService.getUserPermissions(req.params.userId);
+  const permissions = await RbacService.getUserRoleWithPermissions(
+    req.params.userId
+  );
   return success(res, "User permissions fetched successfully", permissions);
+});
+
+exports.getMyOwnRoleAndPermission = asyncHandler(async (req, res) => {
+  const data = await RbacService.getMyOwn(req.user.id);
+  return success(res, "My role and permissions fetched successfully", data);
 });

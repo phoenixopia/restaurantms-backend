@@ -109,7 +109,6 @@ module.exports = (sequelize, DataTypes) => {
       },
       role_tag_id: {
         type: DataTypes.UUID,
-        allowNull: false,
         references: {
           model: "role_tags",
           key: "id",
@@ -227,7 +226,7 @@ module.exports = (sequelize, DataTypes) => {
     });
 
     User.belongsTo(models.RoleTag, {
-      foreignKey: "role_id",
+      foreignKey: "role_tag_id",
     });
 
     User.hasMany(models.ActivityLog, {

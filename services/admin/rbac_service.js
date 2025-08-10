@@ -1,11 +1,11 @@
 const {
+  User,
   Restaurant,
+  Branch,
   Role,
   RoleTag,
-  User,
   Permission,
   RolePermission,
-  UserPermission,
   sequelize,
 } = require("../../models");
 const { Op, where } = require("sequelize");
@@ -573,6 +573,70 @@ const RbacService = {
     return permission;
   },
 
+  async getMyOwn(userId) {
+    const user = await User.findByPk(userId, {
+      attributes: [
+        "id",
+        "full_name",
+        "profile_picture",
+        "restaurant_id",
+        "branch_id",
+      ],
+      include: [
+        {
+          model: Role,
+          attributes: ["id", "name", "role_tag_id"],
+          include: [
+            {
+              model: RoleTag,
+              attributes: ["name"],
+            },
+            {
+              model: Permission,
+              attributes: ["id", "name"],
+              through: { attributes: [] },
+            },
+          ],
+        },
+        {
+          model: sequelize.models.Restaurant,
+          attributes: ["id", "restaurant_name"],
+        },
+        {
+          model: sequelize.models.Branch,
+          attributes: ["id", "name"],
+        },
+      ],
+    });
+
+    if (!user) {
+      throwError("User not found", 404);
+    }
+
+    return {
+      user_id: user.id,
+      full_name: user.full_name,
+      profile_picture: user.profile_picture,
+      restaurant: user.Restaurant
+        ? { id: user.Restaurant.id, name: user.Restaurant.restaurant_name }
+        : null,
+      branch: user.Branch
+        ? { id: user.Branch.id, name: user.Branch.name }
+        : null,
+      role: user.Role
+        ? {
+            id: user.Role.id,
+            name: user.Role.name,
+            role_tag_name: user.Role.RoleTag ? user.Role.RoleTag.name : null,
+            permissions: user.Role.Permissions.map((p) => ({
+              id: p.id,
+              name: p.name,
+            })),
+          }
+        : null,
+    };
+  },
+
   async getUserRoleWithPermissions(userId) {
     const user = await User.findByPk(userId, {
       attributes: ["id", "role_id"],
@@ -591,9 +655,7 @@ const RbacService = {
       ],
     });
 
-    if (!user) {
-      throwError("User not found", 404);
-    }
+    if (!user) throwError("User not found", 404);
 
     if (!user.Role) {
       return { role: null, permissions: [] };
@@ -604,7 +666,10 @@ const RbacService = {
         id: user.Role.id,
         name: user.Role.name,
       },
-      permissions: user.Role.Permissions || [],
+      permissions: user.Role.Permissions.map((perm) => ({
+        id: perm.id,
+        name: perm.name,
+      })),
     };
   },
 };

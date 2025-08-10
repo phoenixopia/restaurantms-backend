@@ -40,7 +40,7 @@ router.get(
 
 // Get one created user by ID (only if created by current user)
 router.get(
-  "/:id",
+  "/get-user/:id",
   protect("user"),
   authorize("restaurant_admin", "super_admin"),
   UserController.getCreatedUserById
