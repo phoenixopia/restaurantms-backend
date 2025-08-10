@@ -18,7 +18,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "nodemon server.js",
     "create-super-admin": "node config/init/command.js create-super-admin",
-    "seed": "node ./seeders/index.js"
+    "seed": "node ./seeders/index.js",
+    "seed-data": "node ./seed_data_dashboard/index.js"
   },
   "dependencies": {
     "@ffmpeg-installer/ffmpeg": "^1.1.0",
