@@ -51,7 +51,7 @@ exports.sendTokenResponse = async (
       phone_number: user.phone_number || null,
       profile_picture: user.profile_picture,
       role_tag: roleTag?.name || null,
-      role: role?.name || null,
+      role_name: role?.name || null,
       permissions: rolePermissions,
       restaurant_id: user.restaurant_id || null,
       branch_id: user.branch_id || null,
@@ -61,6 +61,7 @@ exports.sendTokenResponse = async (
       responseData.requiresPasswordChange = true;
     }
 
+    console.log(responseData);
     return res.status(statusCode).cookie("token", token, cookieOptions).json({
       success: true,
       token,
