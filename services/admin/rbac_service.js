@@ -355,11 +355,7 @@ const RbacService = {
     limit = Number(limit);
     const offset = (page - 1) * limit;
 
-    const where = {};
-    if (user.restaurant_id) {
-      where.created_by = user.id;
-      where["$RoleTag.name$"] = "staff";
-    }
+    const where = { created_by: user.id };
 
     const { count, rows } = await Role.findAndCountAll({
       where,
@@ -367,6 +363,11 @@ const RbacService = {
         {
           model: RoleTag,
           attributes: ["name"],
+        },
+        {
+          model: Permission,
+          attributes: ["id"], // no need to fetch all names for counting
+          through: { attributes: [] },
         },
       ],
       order: [["created_at", "DESC"]],
@@ -388,6 +389,7 @@ const RbacService = {
       description: role.description,
       role_tag_name: role.RoleTag?.name || null,
       restaurant_name: restaurantName,
+      permission_count: role.Permissions ? role.Permissions.length : 0,
     }));
 
     return {
