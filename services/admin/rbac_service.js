@@ -366,7 +366,7 @@ const RbacService = {
         },
         {
           model: Permission,
-          attributes: ["id"], // no need to fetch all names for counting
+          attributes: ["id", "name"],
           through: { attributes: [] },
         },
       ],
@@ -389,7 +389,12 @@ const RbacService = {
       description: role.description,
       role_tag_name: role.RoleTag?.name || null,
       restaurant_name: restaurantName,
-      permission_count: role.Permissions ? role.Permissions.length : 0,
+      permissions:
+        role.Permissions?.map((p) => ({
+          id: p.id,
+          name: p.name,
+        })) || [],
+      permission_count: role.Permissions?.length || 0,
     }));
 
     return {
@@ -400,7 +405,6 @@ const RbacService = {
       roles,
     };
   },
-
   async getRoleById(roleId, user) {
     const where = { id: roleId };
 
