@@ -114,18 +114,22 @@ module.exports = (sequelize, DataTypes) => {
   };
 
   Branch.associate = (models) => {
-    Branch.hasMany(models.ContactInfo, {
-      foreignKey: "module_id",
-      constraints: false,
-      scope: {
-        module_type: "branch",
-      },
-      onUpdate: "CASCADE",
-      onDelete: "CASCADE",
-    });
+    // Branch.hasMany(models.ContactInfo, {
+    //   foreignKey: "module_id",
+    //   constraints: false,
+    //   scope: {
+    //     module_type: "branch",
+    //   },
+    //   onUpdate: "CASCADE",
+    //   onDelete: "CASCADE",
+    // });
 
     Branch.belongsTo(models.Restaurant, {
       foreignKey: "restaurant_id",
+      onDelete: "CASCADE",
+    });
+    Branch.hasMany(models.RestaurantBankAccount, {
+      foreignKey: "branch_id",
       onDelete: "CASCADE",
     });
 

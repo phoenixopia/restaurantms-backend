@@ -48,13 +48,13 @@ module.exports = (sequelize) => {
       as: "owned_contact_info",
     });
     // to show contact info of restaurant branches
-    Restaurant.hasMany(models.ContactInfo, {
-      foreignKey: "module_id",
-      constraints: false,
-      scope: {
-        module_type: "restaurant",
-      },
-    });
+    // Restaurant.hasMany(models.ContactInfo, {
+    //   foreignKey: "module_id",
+    //   constraints: false,
+    //   scope: {
+    //     module_type: "restaurant",
+    //   },
+    // });
 
     Restaurant.hasMany(models.Subscription, {
       foreignKey: "restaurant_id",

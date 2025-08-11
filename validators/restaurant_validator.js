@@ -78,7 +78,7 @@ module.exports = {
       .notEmpty()
       .withMessage("Status is required")
       .bail()
-      .isIn(["active", "trial", "cancelled", "expired", "pending"])
+      .isIn(["active", "trial", "inactive", "cancelled", "expired", "pending"])
       .withMessage("Invalid status"),
   ],
   paginationValidation,

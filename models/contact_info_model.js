@@ -51,21 +51,21 @@ module.exports = (sequelize, DataTypes) => {
       onDelete: "CASCADE",
     });
 
-    ContactInfo.belongsTo(models.Restaurant, {
-      foreignKey: "module_id",
-      constraints: false,
-      scope: {
-        module_type: "restaurant",
-      },
-    });
+    // ContactInfo.belongsTo(models.Restaurant, {
+    //   foreignKey: "module_id",
+    //   constraints: false,
+    //   scope: {
+    //     module_type: "restaurant",
+    //   },
+    // });
 
-    ContactInfo.belongsTo(models.Branch, {
-      foreignKey: "module_id",
-      constraints: false,
-      scope: {
-        module_type: "branch",
-      },
-    });
+    // ContactInfo.belongsTo(models.Branch, {
+    //   foreignKey: "module_id",
+    //   constraints: false,
+    //   scope: {
+    //     module_type: "branch",
+    //   },
+    // });
   };
 
   return ContactInfo;

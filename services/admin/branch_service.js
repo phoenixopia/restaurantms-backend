@@ -381,74 +381,74 @@ const BranchService = {
     return branch;
   },
 
-  async addBranchContactInfo(branchId, data, user) {
-    const transaction = await sequelize.transaction();
+  // async addBranchContactInfo(branchId, data, user) {
+  //   const transaction = await sequelize.transaction();
 
-    try {
-      const branch = await Branch.findByPk(branchId, { transaction });
-      if (!branch) throwError("Branch not found", 404);
+  //   try {
+  //     const branch = await Branch.findByPk(branchId, { transaction });
+  //     if (!branch) throwError("Branch not found", 404);
 
-      const dbUser = await User.findByPk(user.id, { transaction });
-      if (!dbUser) throwError("User not found", 404);
+  //     const dbUser = await User.findByPk(user.id, { transaction });
+  //     if (!dbUser) throwError("User not found", 404);
 
-      if (dbUser.role_name === "staff") {
-        if (dbUser.branch_id !== branch.id) {
-          throwError("Access denied - Not your assigned branch", 403);
-        }
-      } else {
-        if (dbUser.restaurant_id !== branch.restaurant_id) {
-          throwError(
-            "Access denied - Branch doesn't belong to your restaurant",
-            403
-          );
-        }
-      }
+  //     if (dbUser.role_name === "staff") {
+  //       if (dbUser.branch_id !== branch.id) {
+  //         throwError("Access denied - Not your assigned branch", 403);
+  //       }
+  //     } else {
+  //       if (dbUser.restaurant_id !== branch.restaurant_id) {
+  //         throwError(
+  //           "Access denied - Branch doesn't belong to your restaurant",
+  //           403
+  //         );
+  //       }
+  //     }
 
-      const { type, value, is_primary = true } = data;
+  //     const { type, value, is_primary = true } = data;
 
-      if (!type || !value) {
-        throwError("Both 'type' and 'value' are required");
-      }
+  //     if (!type || !value) {
+  //       throwError("Both 'type' and 'value' are required");
+  //     }
 
-      const normalizedType = type.trim().toLowerCase();
+  //     const normalizedType = type.trim().toLowerCase();
 
-      const existing = await ContactInfo.findOne({
-        where: {
-          module_type: "branch",
-          module_id: branchId,
-          type: normalizedType,
-        },
-        transaction,
-      });
+  //     const existing = await ContactInfo.findOne({
+  //       where: {
+  //         module_type: "branch",
+  //         module_id: branchId,
+  //         type: normalizedType,
+  //       },
+  //       transaction,
+  //     });
 
-      let contactInfo;
+  //     let contactInfo;
 
-      if (existing) {
-        contactInfo = await existing.update(
-          { value, is_primary },
-          { transaction }
-        );
-      } else {
-        contactInfo = await ContactInfo.create(
-          {
-            restaurant_id: branch.restaurant_id,
-            module_type: "branch",
-            module_id: branchId,
-            type: normalizedType,
-            value,
-            is_primary,
-          },
-          { transaction }
-        );
-      }
+  //     if (existing) {
+  //       contactInfo = await existing.update(
+  //         { value, is_primary },
+  //         { transaction }
+  //       );
+  //     } else {
+  //       contactInfo = await ContactInfo.create(
+  //         {
+  //           restaurant_id: branch.restaurant_id,
+  //           module_type: "branch",
+  //           module_id: branchId,
+  //           type: normalizedType,
+  //           value,
+  //           is_primary,
+  //         },
+  //         { transaction }
+  //       );
+  //     }
 
-      await transaction.commit();
-      return contactInfo;
-    } catch (error) {
-      await transaction.rollback();
-      throw error;
-    }
-  },
+  //     await transaction.commit();
+  //     return contactInfo;
+  //   } catch (error) {
+  //     await transaction.rollback();
+  //     throw error;
+  //   }
+  // },
 
   async toggleBranchStatus(branchId, status, user) {
     const ALLOWED_STATUSES = ["active", "inactive", "under_maintenance"];

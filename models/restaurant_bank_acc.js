@@ -17,10 +17,38 @@ module.exports = (sequelize, DataTypes) => {
           key: "id",
         },
       },
+      branch_id: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        references: {
+          model: "branches",
+          key: "id",
+        },
+      },
       bank_name: {
-        type: DataTypes.STRING,
+        type: DataTypes.ENUM(
+          "Commercial Bank of Ethiopia",
+          "Awash International Bank",
+          "Dashen Bank",
+          "Bank of Abyssinia",
+          "Cooperative Bank of Oromia",
+          "Berhan International Bank",
+          "Nib International Bank",
+          "Hibret Bank",
+          "Bunna International Bank",
+          "Wegagen Bank",
+          "Abay Bank",
+          "Zemen Bank",
+          "Oromia International Bank",
+          "Enat Bank",
+          "Hijra Bank",
+          "Siinqee Bank",
+          "Ahadu Bank",
+          "Tsehay Bank"
+        ),
         allowNull: false,
       },
+
       account_number: {
         type: DataTypes.STRING,
         allowNull: false,
@@ -48,6 +76,11 @@ module.exports = (sequelize, DataTypes) => {
   RestaurantBankAccount.associate = (models) => {
     RestaurantBankAccount.belongsTo(models.Restaurant, {
       foreignKey: "restaurant_id",
+      onDelete: "CASCADE",
+      onUpdate: "CASCADE",
+    });
+    RestaurantBankAccount.belongsTo(models.Branch, {
+      foreignKey: "branch_id",
       onDelete: "CASCADE",
       onUpdate: "CASCADE",
     });

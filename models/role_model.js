@@ -23,11 +23,8 @@ module.exports = (sequelize, DataTypes) => {
       restaurant_id: {
         type: DataTypes.UUID,
         allowNull: true,
-        references: {
-          model: "restaurants",
-          key: "id",
-        },
       },
+
       description: {
         type: DataTypes.STRING(255),
       },

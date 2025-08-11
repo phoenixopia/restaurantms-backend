@@ -368,22 +368,26 @@ const RbacService = {
           model: RoleTag,
           attributes: ["name"],
         },
-        {
-          model: Restaurant,
-          attributes: ["name"],
-        },
       ],
       order: [["created_at", "DESC"]],
       limit,
       offset,
     });
 
+    let restaurantName = null;
+    if (user.restaurant_id) {
+      const restaurant = await Restaurant.findByPk(user.restaurant_id, {
+        attributes: ["restaurant_name"],
+      });
+      restaurantName = restaurant?.restaurant_name || null;
+    }
+
     const roles = rows.map((role) => ({
       id: role.id,
       name: role.name,
       description: role.description,
       role_tag_name: role.RoleTag?.name || null,
-      restaurant_name: role.Restaurant?.name || null,
+      restaurant_name: restaurantName,
     }));
 
     return {
@@ -406,7 +410,6 @@ const RbacService = {
       where,
       include: [
         { model: RoleTag, attributes: ["id", "name"] },
-        { model: Restaurant, attributes: ["name"] },
         {
           model: Permission,
           attributes: ["id", "name"],
@@ -417,6 +420,14 @@ const RbacService = {
 
     if (!role) return null;
 
+    let restaurant = null;
+    if (user.restaurant_id) {
+      const foundRestaurant = await Restaurant.findByPk(user.restaurant_id, {
+        attributes: ["restaurant_name"],
+      });
+      restaurant = foundRestaurant ? { name: foundRestaurant.name } : null;
+    }
+
     return {
       id: role.id,
       name: role.name,
@@ -425,11 +436,10 @@ const RbacService = {
       role_tag: role.RoleTag
         ? { id: role.RoleTag.id, name: role.RoleTag.name }
         : null,
-      restaurant: role.Restaurant ? { name: role.Restaurant.name } : null,
+      restaurant,
       permissions: role.Permissions.map((p) => ({ id: p.id, name: p.name })),
     };
   },
-
   // ================== PERMISSION ==================
 
   async createPermission(data) {
@@ -577,7 +587,8 @@ const RbacService = {
     const user = await User.findByPk(userId, {
       attributes: [
         "id",
-        "full_name",
+        "first_name",
+        "last_name",
         "profile_picture",
         "restaurant_id",
         "branch_id",
@@ -598,14 +609,6 @@ const RbacService = {
             },
           ],
         },
-        {
-          model: sequelize.models.Restaurant,
-          attributes: ["id", "restaurant_name"],
-        },
-        {
-          model: sequelize.models.Branch,
-          attributes: ["id", "name"],
-        },
       ],
     });
 
@@ -617,12 +620,6 @@ const RbacService = {
       user_id: user.id,
       full_name: user.full_name,
       profile_picture: user.profile_picture,
-      restaurant: user.Restaurant
-        ? { id: user.Restaurant.id, name: user.Restaurant.restaurant_name }
-        : null,
-      branch: user.Branch
-        ? { id: user.Branch.id, name: user.Branch.name }
-        : null,
       role: user.Role
         ? {
             id: user.Role.id,

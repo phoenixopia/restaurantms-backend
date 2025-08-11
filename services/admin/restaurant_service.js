@@ -1,6 +1,7 @@
 "use strict";
 
 const { Op, fn, col, literal, QueryTypes, where } = require("sequelize");
+const moment = require("moment-timezone");
 const validator = require("validator");
 const fs = require("fs");
 const path = require("path");
@@ -37,6 +38,21 @@ const getFileUrl = (filename) => {
   return `${SERVER_URL}/uploads/${encodedFilename}`;
 };
 
+function getDateFilterRange(filterType) {
+  switch (filterType) {
+    case "week":
+      return moment().startOf("week").toDate();
+    case "month":
+      return moment().startOf("month").toDate();
+    case "6month":
+      return moment().subtract(6, "months").toDate();
+    case "year":
+      return moment().startOf("year").toDate();
+    default:
+      return null;
+  }
+}
+
 const getFilePath = (filename) => path.join(UPLOADS_DIR, filename);
 
 const FollowService = require("./follow_service");
@@ -44,61 +60,94 @@ const FollowService = require("./follow_service");
 const RestaurantService = {
   // ===================
   // this is for the owner of restaurant = restaurant_admin
-  async getUserRestaurants(userId) {
-    const user = await User.findByPk(userId);
-    if (!user || !user.restaurant_id) throwError("Restaurant not found", 404);
+  async getUserRestaurants(user) {
+    let restaurantId = null;
 
-    const restaurantId = user.restaurant_id;
+    if (user.restaurant_id) {
+      restaurantId = user.restaurant_id;
+    } else if (user.branch_id) {
+      const branch = await Branch.findByPk(user.branch_id);
+      if (!branch) throwError("Branch not found", 404);
+      restaurantId = branch.restaurant_id;
+    } else {
+      throwError("User is not associated with any restaurant or branch", 400);
+    }
 
-    const includes = [
-      {
-        model: Subscription,
-        attributes: ["plan_id", "end_date", "status"],
-        include: {
-          model: Plan,
-          attributes: ["name", "price", "billing_cycle"],
-        },
-      },
-      {
-        model: Branch,
-        required: false,
-        where: { main_branch: true },
-        attributes: ["id", "name"],
-        include: [
-          {
-            model: Location,
-            attributes: ["address", "latitude", "longitude"],
+    const restaurant = await Restaurant.findByPk(restaurantId, {
+      include: [
+        {
+          model: Subscription,
+          attributes: ["plan_id", "end_date", "status"],
+          include: {
+            model: Plan,
+            attributes: ["name", "price", "billing_cycle"],
           },
-        ],
-      },
-      {
-        model: SystemSetting,
-        required: false,
-        attributes: ["logo_url", "images"],
-      },
-      {
-        model: ContactInfo,
-        required: false,
-        where: {
-          restaurant_id: restaurantId,
-          module_type: "restaurant",
-          module_id: restaurantId,
         },
-        attributes: ["type", "value", "is_primary", "module_id"],
-      },
-    ];
-
-    return await Restaurant.findByPk(restaurantId, {
-      include: includes,
+        {
+          model: Branch,
+          required: false,
+          where: { main_branch: true },
+          attributes: ["id", "name"],
+          include: [
+            {
+              model: Location,
+              attributes: ["address", "latitude", "longitude"],
+            },
+          ],
+        },
+        {
+          model: SystemSetting,
+          required: false,
+          attributes: ["logo_url", "images"],
+        },
+        {
+          model: ContactInfo,
+          required: false,
+          where: {
+            restaurant_id: restaurantId,
+            module_type: "restaurant",
+            module_id: restaurantId,
+          },
+          attributes: ["type", "value", "is_primary", "module_id"],
+        },
+      ],
       attributes: { exclude: ["created_at", "updated_at"] },
     });
-  },
 
+    if (!restaurant) throwError("Restaurant not found", 404);
+
+    return restaurant;
+  },
   // this for super admin to get all restaurants with their subscription
-  async getAllRestaurantsWithSubscriptions({ page, limit }) {
+  async getAllRestaurantsWithSubscriptions({ page, limit, filters }) {
     const offset = (page - 1) * limit;
+    const where = {};
+    const subscriptionWhere = {};
+    const planWhere = {};
+
+    if (filters.search) {
+      where.restaurant_name = { [Op.iLike]: `%${filters.search}%` };
+    }
+
+    if (filters.status) {
+      where.status = filters.status;
+    }
+
+    const startDate = getDateFilterRange(filters.createdFilter);
+    if (startDate) {
+      where.created_at = { [Op.gte]: startDate };
+    }
+
+    if (filters.subscriptionStatus) {
+      subscriptionWhere.status = filters.subscriptionStatus;
+    }
+
+    if (filters.billingCycle) {
+      planWhere.billing_cycle = filters.billingCycle;
+    }
 
     const { count, rows } = await Restaurant.findAndCountAll({
+      where,
       attributes: { exclude: ["created_at", "updated_at"] },
       include: [
         {
@@ -115,17 +164,35 @@ const RestaurantService = {
             "payment_method",
             "status",
           ],
+          where: Object.keys(subscriptionWhere).length
+            ? subscriptionWhere
+            : undefined,
           include: [
             {
               model: Plan,
               attributes: ["id", "name", "price", "billing_cycle"],
+              where: Object.keys(planWhere).length ? planWhere : undefined,
             },
           ],
+          separate: true,
+          limit: 1,
+          order: [["created_at", "DESC"]],
+        },
+        {
+          model: ContactInfo,
+          required: false,
+          where: {
+            module_type: "restaurant",
+            is_primary: true,
+            module_id: { [Op.col]: "Restaurant.id" },
+          },
+          attributes: ["type", "value", "is_primary", "module_id"],
         },
       ],
       offset,
       limit,
       order: [["created_at", "DESC"]],
+      distinct: true,
     });
 
     return {
@@ -136,7 +203,6 @@ const RestaurantService = {
       data: rows,
     };
   },
-
   // this by id
   async getRestaurantWithSubscriptionById(restaurantId) {
     const restaurant = await Restaurant.findByPk(restaurantId, {
@@ -158,6 +224,16 @@ const RestaurantService = {
             },
           ],
         },
+        {
+          model: ContactInfo,
+          required: false,
+          where: {
+            module_type: "restaurant",
+            is_primary: true,
+            module_id: restaurantId,
+          },
+          attributes: ["type", "value", "is_primary", "module_id"],
+        },
       ],
     });
 
@@ -166,7 +242,7 @@ const RestaurantService = {
   },
 
   // creating restaurant with assigning restaurant admin optionally
-  async createRestaurant(body, files, superAdminId) {
+  async createRestaurant(body, superAdminId) {
     const transaction = await sequelize.transaction();
     try {
       const { restaurant_name, restaurant_admin_id } = body;
@@ -215,18 +291,10 @@ const RestaurantService = {
           { transaction }
         );
       }
-      const logoUrl = files?.logo?.[0]
-        ? getFileUrl(files.logo[0].filename)
-        : null;
-
-      const imageUrls =
-        files?.images?.map((img) => getFileUrl(img.filename)) || [];
 
       await SystemSetting.create(
         {
           restaurant_id: restaurant.id,
-          logo_url: logoUrl,
-          images: imageUrls,
           default_language: body.language || null,
           default_theme: body.theme || "Light",
           primary_color: body.primary_color || null,
@@ -239,9 +307,6 @@ const RestaurantService = {
       return restaurant;
     } catch (err) {
       await transaction.rollback();
-      if (files) {
-        await cleanupUploadedFiles(files);
-      }
       throw err;
     }
   },
@@ -379,18 +444,91 @@ const RestaurantService = {
     }
   },
 
-  async changeRestaurantStatus(id, status) {
-    const allowedStatuses = [
-      "active",
-      "trial",
-      "cancelled",
-      "expired",
-      "pending",
-    ];
-    if (!allowedStatuses.includes(status)) {
-      throwError("Invalid status", 400);
-    }
+  async updateBasicInfo(id, body, user) {
+    const transaction = await sequelize.transaction();
 
+    try {
+      let restaurant_id = null;
+
+      if (user.restaurant_id) {
+        restaurant_id = user.restaurant_id;
+      } else if (user.branch_id) {
+        const branch = await Branch.findByPk(user.branch_id, { transaction });
+        if (!branch) throwError("Branch not found", 404);
+        restaurant_id = branch.restaurant_id;
+      } else {
+        throwError("Access Denied", 403);
+      }
+
+      if (!restaurant_id)
+        throwError("Unable to determine user's restaurant", 403);
+
+      const restaurant = await Restaurant.findByPk(id, {
+        include: [SystemSetting],
+        transaction,
+      });
+      if (!restaurant) throwError("Restaurant not found", 404);
+
+      if (restaurant.id !== restaurant_id)
+        throwError(
+          "Access denied: You can only update your own restaurant",
+          403
+        );
+
+      if (body.restaurant_name) {
+        const existing = await Restaurant.findOne({
+          where: {
+            restaurant_name: body.restaurant_name,
+            id: { [Op.ne]: id },
+          },
+          transaction,
+        });
+
+        if (existing) {
+          throwError("Restaurant name already in use", 400);
+        }
+      }
+
+      const updates = {};
+      const settingUpdates = {};
+
+      if (body.restaurant_name) updates.restaurant_name = body.restaurant_name;
+      if (body.primary_color) settingUpdates.primary_color = body.primary_color;
+      if (body.language) settingUpdates.default_language = body.language;
+      if (typeof body.rtl_enabled === "boolean") {
+        settingUpdates.rtl_enabled = body.rtl_enabled;
+      }
+      if (body.font_family) settingUpdates.font_family = body.font_family;
+      if (typeof body.sms_enabled === "boolean") {
+        settingUpdates.sms_enabled = body.sms_enabled;
+      }
+
+      if (Object.keys(updates).length) {
+        await restaurant.update(updates, { transaction });
+      }
+
+      if (Object.keys(settingUpdates).length) {
+        if (restaurant.SystemSetting) {
+          await restaurant.SystemSetting.update(settingUpdates, {
+            transaction,
+          });
+        } else {
+          await SystemSetting.create(
+            { restaurant_id: restaurant.id, ...settingUpdates },
+            { transaction }
+          );
+        }
+      }
+
+      await transaction.commit();
+      return await Restaurant.findByPk(id, { include: [SystemSetting] });
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
+  },
+
+  async changeRestaurantStatus(id, status) {
     const restaurant = await Restaurant.findByPk(id);
     if (!restaurant) throwError("Restaurant not found", 404);
 
@@ -399,8 +537,360 @@ const RestaurantService = {
     return restaurant;
   },
 
-  async addContactInfo(data) {
-    return await ContactInfo.create(data);
+  async addContactInfo(user, data) {
+    const { module_type, module_id, type, value, is_primary = false } = data;
+    let restaurant_id = null;
+
+    if (user.restaurant_id) {
+      restaurant_id = user.restaurant_id;
+    } else if (user.branch_id) {
+      const branch = await Branch.findByPk(user.branch_id);
+      if (!branch) throwError("Branch not found", 404);
+      restaurant_id = branch.restaurant_id;
+    } else {
+      throwError("User does not belong to a restaurant or branch");
+    }
+
+    if (is_primary) {
+      const existingPrimary = await ContactInfo.findOne({
+        where: {
+          restaurant_id,
+          module_type,
+          module_id,
+          is_primary: true,
+        },
+      });
+
+      if (existingPrimary) {
+        throw new Error(
+          `There is already a primary contact for this ${module_type}. Only one primary contact is allowed.`
+        );
+      }
+    }
+
+    const contactInfo = await ContactInfo.create({
+      restaurant_id,
+      module_type,
+      module_id,
+      type,
+      value,
+      is_primary,
+    });
+
+    return contactInfo;
+  },
+
+  async getAllContactInfo(user, filters) {
+    const { module_type, search_value, page, limit } = filters;
+    const offset = (page - 1) * limit;
+
+    let where = {};
+
+    if (user.restaurant_id) {
+      where.restaurant_id = user.restaurant_id;
+
+      if (module_type) {
+        where.module_type = module_type;
+      }
+      if (search_value) {
+        where.value = {
+          [Op.iLike]: `%${search_value}%`,
+        };
+      }
+    } else if (user.branch_id) {
+      where = {
+        module_type: "branch",
+        module_id: user.branch_id,
+      };
+    } else {
+      throwError("User does not belong to a restaurant or branch", 404);
+    }
+
+    const { count, rows } = await ContactInfo.findAndCountAll({
+      where,
+      order: [["created_at", "DESC"]],
+      offset,
+      limit,
+      include: [
+        {
+          model: Restaurant,
+          attributes: ["id", "restaurant_name"],
+          required: false,
+          where: { id: sequelize.col("ContactInfo.module_id") },
+        },
+        {
+          model: Branch,
+          attributes: ["id", "name"],
+          required: false,
+          where: { id: sequelize.col("ContactInfo.module_id") },
+        },
+      ],
+    });
+
+    return {
+      total: count,
+      page,
+      limit,
+      totalPages: Math.ceil(count / limit),
+      data: rows,
+    };
+  },
+
+  async getContactInfoById(user, id) {
+    const contactInfo = await ContactInfo.findByPk(id, {
+      include: [
+        {
+          model: Restaurant,
+          attributes: ["id", "restaurant_name"],
+          required: false,
+          where: sequelize.literal(
+            `"ContactInfo"."module_type" = 'restaurant' AND "ContactInfo"."module_id" = "restaurant"."id"`
+          ),
+        },
+        {
+          model: Branch,
+          attributes: ["id", "name", "restaurant_id"],
+          required: false,
+          where: sequelize.literal(
+            `"ContactInfo"."module_type" = 'branch' AND "ContactInfo"."module_id" = "branch"."id"`
+          ),
+        },
+      ],
+    });
+
+    if (!contactInfo) {
+      throwError("Contact info not found", 404);
+    }
+
+    let restaurant_id = null;
+
+    if (user.restaurant_id) {
+      restaurant_id = user.restaurant_id;
+    } else if (user.branch_id) {
+      if (!contactInfo.Branch) {
+        throwError("Branch info not found", 404);
+      }
+      restaurant_id = contactInfo.Branch.restaurant_id;
+    } else {
+      throwError("User does not belong to a restaurant or branch", 403);
+    }
+
+    if (contactInfo.restaurant_id !== restaurant_id) {
+      throwError("Not authorized to access this contact info", 403);
+    }
+
+    if (user.branch_id) {
+      if (
+        contactInfo.module_type !== "branch" ||
+        contactInfo.module_id !== user.branch_id
+      ) {
+        throwError("Not authorized to access this contact info", 403);
+      }
+    }
+
+    return contactInfo;
+  },
+
+  async updateContactInfo(user, id, data) {
+    const transaction = await sequelize.transaction();
+    try {
+      const contactInfo = await ContactInfo.findByPk(id, { transaction });
+      if (!contactInfo) {
+        throwError("Contact info not found", 404);
+      }
+
+      let restaurant_id = null;
+
+      if (user.restaurant_id) {
+        restaurant_id = user.restaurant_id;
+      } else if (user.branch_id) {
+        const branch = await Branch.findByPk(user.branch_id, { transaction });
+        if (!branch) {
+          throwError("Branch not found", 404);
+        }
+        restaurant_id = branch.restaurant_id;
+      } else {
+        throwError("User does not belong to a restaurant or branch", 403);
+      }
+
+      if (contactInfo.restaurant_id !== restaurant_id) {
+        throwError("Not authorized to update this contact info", 403);
+      }
+
+      if (user.branch_id) {
+        if (
+          contactInfo.module_type !== "branch" ||
+          contactInfo.module_id !== user.branch_id
+        ) {
+          throwError("Not authorized to update this contact info", 403);
+        }
+      }
+
+      if (data.is_primary === true && !contactInfo.is_primary) {
+        const existingPrimary = await ContactInfo.findOne({
+          where: {
+            restaurant_id,
+            module_type: contactInfo.module_type,
+            module_id: contactInfo.module_id,
+            is_primary: true,
+            id: { [Op.ne]: id },
+          },
+          transaction,
+        });
+
+        if (existingPrimary) {
+          throwError(
+            `There is already a primary contact for this ${contactInfo.module_type}. Only one primary contact is allowed.`,
+            400
+          );
+        }
+      }
+
+      const allowedFields = ["type", "value", "is_primary"];
+      allowedFields.forEach((field) => {
+        if (data[field] !== undefined) {
+          contactInfo[field] = data[field];
+        }
+      });
+
+      await contactInfo.save({ transaction });
+
+      await transaction.commit();
+      return contactInfo;
+    } catch (err) {
+      await transaction.rollback();
+      throw err;
+    }
+  },
+
+  async deleteContactInfo(user, id) {
+    const transaction = await sequelize.transaction();
+    try {
+      const contactInfo = await ContactInfo.findByPk(id, {
+        include: [
+          {
+            model: Branch,
+            attributes: ["id", "restaurant_id"],
+            required: false,
+            where: sequelize.literal(
+              `"ContactInfo"."module_type" = 'branch' AND "ContactInfo"."module_id" = "branch"."id"`
+            ),
+          },
+        ],
+        transaction,
+      });
+
+      if (!contactInfo) {
+        throwError("Contact info not found", 404);
+      }
+
+      let restaurant_id = null;
+
+      if (user.restaurant_id) {
+        restaurant_id = user.restaurant_id;
+      } else if (user.branch_id) {
+        if (!contactInfo.Branch) {
+          throwError("Branch info not found", 404);
+        }
+        restaurant_id = contactInfo.Branch.restaurant_id;
+      } else {
+        throwError("User does not belong to a restaurant or branch", 403);
+      }
+
+      if (contactInfo.restaurant_id !== restaurant_id) {
+        throwError("Not authorized to delete this contact info", 403);
+      }
+
+      if (user.branch_id) {
+        if (
+          contactInfo.module_type !== "branch" ||
+          contactInfo.module_id !== user.branch_id
+        ) {
+          throwError("Not authorized to delete this contact info", 403);
+        }
+      }
+
+      await contactInfo.destroy({ transaction });
+
+      await transaction.commit();
+      return { message: "Contact info deleted successfully" };
+    } catch (err) {
+      await transaction.rollback();
+      throw err;
+    }
+  },
+
+  async setPrimaryContactInfo(user, contactInfoId) {
+    const transaction = await sequelize.transaction();
+    try {
+      const contactInfo = await ContactInfo.findByPk(contactInfoId, {
+        include: [
+          {
+            model: Branch,
+            attributes: ["id", "restaurant_id"],
+            required: false,
+            where: sequelize.literal(
+              `"ContactInfo"."module_type" = 'branch' AND "ContactInfo"."module_id" = "branch"."id"`
+            ),
+          },
+        ],
+        transaction,
+      });
+
+      if (!contactInfo) {
+        throwError("Contact info not found", 404);
+      }
+
+      let restaurant_id = null;
+      if (user.restaurant_id) {
+        restaurant_id = user.restaurant_id;
+      } else if (user.branch_id) {
+        if (!contactInfo.Branch) {
+          throwError("Branch info not found", 404);
+        }
+        restaurant_id = contactInfo.Branch.restaurant_id;
+      } else {
+        throwError("User does not belong to a restaurant or branch", 403);
+      }
+
+      if (contactInfo.restaurant_id !== restaurant_id) {
+        throwError("Not authorized to update this contact info", 403);
+      }
+
+      if (user.branch_id) {
+        if (
+          contactInfo.module_type !== "branch" ||
+          contactInfo.module_id !== user.branch_id
+        ) {
+          throwError("Not authorized to update this contact info", 403);
+        }
+      }
+
+      const existingPrimary = await ContactInfo.findOne({
+        where: {
+          restaurant_id,
+          module_type: contactInfo.module_type,
+          module_id: contactInfo.module_id,
+          is_primary: true,
+          id: { [Op.ne]: contactInfoId },
+        },
+        transaction,
+      });
+
+      if (existingPrimary) {
+        existingPrimary.is_primary = false;
+        await existingPrimary.save({ transaction });
+      }
+
+      contactInfo.is_primary = true;
+      await contactInfo.save({ transaction });
+
+      await transaction.commit();
+      return contactInfo;
+    } catch (err) {
+      await transaction.rollback();
+      throw err;
+    }
   },
 
   // delete restaurant only for the restaurant admin

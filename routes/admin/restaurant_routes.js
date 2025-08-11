@@ -37,8 +37,6 @@ router.post(
   "/register",
   protect("user"),
   authorize("super_admin"),
-  ValidateUploadedFiles.validateUploadedFiles("restaurant"),
-  Upload.uploadRestaurantFiles,
   createRestaurantValidator,
   validateRequest,
   RestaurantController.registerRestaurant
@@ -55,26 +53,67 @@ router.put(
 
 // ========== RESTAURANT ADMIN ==========
 router.get(
-  "/owned",
+  "/get-my-restaurant",
   protect("user"),
-  authorize("restaurant_admin"),
+  permissionCheck("view_restaurant"),
   RestaurantController.getRestaurant
 );
 
 router.post(
   "/add-contact-info",
   protect("user"),
-  authorize("restaurant_admin"),
+  permissionCheck("add_contact_info"),
   RestaurantController.addContactInfo
+);
+
+router.get(
+  "/contact-info",
+  protect("user"),
+  permissionCheck("view_contact_info"),
+  RestaurantController.getAllContactInfo
+);
+
+router.get(
+  "/get-byId/:id",
+  protect("user"),
+  permissionCheck("view_contact_info"),
+  RestaurantController.getContactInfoById
+);
+
+router.put(
+  "/update-contact-info/:id",
+  protect("user"),
+  permissionCheck("update_contact_info"),
+  RestaurantController.updateContactInfo
+);
+
+router.put(
+  "/set-primary-contact/:id",
+  protect("user"),
+  permissionCheck("update_contact_info"),
+  RestaurantController.setPrimaryContactInfo
+);
+
+router.delete(
+  "/delete-contact-info/:id",
+  protect("user"),
+  permissionCheck("delete_contact_info"),
+  RestaurantController.deleteContactInfo
+);
+
+router.put(
+  "/update-basic-info/:id",
+  protect("user"),
+  permissionCheck("update_restaurant"),
+  RestaurantController.updateBasicInfo
 );
 
 router.put(
   "/update/:id",
   protect("user"),
-  authorize("restaurant_admin"),
-  RestaurantStatus.checkRestaurantStatus,
-  ValidateUploadedFiles.validateUploadedFiles("restaurant"),
-  Upload.uploadRestaurantFiles,
+  permissionCheck("update_restaurant"),
+  // RestaurantStatus.checkRestaurantStatus,
+
   updateRestaurantValidator,
   validateRequest,
   RestaurantController.updateRestaurant
@@ -123,13 +162,13 @@ router.delete(
   RestaurantController.deleteBranch
 );
 
-router.post(
-  "branches/:branchId/contact-info",
-  protect("user"),
-  permissionCheck("manage_contact_info"),
-  RestaurantStatus.checkRestaurantStatus,
-  RestaurantController.addBranchContactInfo
-);
+// router.post(
+//   "branches/:branchId/contact-info",
+//   protect("user"),
+//   permissionCheck("manage_contact_info"),
+//   RestaurantStatus.checkRestaurantStatus,
+//   RestaurantController.addBranchContactInfo
+// );
 
 router.put(
   "branches/:branchId/update-contact-info/:contactInfoId",
