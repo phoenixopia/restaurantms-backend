@@ -486,51 +486,6 @@ const BranchService = {
       throw error;
     }
   },
-
-  async updateBranchContactInfo(branchId, contactInfoId, data, user) {
-    const transaction = await sequelize.transaction();
-
-    try {
-      const contactInfo = await ContactInfo.findByPk(contactInfoId, {
-        transaction,
-      });
-
-      if (
-        !contactInfo ||
-        contactInfo.module_type !== "branch" ||
-        contactInfo.module_id !== branchId
-      ) {
-        throwError("Contact info not found for this branch", 404);
-      }
-
-      const branch = await Branch.findByPk(branchId, { transaction });
-      if (!branch) throwError("Branch not found", 404);
-
-      if (user.role_name === "staff") {
-        if (user.branch_id !== branch.id) {
-          throwError(
-            "Access denied - You are not assigned to this branch",
-            403
-          );
-        }
-      } else {
-        if (user.restaurant_id !== branch.restaurant_id) {
-          throwError(
-            "Access denied - Branch does not belong to your restaurant",
-            403
-          );
-        }
-      }
-
-      await contactInfo.update(data, { transaction });
-
-      await transaction.commit();
-      return contactInfo;
-    } catch (error) {
-      await transaction.rollback();
-      throw error;
-    }
-  },
 };
 
 module.exports = BranchService;

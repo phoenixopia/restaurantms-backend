@@ -47,6 +47,12 @@ module.exports = (sequelize) => {
       foreignKey: "restaurant_id",
       as: "owned_contact_info",
     });
+
+    Restaurant.hasMany(models.ChargeSetting, {
+      foreignKey: "restaurant_id",
+      onDelete: "CASCADE",
+    });
+
     // to show contact info of restaurant branches
     // Restaurant.hasMany(models.ContactInfo, {
     //   foreignKey: "module_id",

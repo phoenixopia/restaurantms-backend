@@ -1,7 +1,8 @@
 const asyncHandler = require("../../utils/asyncHandler");
 const RestaurantService = require("../../services/admin/restaurant_service");
+const ContactInfoService = require("../../services/admin/contact_info_service");
 const BranchService = require("../../services/admin/branch_service");
-const MenuCategoryService = require("../../services/admin/menuCategory_service");
+const RestaurantBankAccountService = require("../../services/admin/restaurant_bank_acc_service");
 const { success } = require("../../utils/apiResponse");
 const throwError = require("../../utils/throwError");
 
@@ -55,14 +56,48 @@ exports.changeRestaurantStatus = asyncHandler(async (req, res) => {
   return success(res, "Restaurant status updated", restaurant);
 });
 
+exports.createBankAccount = asyncHandler(async (req, res) => {
+  const account = await RestaurantBankAccountService.createBankAccount(req);
+  return success(res, "Bank account created successfully", account);
+});
+
+exports.updateBankAccount = asyncHandler(async (req, res) => {
+  const account = await RestaurantBankAccountService.updateBankAccount(req);
+  return success(res, "Bank account updated successfully", account);
+});
+
+exports.getAllBankAccount = asyncHandler(async (req, res) => {
+  const account = await RestaurantBankAccountService.getAllBankAccounts(req);
+  return success(res, "Bank account fetched successfully", account);
+});
+
+exports.getBankAccountById = asyncHandler(async (req, res) => {
+  const bankAccountId = req.params.id;
+  const account = await RestaurantBankAccountService.getBankAccountById(
+    req.user,
+    bankAccountId
+  );
+  return success(res, "Bank account fetched successfully", account);
+});
+
+exports.deleteBankAccout = asyncHandler(async (req, res) => {
+  const bankAccountId = req.params.id;
+  await RestaurantBankAccountService.deleteBankAccount(req.user, bankAccountId);
+  return success(res, "Bank account deleted successfully");
+});
+
+exports.setDefaultBankAccount = asyncHandler(async (req, res) => {
+  const bankAccountId = req.params.id;
+  await RestaurantBankAccountService.setDefaultBankAccount(
+    req.user,
+    bankAccountId
+  );
+  return success(res, "Default bank account set successfully");
+});
+
 // ===============================
 // ===== RESTAURANT RETRIEVAL ====
 // ===============================
-
-exports.getAllRestaurants = asyncHandler(async (req, res) => {
-  const result = await RestaurantService.getAllRestaurants(req.query);
-  return success(res, "All registered restaurants fetched", result);
-});
 
 exports.getAllRestaurantsWithSubscriptions = asyncHandler(async (req, res) => {
   const page = parseInt(req.query.page) || 1;
@@ -89,46 +124,6 @@ exports.getAllRestaurantsWithSubscriptions = asyncHandler(async (req, res) => {
   );
 });
 
-exports.getAllRestaurantWithCheapestItems = asyncHandler(async (req, res) => {
-  const { page = 1, limit = 10 } = req.query;
-
-  const result = await RestaurantService.getAllRestaurantsWithCheapestItem({
-    page: parseInt(page),
-    limit: parseInt(limit),
-  });
-
-  return success(
-    res,
-    "All registered restaurants with cheapest items fetched",
-    result
-  );
-});
-
-exports.getRestaurantById = asyncHandler(async (req, res) => {
-  const { page = 1, limit = 10 } = req.query;
-  const restaurant = await RestaurantService.getRestaurantById(
-    req.params.id,
-    parseInt(page),
-    parseInt(limit)
-  );
-  return success(res, "Restaurant fetched successfully", restaurant);
-});
-
-exports.getBranchMenus = asyncHandler(async (req, res) => {
-  const { restaurantId, branchId } = req.params;
-  const { page = 1, limit = 10, category = "" } = req.query;
-
-  const menus = await RestaurantService.getBranchMenus(
-    restaurantId,
-    branchId,
-    parseInt(page),
-    parseInt(limit),
-    category
-  );
-
-  return success(res, "Branch menus fetched successfully", menus);
-});
-
 exports.getRestaurantWithSubscriptionById = asyncHandler(async (req, res) => {
   const restaurant = await RestaurantService.getRestaurantWithSubscriptionById(
     req.params.id
@@ -152,92 +147,6 @@ exports.getRestaurantProfileWithVideos = asyncHandler(async (req, res) => {
   );
 
   return success(res, "Restaurant profile fetched successfully", result);
-});
-
-exports.searchRestaurants = asyncHandler(async (req, res) => {
-  const result = await RestaurantService.searchRestaurants(req.query);
-  return success(res, "Restaurants fetched successfully", result);
-});
-
-exports.getRestaurantsByCategoryTagId = asyncHandler(async (req, res) => {
-  const { page = 1, limit = 10 } = req.query;
-  const categoryTagId = req.params.id;
-
-  if (!categoryTagId) {
-    throwError("Category tag ID is required", 400);
-  }
-
-  const result = await MenuCategoryService.getRestaurantsByCategoryTagId(
-    categoryTagId,
-    parseInt(page),
-    parseInt(limit)
-  );
-
-  return success(
-    res,
-    "Restaurants with the specified category tag fetched",
-    result
-  );
-});
-
-// ==============================
-// ===== RESTAURANT CONTACT =====
-// ==============================
-
-exports.addContactInfo = asyncHandler(async (req, res) => {
-  const contactInfo = await RestaurantService.addContactInfo(
-    req.user,
-    req.body
-  );
-  return success(res, "Contact info added successfully", contactInfo);
-});
-
-exports.getAllContactInfo = asyncHandler(async (req, res) => {
-  const filters = {
-    module_type: req.query.module_type || null,
-    search_value: req.query.search_value || null,
-    page: parseInt(req.query.page) || 1,
-    limit: parseInt(req.query.limit) || 10,
-  };
-
-  const result = await RestaurantService.getAllContactInfo(req.user, filters);
-
-  return success(res, "Contact info fetched successfully", result);
-});
-
-exports.getContactInfoById = asyncHandler(async (req, res) => {
-  const result = await RestaurantService.getContactInfoById(
-    req.user,
-    req.params.id
-  );
-  return success(res, "Contact info fetched successfully", result);
-});
-
-exports.updateContactInfo = asyncHandler(async (req, res) => {
-  const result = await RestaurantService.updateContactInfo(
-    req.user,
-    req.params.id,
-    req.body
-  );
-
-  return success(res, "Contact info updated successfully", result);
-});
-
-exports.deleteContactInfo = asyncHandler(async (req, res) => {
-  const result = await RestaurantService.deleteContactInfo(
-    req.user,
-    req.params.id
-  );
-  return success(res, "Contact Info deleted successfully", result);
-});
-
-exports.setPrimaryContactInfo = asyncHandler(async (req, res) => {
-  const contactInfo = await RestaurantService.setPrimaryContactInfo(
-    req.user,
-    req.params.id
-  );
-
-  return success(res, "Contact info set as primary successfully", contactInfo);
 });
 
 // ==========================
@@ -315,28 +224,62 @@ exports.toggleBranchStatus = asyncHandler(async (req, res) => {
   return success(res, "Branch status updated successfully", updatedBranch);
 });
 
-// ===============================
-// ===== BRANCH CONTACT INFO =====
-// ===============================
+// ==============================
+// ===== CONTACT Info =====
+// ==============================
 
-// exports.addBranchContactInfo = asyncHandler(async (req, res) => {
-//   const { branchId } = req.params;
-//   const contactInfo = await BranchService.addBranchContactInfo(
-//     branchId,
-//     req.body,
-//     req.user
-//   );
-//   return success(res, "Branch contact info added successfully", contactInfo);
-// });
+exports.addContactInfo = asyncHandler(async (req, res) => {
+  const contactInfo = await ContactInfoService.addContactInfo(
+    req.user,
+    req.body
+  );
+  return success(res, "Contact info added successfully", contactInfo);
+});
 
-exports.updateBranchContactInfo = asyncHandler(async (req, res) => {
-  const { branchId, contactInfoId } = req.params;
-  const updated = await BranchService.updateBranchContactInfo(
-    branchId,
-    contactInfoId,
-    req.body,
-    req.user
+exports.getAllContactInfo = asyncHandler(async (req, res) => {
+  const filters = {
+    module_type: req.query.module_type || null,
+    search_value: req.query.search_value || null,
+    page: parseInt(req.query.page) || 1,
+    limit: parseInt(req.query.limit) || 10,
+  };
+
+  const result = await ContactInfoService.getAllContactInfo(req.user, filters);
+
+  return success(res, "Contact info fetched successfully", result);
+});
+
+exports.getContactInfoById = asyncHandler(async (req, res) => {
+  const result = await ContactInfoService.getContactInfoById(
+    req.user,
+    req.params.id
+  );
+  return success(res, "Contact info fetched successfully", result);
+});
+
+exports.updateContactInfo = asyncHandler(async (req, res) => {
+  const result = await ContactInfoService.updateContactInfo(
+    req.user,
+    req.params.id,
+    req.body
   );
 
-  return success(res, "Branch contact info updated successfully", updated);
+  return success(res, "Contact info updated successfully", result);
+});
+
+exports.deleteContactInfo = asyncHandler(async (req, res) => {
+  const result = await ContactInfoService.deleteContactInfo(
+    req.user,
+    req.params.id
+  );
+  return success(res, "Contact Info deleted successfully", result);
+});
+
+exports.setPrimaryContactInfo = asyncHandler(async (req, res) => {
+  const contactInfo = await ContactInfoService.setPrimaryContactInfo(
+    req.user,
+    req.params.id
+  );
+
+  return success(res, "Contact info set as primary successfully", contactInfo);
 });

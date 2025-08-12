@@ -10,7 +10,6 @@ const {
   PlanLimit,
   Permission,
   RolePermission,
-  UserPermission,
   Subscription,
   sequelize,
 } = require("../../models");
@@ -31,9 +30,10 @@ const UserService = {
         password,
         restaurant_id = null,
         creatorMode,
+        role_id,
       } = data;
 
-      if (!first_name || !last_name || !password)
+      if (!first_name || !last_name || !password || role_id)
         throwError("Missing required fields", 400);
 
       if (creatorMode === "email" && !email)
@@ -49,40 +49,11 @@ const UserService = {
         if (!restaurant) throwError("Restaurant not found", 400);
       }
 
-      let roleTag = await RoleTag.findOne({
-        where: { name: "restaurant_admin" },
-        transaction: t,
-      });
+      const role = await Role.findByPk(role_id, { transaction: t });
 
-      if (!roleTag) {
-        roleTag = await RoleTag.create(
-          {
-            name: "restaurant_admin",
-            description:
-              "Administrator of a restaurant, manages staff and operations.",
-          },
-          { transaction: t }
-        );
-      }
+      if (!role) throwError("Role not found", 400);
 
-      let role = await Role.findOne({
-        where: {
-          role_tag_id: roleTag.id,
-        },
-        transaction: t,
-      });
-
-      if (!role) {
-        role = await Role.create(
-          {
-            name: "Restaurant Admin",
-            role_tag_id: roleTag.id,
-            description: "Full administrative access for managing a restaurant",
-            created_by: superAdminId,
-          },
-          { transaction: t }
-        );
-      }
+      const roleTagId = role.role_tag_id;
 
       const whereClause =
         creatorMode === "email" ? { email } : { phone_number };
@@ -102,7 +73,7 @@ const UserService = {
           phone_number: creatorMode === "phone" ? phone_number : null,
           password,
           role_id: role.id,
-          role_tag_id: roleTag.id,
+          role_tag_id: roleTagId,
           restaurant_id,
           branch_id: null,
           created_by: superAdminId,
@@ -168,7 +139,7 @@ const UserService = {
         creatorMode,
       } = data;
 
-      if (!first_name || !last_name || !password)
+      if (!first_name || !last_name || !password || role_id)
         throwError("Missing required fields", 400);
       if (creatorMode === "email" && !email)
         throwError("Email is required for email mode", 400);

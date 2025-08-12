@@ -73,6 +73,32 @@ module.exports = async () => {
       description: "Permission to update existing permissions",
     },
     { name: "view_permission", description: "Permission to view permissions" },
+
+    {
+      name: "view_restaurant",
+      description: "Permission to view restaurant information",
+    },
+    {
+      name: "update_restaurant",
+      description: "Permission to update restaurant information",
+    },
+
+    {
+      name: "add_contact_info",
+      description: "Permission to add contact information",
+    },
+    {
+      name: "view_contact_info",
+      description: "Permission to view contact information",
+    },
+    {
+      name: "update_contact_info",
+      description: "Permission to update contact information",
+    },
+    {
+      name: "delete_contact_info",
+      description: "Permission to delete contact information",
+    },
   ]);
 
   await RolePermission.bulkCreate(
@@ -104,4 +130,3 @@ module.exports = async () => {
     "✅ Roles, permissions, and super admin user seeded successfully"
   );
 };
-``;

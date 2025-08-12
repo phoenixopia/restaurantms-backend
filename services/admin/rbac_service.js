@@ -362,7 +362,7 @@ const RbacService = {
       include: [
         {
           model: RoleTag,
-          attributes: ["name"],
+          attributes: ["id", "name"],
         },
         {
           model: Permission,
@@ -387,7 +387,9 @@ const RbacService = {
       id: role.id,
       name: role.name,
       description: role.description,
-      role_tag_name: role.RoleTag?.name || null,
+      role_tag: role.RoleTag
+        ? { id: role.RoleTag.id, name: role.RoleTag.name }
+        : null,
       restaurant_name: restaurantName,
       permissions:
         role.Permissions?.map((p) => ({

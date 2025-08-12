@@ -18,7 +18,7 @@ const {
 
 const router = express.Router();
 
-// ========== SUPER ADMIN ==========
+// ====================== SUPER ADMIN =============================
 router.get(
   "/all-registered-restaurants",
   protect("user"),
@@ -51,13 +51,94 @@ router.put(
   RestaurantController.changeRestaurantStatus
 );
 
-// ========== RESTAURANT ADMIN ==========
+// ======================== RESTAURANT ADMIN =======================
 router.get(
   "/get-my-restaurant",
   protect("user"),
   permissionCheck("view_restaurant"),
   RestaurantController.getRestaurant
 );
+
+router.put(
+  "/update-basic-info/:id",
+  protect("user"),
+  permissionCheck("update_restaurant"),
+  RestaurantController.updateBasicInfo
+);
+
+router.put(
+  "/update/:id",
+  protect("user"),
+  permissionCheck("update_restaurant"),
+  // RestaurantStatus.checkRestaurantStatus,
+
+  updateRestaurantValidator,
+  validateRequest,
+  RestaurantController.updateRestaurant
+);
+
+router.delete(
+  "/delete/:id",
+  protect("user"),
+  authorize("restaurant_admin"),
+  deleteRestaurantValidator,
+  validateRequest,
+  RestaurantController.deleteRestaurant
+);
+
+// ========================= BRANCH MANAGEMENT =========================
+router.post(
+  "/branches/create-branch",
+  protect("user"),
+  authorize("restaurant_admin"),
+  RestaurantStatus.checkRestaurantStatus,
+  branchLimit,
+  RestaurantController.createBranch
+);
+
+router.put(
+  "/branches/:branchId",
+  protect("user"),
+  authorize("restaurant_admin"),
+  RestaurantStatus.checkRestaurantStatus,
+  validateRequest,
+  RestaurantController.updateBranch
+);
+
+router.patch(
+  "/branches/:branchId/toggle-status",
+  protect("user"),
+  permissionCheck("toggle_branch_status"),
+  RestaurantStatus.checkRestaurantStatus,
+  RestaurantController.toggleBranchStatus
+);
+
+router.delete(
+  "/branches/:branchId",
+  protect("user"),
+  authorize("restaurant_admin"),
+  RestaurantController.deleteBranch
+);
+
+router.get(
+  "/branches",
+  protect("user"),
+  permissionCheck(["view_branch", "manage_branches"]),
+  RestaurantStatus.checkRestaurantStatus,
+  paginationValidation,
+  validateRequest,
+  RestaurantController.getAllBranches
+);
+
+router.get(
+  "/branches/:branchId",
+  protect("user"),
+  permissionCheck(["view_branch", "manage_branches"]),
+  RestaurantStatus.checkRestaurantStatus,
+  RestaurantController.getBranchById
+);
+
+// =============================== Contact Info =====================
 
 router.post(
   "/add-contact-info",
@@ -101,99 +182,47 @@ router.delete(
   RestaurantController.deleteContactInfo
 );
 
+// ====================== Bank ========================
 router.put(
-  "/update-basic-info/:id",
+  "/create-bank-account",
   protect("user"),
-  permissionCheck("update_restaurant"),
-  RestaurantController.updateBasicInfo
-);
-
-router.put(
-  "/update/:id",
-  protect("user"),
-  permissionCheck("update_restaurant"),
-  // RestaurantStatus.checkRestaurantStatus,
-
-  updateRestaurantValidator,
-  validateRequest,
-  RestaurantController.updateRestaurant
-);
-
-router.delete(
-  "/delete/:id",
-  protect("user"),
-  authorize("restaurant_admin"),
-  deleteRestaurantValidator,
-  validateRequest,
-  RestaurantController.deleteRestaurant
-);
-
-// ========== BRANCH MANAGEMENT ==========
-router.post(
-  "/branches/create-branch",
-  protect("user"),
-  authorize("restaurant_admin"),
-  RestaurantStatus.checkRestaurantStatus,
-  branchLimit,
-  RestaurantController.createBranch
+  permissionCheck("add_bank_account"),
+  RestaurantController.createBankAccount
 );
 
 router.put(
-  "/branches/:branchId",
+  "/update-bank-account/:id",
   protect("user"),
-  authorize("restaurant_admin"),
-  RestaurantStatus.checkRestaurantStatus,
-  validateRequest,
-  RestaurantController.updateBranch
-);
-
-router.patch(
-  "/branches/:branchId/toggle-status",
-  protect("user"),
-  permissionCheck("toggle_branch_status"),
-  RestaurantStatus.checkRestaurantStatus,
-  RestaurantController.toggleBranchStatus
-);
-
-router.delete(
-  "/branches/:branchId",
-  protect("user"),
-  authorize("restaurant_admin"),
-  RestaurantController.deleteBranch
-);
-
-// router.post(
-//   "branches/:branchId/contact-info",
-//   protect("user"),
-//   permissionCheck("manage_contact_info"),
-//   RestaurantStatus.checkRestaurantStatus,
-//   RestaurantController.addBranchContactInfo
-// );
-
-router.put(
-  "branches/:branchId/update-contact-info/:contactInfoId",
-  protect("user"),
-  permissionCheck("manage_contact_info"),
-  RestaurantStatus.checkRestaurantStatus,
-  RestaurantController.updateBranchContactInfo
+  permissionCheck("update_bank_account"),
+  RestaurantController.updateBankAccount
 );
 
 router.get(
-  "/branches",
+  "/get-bank-info",
   protect("user"),
-  permissionCheck(["view_branch", "manage_branches"]),
-  RestaurantStatus.checkRestaurantStatus,
-  paginationValidation,
-  validateRequest,
-  RestaurantController.getAllBranches
+  permissionCheck("view_bank_account"),
+  RestaurantController.getAllBankAccount
 );
 
 router.get(
-  "/branches/:branchId",
+  "/get-bank-byId/:id",
   protect("user"),
-  permissionCheck(["view_branch", "manage_branches"]),
-  RestaurantStatus.checkRestaurantStatus,
-  RestaurantController.getBranchById
+  permissionCheck("view_bank_account"),
+  RestaurantController.getBankAccountById
+);
+
+router.delete(
+  "/delet-bank-account/:id",
+  protect("user"),
+  permissionCheck("delete_bank_account"),
+  RestaurantController.deleteBankAccout
+);
+
+router.put(
+  "/set-default-bank-account/:id",
+  protect("user"),
+  permissionCheck("update_bank_account"),
+  RestaurantController.setDefaultBankAccount
 );
 
 module.exports = router;

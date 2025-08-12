@@ -1,5 +1,5 @@
 "use strict";
-
+const { Op } = require("sequelize");
 module.exports = (sequelize, DataTypes) => {
   const RestaurantBankAccount = sequelize.define(
     "RestaurantBankAccount",
@@ -76,15 +76,45 @@ module.exports = (sequelize, DataTypes) => {
   RestaurantBankAccount.associate = (models) => {
     RestaurantBankAccount.belongsTo(models.Restaurant, {
       foreignKey: "restaurant_id",
-      onDelete: "CASCADE",
-      onUpdate: "CASCADE",
     });
     RestaurantBankAccount.belongsTo(models.Branch, {
       foreignKey: "branch_id",
-      onDelete: "CASCADE",
-      onUpdate: "CASCADE",
     });
   };
+
+  RestaurantBankAccount.addHook("beforeSave", async (account, options) => {
+    const where = {
+      restaurant_id: account.restaurant_id,
+    };
+
+    if (account.branch_id) {
+      where.branch_id = account.branch_id;
+    } else {
+      where.branch_id = null;
+    }
+
+    const existingDefault = await RestaurantBankAccount.findOne({
+      where: { ...where, is_default: true },
+      transaction: options.transaction,
+    });
+
+    if (account.is_default) {
+      if (
+        existingDefault &&
+        (!account.id || existingDefault.id !== account.id)
+      ) {
+        throw new Error(
+          `Only one default account is allowed for ${
+            account.branch_id ? "this branch" : "the restaurant"
+          }.`
+        );
+      }
+    } else {
+      if (!existingDefault) {
+        account.is_default = true;
+      }
+    }
+  });
 
   return RestaurantBankAccount;
 };
