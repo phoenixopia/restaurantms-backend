@@ -1,6 +1,7 @@
 const express = require("express");
 const RestaurantController = require("../../controllers/admin/restaurant_controller");
 const ValidateUploadedFiles = require("../../middleware/validateUploadedFiles");
+const checkStorageQuota = require("../../middleware/checkStorageCapacity");
 const Upload = require("../../middleware/uploads");
 const RestaurantStatus = require("../../middleware/checkRestaurantStatus");
 const { protect } = require("../../middleware/protect");
@@ -18,7 +19,7 @@ const {
 
 const router = express.Router();
 
-// ====================== SUPER ADMIN =============================
+// ===================== SUPER ADMIN ==================
 router.get(
   "/all-registered-restaurants",
   protect("user"),
@@ -67,14 +68,14 @@ router.put(
 );
 
 router.put(
-  "/update/:id",
+  "/upload-logo-image",
   protect("user"),
   permissionCheck("update_restaurant"),
-  // RestaurantStatus.checkRestaurantStatus,
-
-  updateRestaurantValidator,
-  validateRequest,
-  RestaurantController.updateRestaurant
+  RestaurantStatus.checkRestaurantStatus,
+  Upload.uploadRestaurantFiles,
+  ValidateUploadedFiles.validateUploadedFiles("restaurant"),
+  checkStorageQuota,
+  RestaurantController.uploadLogoImage
 );
 
 router.delete(
@@ -223,6 +224,28 @@ router.put(
   protect("user"),
   permissionCheck("update_bank_account"),
   RestaurantController.setDefaultBankAccount
+);
+
+// ==================== charge setting ===================
+router.get(
+  "/charge-settings",
+  protect("user"),
+  permissionCheck("view_charge_setting"),
+  RestaurantController.getChargeSetting
+);
+
+router.get(
+  "/create-update-charge-setting",
+  protect("user"),
+  permissionCheck("manage_charge_setting"),
+  RestaurantController.syncUpsertChargeSetting
+);
+
+router.delete(
+  "/delete-charge-settings",
+  protect("user"),
+  permissionCheck("delete_charge_setting"),
+  RestaurantController.deleteChargeSetting
 );
 
 module.exports = router;

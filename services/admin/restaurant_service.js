@@ -24,13 +24,14 @@ const {
   Branch,
   MenuCategory,
   MenuItem,
+  UploadedFile,
   sequelize,
   Video,
 } = require("../../models");
 
 const UPLOADS_DIR = path.resolve(__dirname, "../../../uploads/restaurant");
 const SERVER_URL = process.env.SERVER_URL || "http://127.0.0.1:8000";
-const MAX_NEARBY_DISTANCE_KM = 5;
+// const MAX_NEARBY_DISTANCE_KM = 5;
 
 const getFileUrl = (filename) => {
   if (!filename) return null;
@@ -203,6 +204,7 @@ const RestaurantService = {
       data: rows,
     };
   },
+
   // this by id
   async getRestaurantWithSubscriptionById(restaurantId) {
     const restaurant = await Restaurant.findByPk(restaurantId, {
@@ -311,127 +313,124 @@ const RestaurantService = {
     }
   },
 
-  async updateRestaurant(id, body, files, user) {
+  async uploadLogoImage(files, user) {
     const transaction = await sequelize.transaction();
+    let restaurant_id = null;
+
+    if (user.restaurant_id) {
+      restaurant_id = user.restaurant_id;
+    } else if (user.branch_id) {
+      const branch = await Branch.findByPk(user.branch_id);
+      if (!branch) throwError("Branch not found", 404);
+      restaurant_id = branch.restaurant_id;
+    } else {
+      throwError("User does not belong to a restaurant or branch", 404);
+    }
 
     try {
-      if (!validator.isUUID(id)) throwError("Invalid restaurant ID", 400);
-
-      const restaurant = await Restaurant.findByPk(id, {
+      const restaurant = await Restaurant.findByPk(restaurant_id, {
         include: [SystemSetting],
         transaction,
       });
 
       if (!restaurant) throwError("Restaurant not found", 404);
 
-      if (restaurant.id !== user.restaurant_id) {
-        throwError(
-          "Access denied: You can only update your own restaurant",
-          403
+      let systemSetting = restaurant.SystemSetting;
+
+      if (!systemSetting) {
+        systemSetting = await SystemSetting.create(
+          { restaurant_id },
+          { transaction }
         );
       }
-
-      const updates = {};
-      const settingUpdates = {};
 
       if (files?.logo?.[0]) {
         const newLogo = files.logo[0];
-        const newLogoUrl = getFileUrl(newLogo.filename);
-        settingUpdates.logo_url = newLogoUrl;
 
-        const oldLogoUrl = restaurant.SystemSetting?.logo_url;
-        if (oldLogoUrl) {
-          const oldFile = decodeURIComponent(oldLogoUrl.split("/").pop());
-          const oldPath = getFilePath(oldFile);
-          if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
-        }
-      }
-
-      if (files?.images?.length) {
-        const newImageUrls = files.images.map((img) =>
-          getFileUrl(img.filename)
-        );
-        settingUpdates.images = newImageUrls;
-
-        const oldImages = restaurant.SystemSetting?.images || [];
-        for (const imgUrl of oldImages) {
-          const oldFile = decodeURIComponent(imgUrl.split("/").pop());
-          const oldPath = getFilePath(oldFile);
-          if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
-        }
-      }
-
-      if (body.restaurant_name) updates.restaurant_name = body.restaurant_name;
-      if (body.primary_color) settingUpdates.primary_color = body.primary_color;
-      if (body.language) settingUpdates.default_language = body.language;
-      if (typeof body.rtl_enabled === "boolean") {
-        settingUpdates.rtl_enabled = body.rtl_enabled;
-      }
-
-      if (Object.keys(updates).length) {
-        await restaurant.update(updates, { transaction });
-      }
-
-      if (Object.keys(settingUpdates).length) {
-        if (restaurant.SystemSetting) {
-          await restaurant.SystemSetting.update(settingUpdates, {
-            transaction,
-          });
-        } else {
-          await SystemSetting.create(
-            {
-              restaurant_id: restaurant.id,
-              ...settingUpdates,
-            },
-            { transaction }
-          );
-        }
-      }
-
-      if (body.contact_info) {
-        const { type, value, is_primary = false } = body.contact_info;
-
-        if (!type || !value)
-          throwError("Contact info type and value are required");
-
-        const [contact, created] = await ContactInfo.findOrCreate({
+        let uploadedLogo = await UploadedFile.findOne({
           where: {
-            restaurant_id: restaurant.id,
-            module_type: "restaurant",
-            module_id: restaurant.id,
-            type,
-          },
-          defaults: {
-            value,
-            is_primary,
+            restaurant_id,
+            type: "logo",
+            reference_id: systemSetting.id,
           },
           transaction,
         });
 
-        if (!created) {
-          await contact.update({ value, is_primary }, { transaction });
-        }
+        if (uploadedLogo) {
+          const oldPath = getFilePath(uploadedLogo.path);
+          if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
 
-        if (is_primary) {
-          await ContactInfo.update(
-            { is_primary: false },
+          uploadedLogo.path = newLogo.filename;
+          uploadedLogo.size_mb = newLogo.size / (1024 * 1024);
+          uploadedLogo.uploaded_by = user.id;
+          await uploadedLogo.save({ transaction });
+        } else {
+          uploadedLogo = await UploadedFile.create(
             {
-              where: {
-                restaurant_id: restaurant.id,
-                module_type: "restaurant",
-                module_id: restaurant.id,
-                type,
-                id: { [Op.ne]: contact.id },
-              },
-              transaction,
-            }
+              restaurant_id,
+              path: newLogo.filename,
+              size_mb: newLogo.size / (1024 * 1024),
+              uploaded_by: user.id,
+              type: "logo",
+              reference_id: systemSetting.id,
+            },
+            { transaction }
           );
         }
+
+        systemSetting.logo_url = uploadedLogo.id;
+        await systemSetting.save({ transaction });
+      }
+
+      if (files?.images?.length) {
+        const newImages = files.images;
+
+        const oldUploadedImages = await UploadedFile.findAll({
+          where: {
+            restaurant_id,
+            type: "restaurant-image",
+            reference_id: systemSetting.id,
+          },
+          transaction,
+        });
+
+        for (const oldImg of oldUploadedImages) {
+          const oldPath = getFilePath(oldImg.path);
+          if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+        }
+
+        await UploadedFile.destroy({
+          where: {
+            restaurant_id,
+            type: "restaurant-image",
+            reference_id: systemSetting.id,
+          },
+          transaction,
+        });
+
+        const uploadedImages = [];
+        for (const img of newImages) {
+          const uploaded = await UploadedFile.create(
+            {
+              restaurant_id,
+              path: img.filename,
+              size_mb: img.size / (1024 * 1024),
+              uploaded_by: user.id,
+              type: "restaurant-image",
+              reference_id: systemSetting.id,
+            },
+            { transaction }
+          );
+          uploadedImages.push(getFileUrl(uploaded.path));
+        }
+
+        systemSetting.images = uploadedImages;
+        await systemSetting.save({ transaction });
       }
 
       await transaction.commit();
 
-      return await Restaurant.findByPk(id, {
+      return await Restaurant.findByPk(restaurant_id, {
         include: [SystemSetting],
       });
     } catch (err) {
@@ -439,7 +438,6 @@ const RestaurantService = {
       if (files) {
         await cleanupUploadedFiles(files);
       }
-
       throw err;
     }
   },

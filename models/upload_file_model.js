@@ -40,7 +40,8 @@ module.exports = (sequelize, DataTypes) => {
 
       type: {
         type: DataTypes.ENUM(
-          "restaurant",
+          "logo",
+          "restaurant-image",
           "menu-item",
           "gallery",
           "video",
@@ -57,10 +58,8 @@ module.exports = (sequelize, DataTypes) => {
     },
     {
       tableName: "uploaded_files",
-      timestamps: true,
-      createdAt: "created_at",
-      updatedAt: false,
       underscored: true,
+      timestamps: true,
     }
   );
 

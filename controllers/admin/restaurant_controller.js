@@ -3,6 +3,7 @@ const RestaurantService = require("../../services/admin/restaurant_service");
 const ContactInfoService = require("../../services/admin/contact_info_service");
 const BranchService = require("../../services/admin/branch_service");
 const RestaurantBankAccountService = require("../../services/admin/restaurant_bank_acc_service");
+const ChargeSettingService = require("../../services/admin/charge_setting_service");
 const { success } = require("../../utils/apiResponse");
 const throwError = require("../../utils/throwError");
 
@@ -23,10 +24,8 @@ exports.registerRestaurant = asyncHandler(async (req, res) => {
   return success(res, "Restaurant registered successfully", restaurant, 201);
 });
 
-exports.updateRestaurant = asyncHandler(async (req, res) => {
-  const updatedRestaurant = await RestaurantService.updateRestaurant(
-    req.params.id,
-    req.body,
+exports.uploadLogoImage = asyncHandler(async (req, res) => {
+  const updatedRestaurant = await RestaurantService.uploadLogoImage(
     req.files,
     req.user
   );
@@ -54,45 +53,6 @@ exports.changeRestaurantStatus = asyncHandler(async (req, res) => {
     req.body.status
   );
   return success(res, "Restaurant status updated", restaurant);
-});
-
-exports.createBankAccount = asyncHandler(async (req, res) => {
-  const account = await RestaurantBankAccountService.createBankAccount(req);
-  return success(res, "Bank account created successfully", account);
-});
-
-exports.updateBankAccount = asyncHandler(async (req, res) => {
-  const account = await RestaurantBankAccountService.updateBankAccount(req);
-  return success(res, "Bank account updated successfully", account);
-});
-
-exports.getAllBankAccount = asyncHandler(async (req, res) => {
-  const account = await RestaurantBankAccountService.getAllBankAccounts(req);
-  return success(res, "Bank account fetched successfully", account);
-});
-
-exports.getBankAccountById = asyncHandler(async (req, res) => {
-  const bankAccountId = req.params.id;
-  const account = await RestaurantBankAccountService.getBankAccountById(
-    req.user,
-    bankAccountId
-  );
-  return success(res, "Bank account fetched successfully", account);
-});
-
-exports.deleteBankAccout = asyncHandler(async (req, res) => {
-  const bankAccountId = req.params.id;
-  await RestaurantBankAccountService.deleteBankAccount(req.user, bankAccountId);
-  return success(res, "Bank account deleted successfully");
-});
-
-exports.setDefaultBankAccount = asyncHandler(async (req, res) => {
-  const bankAccountId = req.params.id;
-  await RestaurantBankAccountService.setDefaultBankAccount(
-    req.user,
-    bankAccountId
-  );
-  return success(res, "Default bank account set successfully");
 });
 
 // ===============================
@@ -282,4 +242,69 @@ exports.setPrimaryContactInfo = asyncHandler(async (req, res) => {
   );
 
   return success(res, "Contact info set as primary successfully", contactInfo);
+});
+
+// ==============================
+// =========== Bank ============
+// ==============================
+
+exports.createBankAccount = asyncHandler(async (req, res) => {
+  const account = await RestaurantBankAccountService.createBankAccount(req);
+  return success(res, "Bank account created successfully", account);
+});
+
+exports.updateBankAccount = asyncHandler(async (req, res) => {
+  const account = await RestaurantBankAccountService.updateBankAccount(req);
+  return success(res, "Bank account updated successfully", account);
+});
+
+exports.getAllBankAccount = asyncHandler(async (req, res) => {
+  const account = await RestaurantBankAccountService.getAllBankAccounts(req);
+  return success(res, "Bank account fetched successfully", account);
+});
+
+exports.getBankAccountById = asyncHandler(async (req, res) => {
+  const bankAccountId = req.params.id;
+  const account = await RestaurantBankAccountService.getBankAccountById(
+    req.user,
+    bankAccountId
+  );
+  return success(res, "Bank account fetched successfully", account);
+});
+
+exports.deleteBankAccout = asyncHandler(async (req, res) => {
+  const bankAccountId = req.params.id;
+  await RestaurantBankAccountService.deleteBankAccount(req.user, bankAccountId);
+  return success(res, "Bank account deleted successfully");
+});
+
+exports.setDefaultBankAccount = asyncHandler(async (req, res) => {
+  const bankAccountId = req.params.id;
+  await RestaurantBankAccountService.setDefaultBankAccount(
+    req.user,
+    bankAccountId
+  );
+  return success(res, "Default bank account set successfully");
+});
+
+// ==============================
+// ==== Charge Settings =========
+// ==============================
+
+exports.getChargeSetting = asyncHandler(async (req, res) => {
+  const result = await ChargeSettingService.getChargeSetting(req.user);
+  return success(res, "Charge setting fetched successfully", result);
+});
+
+exports.syncUpsertChargeSetting = asyncHandler(async (req, res) => {
+  const result = await ChargeSettingService.syncUpsertChargeSetting(
+    req.user,
+    req.body
+  );
+  return success(res, "Charge setting updated successfully", result);
+});
+
+exports.deleteChargeSetting = asyncHandler(async (req, res) => {
+  await ChargeSettingService.deleteChargeSetting(req.user);
+  return success(res, "Charge setting deleted successfully");
 });

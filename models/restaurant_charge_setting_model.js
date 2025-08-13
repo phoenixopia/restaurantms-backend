@@ -38,6 +38,28 @@ module.exports = (sequelize, DataTypes) => {
       delivery_fee_dynamic: {
         type: DataTypes.JSON,
         allowNull: true,
+        defaultValue: {
+          starting_fee: 0,
+          price_per_meter: 0,
+          minimum_fee: 0,
+        },
+      },
+      dine_in_fee_type: {
+        type: DataTypes.ENUM("fixed", "dynamic"),
+        allowNull: true,
+      },
+      dine_in_fee_fixed: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: true,
+      },
+      dine_in_fee_dynamic: {
+        type: DataTypes.JSON,
+        allowNull: true,
+        defaultValue: {
+          price_per_guest: 0,
+          price_per_hour: 0,
+          minimum_fee: 0,
+        },
       },
     },
     {

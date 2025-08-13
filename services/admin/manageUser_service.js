@@ -16,7 +16,6 @@ const {
 const throwError = require("../../utils/throwError");
 const { sendUserCredentialsEmail } = require("../../utils/sendEmail");
 const { sendSMS } = require("../../utils/sendSMS");
-const { buildPagination } = require("../../utils/pagination");
 
 const UserService = {
   async createRestaurantAdmin(superAdminId, data) {
@@ -303,8 +302,13 @@ const UserService = {
       where: { id, created_by: creatorId },
       attributes: [
         "id",
+        "first_name",
+        "last_name",
         "full_name",
+        "email",
+        "phone_number",
         "profile_picture",
+        "is_active",
         "branch_id",
         "restaurant_id",
         "role_id",
@@ -312,7 +316,19 @@ const UserService = {
       include: [
         {
           model: Role,
-          attributes: ["id", "name", "role_tag_id"],
+          attributes: [
+            "id",
+            "name",
+            "role_tag_id",
+            [
+              sequelize.literal(`(
+              SELECT COUNT(*)
+              FROM role_permissions AS rp
+              WHERE rp.role_id = Role.id
+            )`),
+              "total_permission",
+            ],
+          ],
           include: [
             {
               model: RoleTag,
@@ -353,19 +369,27 @@ const UserService = {
     return {
       id: user.id,
       full_name: user.full_name,
+      email: user.email,
+      phone_number: user.phone_number,
       profile_picture: user.profile_picture,
-      role: {
-        id: user.Role.id,
-        name: user.Role.name,
-        role_tag: {
-          id: user.Role.RoleTag.id,
-          name: user.Role.RoleTag.name,
-        },
-        permissions: permissions.map((p) => ({
-          id: p.id,
-          name: p.name,
-        })),
-      },
+      is_active: user.is_active,
+      role: user.Role
+        ? {
+            id: user.Role.id,
+            name: user.Role.name,
+            total_permission: Number(user.Role.dataValues.total_permission),
+            role_tag: user.Role.RoleTag
+              ? {
+                  id: user.Role.RoleTag.id,
+                  name: user.Role.RoleTag.name,
+                }
+              : null,
+            permissions: permissions.map((p) => ({
+              id: p.id,
+              name: p.name,
+            })),
+          }
+        : null,
       branch: {
         id: user.branch_id || null,
         name: user.Branch?.name || null,
@@ -384,11 +408,22 @@ const UserService = {
 
     const { rows, count } = await User.findAndCountAll({
       where: { created_by: creatorId },
-      attributes: ["id", "profile_picture", "full_name", "created_at"],
+      attributes: [
+        "id",
+        "email",
+        "first_name",
+        "last_name",
+        "full_name",
+        "phone_number",
+        "profile_picture",
+        "is_active",
+        "created_at",
+      ],
       include: [
         {
           model: Role,
           attributes: [
+            "id",
             "name",
             [
               sequelize.literal(`(
@@ -402,7 +437,7 @@ const UserService = {
         },
         {
           model: RoleTag,
-          attributes: ["name"],
+          attributes: ["id", "name"],
         },
       ],
       order: [["created_at", "DESC"]],
@@ -414,7 +449,27 @@ const UserService = {
       total: count,
       page,
       pages: Math.ceil(count / limit),
-      data: rows,
+      data: rows.map((u) => ({
+        id: u.id,
+        email: u.email,
+        full_name: u.full_name,
+        phone_number: u.phone_number,
+        profile_picture: u.profile_picture,
+        is_active: u.is_active,
+        Role: u.Role
+          ? {
+              id: u.Role.id,
+              name: u.Role.name,
+              total_permission: Number(u.Role.dataValues.total_permission),
+            }
+          : null,
+        RoleTag: u.RoleTag
+          ? {
+              id: u.RoleTag.id,
+              name: u.RoleTag.name,
+            }
+          : null,
+      })),
     };
   },
 

@@ -16,7 +16,7 @@ const ContactInfoService = {
       if (!branch) throwError("Branch not found", 404);
       restaurant_id = branch.restaurant_id;
     } else {
-      throwError("User does not belong to a restaurant or branch");
+      throwError("User does not belong to a restaurant or branch", 404);
     }
 
     if (is_primary) {
