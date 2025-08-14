@@ -43,7 +43,7 @@ exports.updateBasicInfo = asyncHandler(async (req, res) => {
 });
 
 exports.deleteRestaurant = asyncHandler(async (req, res) => {
-  await RestaurantService.deleteRestaurant(req.params.id, req.user);
+  await RestaurantService.deleteRestaurant(req.params.id);
   return success(res, "Restaurant deleted successfully");
 });
 
@@ -114,11 +114,11 @@ exports.getRestaurantProfileWithVideos = asyncHandler(async (req, res) => {
 // ==========================
 
 exports.createBranch = asyncHandler(async (req, res) => {
-  const { branchLimit } = req.restaurantData;
+  const { restaurantId } = req.restaurantData;
   const branch = await BranchService.createBranch(
+    restaurantId,
     req.body,
-    req.user,
-    branchLimit
+    req.user.id
   );
 
   return success(res, "Branch created successfully", branch, 201);
@@ -126,10 +126,8 @@ exports.createBranch = asyncHandler(async (req, res) => {
 
 exports.getAllBranches = asyncHandler(async (req, res) => {
   const { page = 1, limit = 10 } = req.query;
-  const restaurantId = req.user.restaurant_id;
 
   const result = await BranchService.getAllBranches({
-    restaurantId,
     page: parseInt(page),
     limit: parseInt(limit),
     user: req.user,
@@ -139,43 +137,39 @@ exports.getAllBranches = asyncHandler(async (req, res) => {
 });
 
 exports.getBranchById = asyncHandler(async (req, res) => {
-  const { branchId } = req.params;
-  const branch = await BranchService.getBranchById(branchId, req.user);
-
-  if (!branch) {
-    throwError("Branch not found", 404);
-  }
-
+  const branch = await BranchService.getBranchById(req.params.id, req.user);
   return success(res, "Branch fetched successfully", branch);
 });
 
 exports.updateBranch = asyncHandler(async (req, res) => {
-  const { branchId } = req.params;
-  const userId = req.user.id;
-  const updates = req.body;
-
   const updatedBranch = await BranchService.updateBranch(
-    branchId,
-    updates,
-    userId
+    req.user,
+    req.params.id,
+    req.body
+  );
+
+  return success(res, "Branch updated successfully", updatedBranch);
+});
+
+exports.changeLocation = asyncHandler(async (req, res) => {
+  const updatedBranch = await BranchService.changeLocation(
+    req.user,
+    req.params.id,
+    req.body
   );
 
   return success(res, "Branch updated successfully", updatedBranch);
 });
 
 exports.deleteBranch = asyncHandler(async (req, res) => {
-  const { branchId } = req.params;
-  await BranchService.deleteBranch(branchId, req.user.id);
+  await BranchService.deleteBranch(req.params.id, req.user.id);
   return success(res, "Branch deleted successfully");
 });
 
 exports.toggleBranchStatus = asyncHandler(async (req, res) => {
-  const { branchId } = req.params;
-  const { status } = req.body;
-
   const updatedBranch = await BranchService.toggleBranchStatus(
-    branchId,
-    status,
+    req.params.id,
+    req.body,
     req.user
   );
 

@@ -81,7 +81,7 @@ router.put(
 router.delete(
   "/delete/:id",
   protect("user"),
-  authorize("restaurant_admin"),
+  authorize("super_admin"),
   deleteRestaurantValidator,
   validateRequest,
   RestaurantController.deleteRestaurant
@@ -91,23 +91,22 @@ router.delete(
 router.post(
   "/branches/create-branch",
   protect("user"),
-  permissionCheck("create_branch"),
+  authorize("restaurant_admin"),
   RestaurantStatus.checkRestaurantStatus,
   branchLimit,
   RestaurantController.createBranch
 );
 
 router.put(
-  "/branches/:branchId",
+  "/update-branch/:id",
   protect("user"),
-  authorize("restaurant_admin"),
+  permissionCheck("update_branch"),
   RestaurantStatus.checkRestaurantStatus,
-  validateRequest,
   RestaurantController.updateBranch
 );
 
 router.patch(
-  "/branches/:branchId/toggle-status",
+  "/toggle-branch-status/:id",
   protect("user"),
   permissionCheck("toggle_branch_status"),
   RestaurantStatus.checkRestaurantStatus,
@@ -115,28 +114,34 @@ router.patch(
 );
 
 router.delete(
-  "/branches/:branchId",
+  "/branches/:id",
   protect("user"),
   authorize("restaurant_admin"),
   RestaurantController.deleteBranch
 );
 
 router.get(
-  "/branches",
+  "/get-all-branches",
   protect("user"),
-  permissionCheck(["view_branch", "manage_branches"]),
+  permissionCheck("view_branch"),
   RestaurantStatus.checkRestaurantStatus,
-  paginationValidation,
-  validateRequest,
   RestaurantController.getAllBranches
 );
 
 router.get(
-  "/branches/:branchId",
+  "/get-branch-byId/:id",
   protect("user"),
-  permissionCheck(["view_branch", "manage_branches"]),
+  permissionCheck("view_branch"),
   RestaurantStatus.checkRestaurantStatus,
   RestaurantController.getBranchById
+);
+
+router.put(
+  "/update-location/:id",
+  protect("user"),
+  permissionCheck("update_branch"),
+  RestaurantStatus.checkRestaurantStatus,
+  RestaurantController.changeLocation
 );
 
 // =============================== Contact Info =====================

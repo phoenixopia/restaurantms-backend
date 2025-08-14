@@ -253,7 +253,7 @@ const RestaurantService = {
       const { restaurant_name, restaurant_admin_id } = body;
 
       if (!restaurant_name) {
-        throwError("restaurant name is required", 400);
+        throwError("restaurant name required", 400);
       }
 
       const existingRestaurant = await Restaurant.findOne({
@@ -539,7 +539,7 @@ const RestaurantService = {
   },
 
   // delete restaurant only for the restaurant admin
-  async deleteRestaurant(id, user) {
+  async deleteRestaurant(id) {
     const transaction = await sequelize.transaction();
     try {
       if (!validator.isUUID(id)) throwError("Invalid restaurant ID", 400);
@@ -549,13 +549,6 @@ const RestaurantService = {
         transaction,
       });
       if (!restaurant) throwError("Restaurant not found", 404);
-
-      if (user.restaurant_id !== id) {
-        throwError(
-          "Access denied: You can only delete your own restaurant",
-          403
-        );
-      }
 
       const setting = restaurant.SystemSetting;
 

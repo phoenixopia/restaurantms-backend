@@ -1,6 +1,6 @@
 "use strict";
 
-const { User, Role } = require("../models");
+const { User } = require("../models");
 const throwError = require("../utils/throwError");
 
 async function validateManagerById(managerId, adminId, transaction = null) {
@@ -8,17 +8,10 @@ async function validateManagerById(managerId, adminId, transaction = null) {
     throwError("Manager ID is required");
   }
 
-  const manager = await User.findByPk(managerId, {
-    include: [{ model: Role, attributes: ["name"] }],
-    transaction,
-  });
+  const manager = await User.findByPk(managerId);
 
   if (!manager) {
     throwError("Manager not found", 404);
-  }
-
-  if (!manager.Role || manager.Role.name !== "staff") {
-    throwError("User is not a staff (branch manager)", 400);
   }
 
   if (manager.created_by !== adminId) {
