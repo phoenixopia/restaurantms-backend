@@ -82,50 +82,6 @@ const BranchService = {
         }
       }
 
-      const branch = await Branch.create(
-        {
-          name,
-          status,
-          main_branch: !!main_branch,
-          opening_time,
-          closing_time,
-          restaurant_id: restaurantId,
-          location_id: location.id,
-          manager_id: validatedManagerId,
-        },
-        { transaction }
-      );
-
-      if (branch_email) {
-        if (!validator.isEmail(branch_email))
-          throwError("Invalid branch email format");
-        await ContactInfo.create(
-          {
-            restaurant_id: restaurantId,
-            module_type: "branch",
-            module_id: branch.id,
-            type: "Email",
-            value: branch_email,
-            is_primary: true,
-          },
-          { transaction }
-        );
-      }
-
-      if (branch_phone) {
-        await ContactInfo.create(
-          {
-            restaurant_id: restaurantId,
-            module_type: "branch",
-            module_id: branch.id,
-            type: "Phone Number ",
-            value: branch_phone,
-            is_primary: true,
-          },
-          { transaction }
-        );
-      }
-
       await transaction.commit();
 
       return {

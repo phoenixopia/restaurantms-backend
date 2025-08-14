@@ -91,7 +91,7 @@ router.delete(
 router.post(
   "/branches/create-branch",
   protect("user"),
-  authorize("restaurant_admin"),
+  permissionCheck("create_branch"),
   RestaurantStatus.checkRestaurantStatus,
   branchLimit,
   RestaurantController.createBranch

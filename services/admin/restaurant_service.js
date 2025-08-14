@@ -103,6 +103,7 @@ const RestaurantService = {
         },
         {
           model: ContactInfo,
+          as: "owned_contact_info",
           required: false,
           where: {
             restaurant_id: restaurantId,
@@ -181,6 +182,7 @@ const RestaurantService = {
         },
         {
           model: ContactInfo,
+          as: "owned_contact_info",
           required: false,
           where: {
             module_type: "restaurant",
@@ -228,6 +230,7 @@ const RestaurantService = {
         },
         {
           model: ContactInfo,
+          as: "owned_contact_info",
           required: false,
           where: {
             module_type: "restaurant",
@@ -608,6 +611,7 @@ const RestaurantService = {
         },
         {
           model: ContactInfo,
+          as: "owned_contact_info",
           where: {
             module_type: "restaurant",
             module_id: restaurantId,

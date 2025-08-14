@@ -61,7 +61,6 @@ exports.sendTokenResponse = async (
       responseData.requiresPasswordChange = true;
     }
 
-    console.log(responseData);
     return res.status(statusCode).cookie("token", token, cookieOptions).json({
       success: true,
       token,
