@@ -99,6 +99,56 @@ module.exports = async () => {
       name: "delete_contact_info",
       description: "Permission to delete contact information",
     },
+    {
+      name: "create_branch",
+      description: "Permission to create new branches",
+    },
+    {
+      name: "update_branch",
+      description: "Permission to update existing branches",
+    },
+    {
+      name: "toggle_branch_status",
+      description: "Permission to toggle branch status",
+    },
+    {
+      name: "view_branch",
+      description: "Permission to view branches",
+    },
+    {
+      name: "delete_branch",
+      description: "Permission to delete branches",
+    },
+
+    {
+      name: "add_bank_account",
+      description: "Permission to add bank accounts",
+    },
+    {
+      name: "update_bank_account",
+      description: "Permission to update bank accounts",
+    },
+    {
+      name: "view_bank_account",
+      description: "Permission to view bank accounts",
+    },
+    {
+      name: "delete_bank_account",
+      description: "Permission to delete bank accounts",
+    },
+
+    {
+      name: "view_charge_setting",
+      description: "Permission to view charge settings",
+    },
+    {
+      name: "manage_charge_setting",
+      description: "Permission to create and update charge settings",
+    },
+    {
+      name: "delete_charge_setting",
+      description: "Permission to delete charge settings",
+    },
   ]);
 
   await RolePermission.bulkCreate(
