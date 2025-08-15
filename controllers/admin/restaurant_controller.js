@@ -176,6 +176,11 @@ exports.toggleBranchStatus = asyncHandler(async (req, res) => {
   return success(res, "Branch status updated successfully", updatedBranch);
 });
 
+exports.setDefaultBranch = asyncHandler(async (req, res) => {
+  const result = await BranchService.setDefault(req.user, req.params.id);
+  return success(res, "Branch updated successfully");
+});
+
 // ==============================
 // ===== CONTACT Info =====
 // ==============================

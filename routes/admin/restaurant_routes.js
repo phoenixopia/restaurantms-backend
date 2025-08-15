@@ -144,6 +144,14 @@ router.put(
   RestaurantController.changeLocation
 );
 
+router.put(
+  "/set-default/:id",
+  protect("user"),
+  authorize("restaurant_admin"),
+  RestaurantStatus.checkRestaurantStatus,
+  RestaurantController.setDefaultBranch
+);
+
 // =============================== Contact Info =====================
 
 router.post(

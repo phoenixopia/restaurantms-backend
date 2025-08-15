@@ -422,6 +422,41 @@ const BranchService = {
       throw err;
     }
   },
+
+  async setDefault(user, branchId) {
+    const transaction = await sequelize.transaction();
+    try {
+      const branch = await Branch.findByPk(branchId, { transaction });
+      if (!branch) throwError("Branch not found", 404);
+
+      let restaurantId;
+
+      if (user.restaurant_id) {
+        restaurantId = user.restaurant_id;
+      } else {
+        throwError("User not associated with any restaurant", 403);
+      }
+
+      if (branch.restaurant_id !== restaurantId) {
+        throwError(
+          "You are not authorized to set default for this branch",
+          403
+        );
+      }
+
+      await Branch.update(
+        { main_branch: false },
+        { where: { restaurant_id: restaurantId }, transaction }
+      );
+
+      await branch.update({ main_branch: true }, { transaction });
+      await transaction.commit();
+      return branch;
+    } catch (err) {
+      await transaction.rollback();
+      throw err;
+    }
+  },
 };
 
 module.exports = BranchService;

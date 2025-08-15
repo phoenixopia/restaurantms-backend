@@ -4,17 +4,57 @@ const { Op, fn, col, literal, QueryTypes, where } = require("sequelize");
 const throwError = require("../../utils/throwError");
 const { ContactInfo, Restaurant, Branch, sequelize } = require("../../models");
 
+async function authorizeContactInfoAccess(user, contactInfo, transaction) {
+  let restaurantId;
+
+  if (user.restaurant_id) {
+    restaurantId = user.restaurant_id;
+  } else if (user.branch_id) {
+    const branch = await Branch.findByPk(user.branch_id, { transaction });
+    if (!branch) throwError("Branch not found", 404);
+    restaurantId = branch.restaurant_id;
+  } else {
+    throwError("User does not belong to a restaurant or branch", 403);
+  }
+
+  if (contactInfo.restaurant_id !== restaurantId) {
+    throwError("Not authorized to access this contact info", 403);
+  }
+
+  if (contactInfo.module_type === "restaurant") {
+    if (contactInfo.module_id !== restaurantId) {
+      throwError("Not authorized for this restaurant contact info", 403);
+    }
+  } else if (contactInfo.module_type === "branch") {
+    const branch = await Branch.findByPk(contactInfo.module_id, {
+      transaction,
+    });
+    if (!branch || branch.restaurant_id !== restaurantId) {
+      throwError("Branch does not belong to your restaurant", 403);
+    }
+
+    if (user.branch_id && user.branch_id !== contactInfo.module_id) {
+      throwError(
+        "Branch user can only access their own branch contact info",
+        403
+      );
+    }
+  }
+
+  return restaurantId;
+}
+
 const ContactInfoService = {
   async addContactInfo(user, data) {
     const { module_type, module_id, type, value, is_primary = false } = data;
-    let restaurant_id = null;
 
+    let restaurantId;
     if (user.restaurant_id) {
-      restaurant_id = user.restaurant_id;
+      restaurantId = user.restaurant_id;
     } else if (user.branch_id) {
       const branch = await Branch.findByPk(user.branch_id);
       if (!branch) throwError("Branch not found", 404);
-      restaurant_id = branch.restaurant_id;
+      restaurantId = branch.restaurant_id;
     } else {
       throwError("User does not belong to a restaurant or branch", 404);
     }
@@ -22,30 +62,28 @@ const ContactInfoService = {
     if (is_primary) {
       const existingPrimary = await ContactInfo.findOne({
         where: {
-          restaurant_id,
+          restaurant_id: restaurantId,
           module_type,
           module_id,
           is_primary: true,
         },
       });
-
       if (existingPrimary) {
-        throw new Error(
-          `There is already a primary contact for this ${module_type}. Only one primary contact is allowed.`
+        throwError(
+          `There is already a primary contact for this ${module_type}.`,
+          400
         );
       }
     }
 
-    const contactInfo = await ContactInfo.create({
-      restaurant_id,
+    return ContactInfo.create({
+      restaurant_id: restaurantId,
       module_type,
       module_id,
       type,
       value,
       is_primary,
     });
-
-    return contactInfo;
   },
 
   async getAllContactInfo(user, filters) {
@@ -53,23 +91,12 @@ const ContactInfoService = {
     const offset = (page - 1) * limit;
 
     let where = {};
-
     if (user.restaurant_id) {
       where.restaurant_id = user.restaurant_id;
-
-      if (module_type) {
-        where.module_type = module_type;
-      }
-      if (search_value) {
-        where.value = {
-          [Op.iLike]: `%${search_value}%`,
-        };
-      }
+      if (module_type) where.module_type = module_type;
+      if (search_value) where.value = { [Op.iLike]: `%${search_value}%` };
     } else if (user.branch_id) {
-      where = {
-        module_type: "branch",
-        module_id: user.branch_id,
-      };
+      where = { module_type: "branch", module_id: user.branch_id };
     } else {
       throwError("User does not belong to a restaurant or branch", 404);
     }
@@ -83,15 +110,9 @@ const ContactInfoService = {
         {
           model: Restaurant,
           attributes: ["id", "restaurant_name"],
-          required: false,
-          where: { id: sequelize.col("ContactInfo.module_id") },
+          as: "restaurant",
         },
-        {
-          model: Branch,
-          attributes: ["id", "name"],
-          required: false,
-          where: { id: sequelize.col("ContactInfo.module_id") },
-        },
+        { model: Branch, attributes: ["id", "name"], as: "branch" },
       ],
     });
 
@@ -105,57 +126,10 @@ const ContactInfoService = {
   },
 
   async getContactInfoById(user, id) {
-    const contactInfo = await ContactInfo.findByPk(id, {
-      include: [
-        {
-          model: Restaurant,
-          attributes: ["id", "restaurant_name"],
-          required: false,
-          where: sequelize.literal(
-            `"ContactInfo"."module_type" = 'restaurant' AND "ContactInfo"."module_id" = "restaurant"."id"`
-          ),
-        },
-        {
-          model: Branch,
-          attributes: ["id", "name", "restaurant_id"],
-          required: false,
-          where: sequelize.literal(
-            `"ContactInfo"."module_type" = 'branch' AND "ContactInfo"."module_id" = "branch"."id"`
-          ),
-        },
-      ],
-    });
+    const contactInfo = await ContactInfo.findByPk(id);
+    if (!contactInfo) throwError("Contact info not found", 404);
 
-    if (!contactInfo) {
-      throwError("Contact info not found", 404);
-    }
-
-    let restaurant_id = null;
-
-    if (user.restaurant_id) {
-      restaurant_id = user.restaurant_id;
-    } else if (user.branch_id) {
-      if (!contactInfo.Branch) {
-        throwError("Branch info not found", 404);
-      }
-      restaurant_id = contactInfo.Branch.restaurant_id;
-    } else {
-      throwError("User does not belong to a restaurant or branch", 403);
-    }
-
-    if (contactInfo.restaurant_id !== restaurant_id) {
-      throwError("Not authorized to access this contact info", 403);
-    }
-
-    if (user.branch_id) {
-      if (
-        contactInfo.module_type !== "branch" ||
-        contactInfo.module_id !== user.branch_id
-      ) {
-        throwError("Not authorized to access this contact info", 403);
-      }
-    }
-
+    await authorizeContactInfoAccess(user, contactInfo);
     return contactInfo;
   },
 
@@ -163,41 +137,14 @@ const ContactInfoService = {
     const transaction = await sequelize.transaction();
     try {
       const contactInfo = await ContactInfo.findByPk(id, { transaction });
-      if (!contactInfo) {
-        throwError("Contact info not found", 404);
-      }
+      if (!contactInfo) throwError("Contact info not found", 404);
 
-      let restaurant_id = null;
-
-      if (user.restaurant_id) {
-        restaurant_id = user.restaurant_id;
-      } else if (user.branch_id) {
-        const branch = await Branch.findByPk(user.branch_id, { transaction });
-        if (!branch) {
-          throwError("Branch not found", 404);
-        }
-        restaurant_id = branch.restaurant_id;
-      } else {
-        throwError("User does not belong to a restaurant or branch", 403);
-      }
-
-      if (contactInfo.restaurant_id !== restaurant_id) {
-        throwError("Not authorized to update this contact info", 403);
-      }
-
-      if (user.branch_id) {
-        if (
-          contactInfo.module_type !== "branch" ||
-          contactInfo.module_id !== user.branch_id
-        ) {
-          throwError("Not authorized to update this contact info", 403);
-        }
-      }
+      await authorizeContactInfoAccess(user, contactInfo, transaction);
 
       if (data.is_primary === true && !contactInfo.is_primary) {
         const existingPrimary = await ContactInfo.findOne({
           where: {
-            restaurant_id,
+            restaurant_id: contactInfo.restaurant_id,
             module_type: contactInfo.module_type,
             module_id: contactInfo.module_id,
             is_primary: true,
@@ -205,10 +152,9 @@ const ContactInfoService = {
           },
           transaction,
         });
-
         if (existingPrimary) {
           throwError(
-            `There is already a primary contact for this ${contactInfo.module_type}. Only one primary contact is allowed.`,
+            `There is already a primary contact for this ${contactInfo.module_type}.`,
             400
           );
         }
@@ -216,13 +162,10 @@ const ContactInfoService = {
 
       const allowedFields = ["type", "value", "is_primary"];
       allowedFields.forEach((field) => {
-        if (data[field] !== undefined) {
-          contactInfo[field] = data[field];
-        }
+        if (data[field] !== undefined) contactInfo[field] = data[field];
       });
 
       await contactInfo.save({ transaction });
-
       await transaction.commit();
       return contactInfo;
     } catch (err) {
@@ -234,52 +177,12 @@ const ContactInfoService = {
   async deleteContactInfo(user, id) {
     const transaction = await sequelize.transaction();
     try {
-      const contactInfo = await ContactInfo.findByPk(id, {
-        include: [
-          {
-            model: Branch,
-            attributes: ["id", "restaurant_id"],
-            required: false,
-            where: sequelize.literal(
-              `"ContactInfo"."module_type" = 'branch' AND "ContactInfo"."module_id" = "branch"."id"`
-            ),
-          },
-        ],
-        transaction,
-      });
+      const contactInfo = await ContactInfo.findByPk(id, { transaction });
+      if (!contactInfo) throwError("Contact info not found", 404);
 
-      if (!contactInfo) {
-        throwError("Contact info not found", 404);
-      }
-
-      let restaurant_id = null;
-
-      if (user.restaurant_id) {
-        restaurant_id = user.restaurant_id;
-      } else if (user.branch_id) {
-        if (!contactInfo.Branch) {
-          throwError("Branch info not found", 404);
-        }
-        restaurant_id = contactInfo.Branch.restaurant_id;
-      } else {
-        throwError("User does not belong to a restaurant or branch", 403);
-      }
-
-      if (contactInfo.restaurant_id !== restaurant_id) {
-        throwError("Not authorized to delete this contact info", 403);
-      }
-
-      if (user.branch_id) {
-        if (
-          contactInfo.module_type !== "branch" ||
-          contactInfo.module_id !== user.branch_id
-        ) {
-          throwError("Not authorized to delete this contact info", 403);
-        }
-      }
+      await authorizeContactInfoAccess(user, contactInfo, transaction);
 
       await contactInfo.destroy({ transaction });
-
       await transaction.commit();
       return { message: "Contact info deleted successfully" };
     } catch (err) {
@@ -292,51 +195,15 @@ const ContactInfoService = {
     const transaction = await sequelize.transaction();
     try {
       const contactInfo = await ContactInfo.findByPk(contactInfoId, {
-        include: [
-          {
-            model: Branch,
-            attributes: ["id", "restaurant_id"],
-            required: false,
-            where: sequelize.literal(
-              `"ContactInfo"."module_type" = 'branch' AND "ContactInfo"."module_id" = "branch"."id"`
-            ),
-          },
-        ],
         transaction,
       });
+      if (!contactInfo) throwError("Contact info not found", 404);
 
-      if (!contactInfo) {
-        throwError("Contact info not found", 404);
-      }
-
-      let restaurant_id = null;
-      if (user.restaurant_id) {
-        restaurant_id = user.restaurant_id;
-      } else if (user.branch_id) {
-        if (!contactInfo.Branch) {
-          throwError("Branch info not found", 404);
-        }
-        restaurant_id = contactInfo.Branch.restaurant_id;
-      } else {
-        throwError("User does not belong to a restaurant or branch", 403);
-      }
-
-      if (contactInfo.restaurant_id !== restaurant_id) {
-        throwError("Not authorized to update this contact info", 403);
-      }
-
-      if (user.branch_id) {
-        if (
-          contactInfo.module_type !== "branch" ||
-          contactInfo.module_id !== user.branch_id
-        ) {
-          throwError("Not authorized to update this contact info", 403);
-        }
-      }
+      await authorizeContactInfoAccess(user, contactInfo, transaction);
 
       const existingPrimary = await ContactInfo.findOne({
         where: {
-          restaurant_id,
+          restaurant_id: contactInfo.restaurant_id,
           module_type: contactInfo.module_type,
           module_id: contactInfo.module_id,
           is_primary: true,
