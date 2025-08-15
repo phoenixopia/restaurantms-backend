@@ -11,10 +11,8 @@ const { branchLimit } = require("../../middleware/branchMiddleware");
 const validateRequest = require("../../middleware/validateRequest");
 const {
   createRestaurantValidator,
-  updateRestaurantValidator,
   deleteRestaurantValidator,
   changeStatusValidator,
-  paginationValidation,
 } = require("../../validators/restaurant_validator");
 
 const router = express.Router();

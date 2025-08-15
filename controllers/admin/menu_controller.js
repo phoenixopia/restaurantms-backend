@@ -8,46 +8,33 @@ const { success } = require("../../utils/apiResponse");
 
 // ====================== Menu
 exports.createMenu = asyncHandler(async (req, res) => {
-  const restaurantId = req.restaurant.id;
+  const restaurantId = req.user.restaurant_id;
   const menu = await MenuService.createMenu(req.body, restaurantId);
   return success(res, "Menu created successfully", menu, 201);
 });
 
 exports.getMenu = asyncHandler(async (req, res) => {
-  const restaurantId = req.restaurant.id;
   const menu = await MenuService.listMenu(req.user);
   return success(res, "Menu fetched successfully", menu);
 });
 
 exports.updateMenu = asyncHandler(async (req, res) => {
-  const { id } = req.params;
-  const menu = await MenuService.updateMenu(id, req.user, req.body);
+  const menu = await MenuService.updateMenu(req.user, req.body);
   return success(res, "Menu updated successfully", menu);
 });
 
 exports.deleteMenu = asyncHandler(async (req, res) => {
-  const { id } = req.params;
-  await MenuService.deleteMenu(id, req.user);
+  await MenuService.deleteMenu(req.user);
   return success(res, "Menu deleted successfully");
 });
-
-// exports.toggleMenuActivation = asyncHandler(async (req, res) => {
-//   const { id } = req.params;
-//   const menu = await MenuService.toggleMenuActivation(id, req.user);
-//   return success(
-//     res,
-//     `Menu is now ${menu.is_active ? "active" : "inactive"}`,
-//     menu
-//   );
-// });
 
 // ====================== Menu Category
 
 exports.createMenuCategory = asyncHandler(async (req, res) => {
-  const category = await MenuCategoryService.createMenuCategory({
-    ...req.body,
-    user: req.user,
-  });
+  const category = await MenuCategoryService.createMenuCategory(
+    req.user,
+    req.body
+  );
   return success(res, "Menu category created successfully", category, 201);
 });
 
@@ -74,10 +61,9 @@ exports.toggleMenuCategoryActivation = asyncHandler(async (req, res) => {
 });
 
 exports.listMenuCategories = asyncHandler(async (req, res) => {
-  const { branchId, page = 1, limit = 10 } = req.query;
+  const { page = 1, limit = 10 } = req.query;
   const result = await MenuCategoryService.listMenuCategoriesUnderRestaurant(
     req.user,
-    branchId,
     parseInt(page),
     parseInt(limit)
   );
@@ -104,12 +90,17 @@ exports.listCategoryTags = asyncHandler(async (req, res) => {
 // ===================== Menu Items
 
 exports.createMenuItem = asyncHandler(async (req, res) => {
-  const item = await MenuItemService.createMenuItem(
-    req.body,
-    req.file?.filename,
+  const item = await MenuItemService.createMenuItem(req.body, req.user);
+  return success(res, "Menu item created successfully", item, 201);
+});
+
+exports.uploadImage = asyncHandler(async (req, res) => {
+  const result = await MenuItemService.uploadLogoImage(
+    req.files,
+    req.params.id,
     req.user
   );
-  return success(res, "Menu item created successfully", item, 201);
+  return success(res, "Restaurant updated successfully", result);
 });
 
 exports.listMenuItemsWithRestaurant = asyncHandler(async (req, res) => {
@@ -121,12 +112,7 @@ exports.listMenuItemsWithRestaurant = asyncHandler(async (req, res) => {
 });
 
 exports.updateMenuItem = asyncHandler(async (req, res) => {
-  const item = await MenuItemService.updateMenuItem(
-    req.params.id,
-    req.body,
-    req.file?.filename,
-    req.user
-  );
+  const item = await MenuItemService.updateMenuItem(req.params.id, req.user);
   return success(res, "Menu item updated successfully", item);
 });
 

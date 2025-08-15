@@ -1,13 +1,27 @@
 "use strict";
 
+const { where } = require("sequelize");
 const {
+  Restaurant,
+  Branch,
   Menu,
   MenuCategory,
   MenuItem,
-  Branch,
   sequelize,
 } = require("../../models");
 const throwError = require("../../utils/throwError");
+
+async function getRestaurantIdFromUser(user, transaction = null) {
+  if (user.restaurant_id) {
+    return user.restaurant_id;
+  }
+  if (user.branch_id) {
+    const branch = await Branch.findByPk(user.branch_id, { transaction });
+    if (!branch) throwError("Branch not found", 404);
+    return branch.restaurant_id;
+  }
+  throwError("User does not belong to a restaurant or branch", 403);
+}
 
 const MenuService = {
   async createMenu({ name, description, is_active = true }, restaurantId) {
@@ -41,146 +55,86 @@ const MenuService = {
   },
 
   async listMenu(user) {
-    let restaurantId;
-    let categoryWhere = {};
+    const restaurantId = await getRestaurantIdFromUser(user);
 
-    if (user.role_name === "restaurant_admin") {
-      restaurantId = user.restaurant_id;
-    } else if (user.role_name === "staff") {
-      const branch = await Branch.findByPk(user.branch_id);
-      if (!branch) throwError("Assigned branch not found", 404);
-      restaurantId = branch.restaurant_id;
+    const restaurant = await Restaurant.findByPk(restaurantId);
 
-      categoryWhere.branch_id = user.branch_id;
-    } else {
-      throwError("Unauthorized role for viewing menu", 403);
-    }
+    if (!restaurant) throwError("Restaurant not found", 404);
 
     const menu = await Menu.findOne({
-      where: { restaurant_id: restaurantId },
-      attributes: { exclude: ["createdAt", "updatedAt"] },
-      include: [
-        {
-          model: MenuCategory,
-          required: false,
-          where: Object.keys(categoryWhere).length ? categoryWhere : undefined,
-          attributes: { exclude: ["createdAt", "updatedAt"] },
-          include: [
-            {
-              model: MenuItem,
-              attributes: { exclude: ["createdAt", "updatedAt"] },
-            },
-          ],
-        },
-      ],
+      where: { restaurant_id: restaurant.id },
     });
+    if (!menu) throwError("Menu not found", 404);
 
-    if (!menu) throwError("No menu found for this restaurant", 404);
-    return menu;
+    let categoryWhere = { menu_id: menu.id };
+    if (user.branch_id && !user.restaurant_id) {
+      categoryWhere.branch_id = user.branch_id;
+    }
+
+    const totalCategories = await MenuCategory.count({ where: categoryWhere });
+
+    const categories = await MenuCategory.findAll({
+      where: categoryWhere,
+      attributes: ["id"],
+    });
+    const categoryIds = categories.map((c) => c.id);
+
+    const totalItems = categoryIds.length
+      ? await MenuItem.count({
+          where: { menu_category_id: { [Op.in]: categoryIds } },
+        })
+      : 0;
+
+    return {
+      id: menu.id,
+      name: menu.name,
+      total_categories: totalCategories,
+      total_items: totalItems,
+    };
   },
-  async updateMenu(id, user, { name, description, is_active }) {
-    const t = await sequelize.transaction();
 
-    try {
-      let restaurantId;
+  async updateMenu(user, data) {
+    return await sequelize.transaction(async (t) => {
+      const restaurantId = await getRestaurantIdFromUser(user, t);
 
-      if (user.role_name === "restaurant_admin") {
-        restaurantId = user.restaurant_id;
-      } else if (user.role_name === "staff") {
-        const branch = await Branch.findByPk(user.branch_id, {
-          transaction: t,
-        });
-        if (!branch) throwError("Branch not found", 404);
-        restaurantId = branch.restaurant_id;
-      } else {
-        throwError("Unauthorized role for updating menu", 403);
-      }
-
-      const menu = await Menu.findOne({
-        where: { id, restaurant_id: restaurantId },
+      const restaurant = await Restaurant.findByPk(restaurantId, {
         transaction: t,
       });
+      if (!restaurant) throwError("Restaurant not found", 404);
 
-      if (!menu) throwError("Menu not found for this restaurant", 404);
+      const menu = await Menu.findOne({
+        where: { restaurant_id: restaurant.id },
+        transaction: t,
+      });
+      if (!menu) throwError("Menu not found", 404);
 
-      if (name !== undefined) menu.name = name;
-      if (description !== undefined) menu.description = description;
-      if (is_active !== undefined) menu.is_active = is_active;
+      menu.name = data.name ?? menu.name;
+      menu.description = data.description ?? menu.description;
 
       await menu.save({ transaction: t });
-      await t.commit();
 
       return menu;
-    } catch (err) {
-      await t.rollback();
-      throw err;
-    }
+    });
   },
 
-  async deleteMenu(id, user) {
-    const t = await sequelize.transaction();
-    try {
-      let restaurantId;
+  async deleteMenu(user) {
+    return await sequelize.transaction(async (t) => {
+      const restaurantId = await getRestaurantIdFromUser(user, t);
 
-      if (user.role_name === "restaurant_admin") {
-        restaurantId = user.restaurant_id;
-      } else if (user.role_name === "staff") {
-        const branch = await Branch.findByPk(user.branch_id, {
-          transaction: t,
-        });
-        if (!branch) throwError("Branch not found", 404);
-        restaurantId = branch.restaurant_id;
-      } else {
-        throwError("Unauthorized role for deleting menu", 403);
-      }
-
-      const menu = await Menu.findOne({
-        where: { id, restaurant_id: restaurantId },
+      const restaurant = await Restaurant.findByPk(restaurantId, {
         transaction: t,
       });
+      if (!restaurant) throwError("Restaurant not found", 404);
 
-      if (!menu) throwError("Menu not found for this restaurant", 404);
+      const menu = await Menu.findOne({
+        where: { restaurant_id: restaurant.id },
+        transaction: t,
+      });
+      if (!menu) throwError("Menu not found", 404);
 
       await menu.destroy({ transaction: t });
-      await t.commit();
-    } catch (err) {
-      await t.rollback();
-      throw err;
-    }
+    });
   },
-  // async toggleMenuActivation(id, user) {
-  //   const t = await sequelize.transaction();
-  //   try {
-  //     let restaurantId;
-
-  //     if (user.role_name === "restaurant_admin") {
-  //       restaurantId = user.restaurant_id;
-  //     } else if (user.role_name === "staff") {
-  //       const branch = await Branch.findByPk(user.branch_id, {
-  //         transaction: t,
-  //       });
-  //       if (!branch) throwError("Branch not found", 404);
-  //       restaurantId = branch.restaurant_id;
-  //     } else {
-  //       throwError("Unauthorized role for toggling menu activation", 403);
-  //     }
-
-  //     const menu = await Menu.findOne({
-  //       where: { id, restaurant_id: restaurantId },
-  //       transaction: t,
-  //     });
-  //     if (!menu) throwError("Menu not found for this restaurant", 404);
-
-  //     menu.is_active = !menu.is_active;
-  //     await menu.save({ transaction: t });
-  //     await t.commit();
-
-  //     return menu;
-  //   } catch (err) {
-  //     await t.rollback();
-  //     throw err;
-  //   }
-  // },
 };
 
 module.exports = MenuService;

@@ -1,5 +1,4 @@
 "use strict";
-const sequelizePaginate = require("sequelize-paginate");
 
 module.exports = (sequelize, DataTypes) => {
   const MenuItem = sequelize.define(
@@ -50,8 +49,6 @@ module.exports = (sequelize, DataTypes) => {
       foreignKey: "menu_item_id",
     });
   };
-
-  sequelizePaginate.paginate(MenuItem);
 
   return MenuItem;
 };

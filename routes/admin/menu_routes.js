@@ -12,7 +12,7 @@ const router = express.Router();
 
 // ======================== Menu
 router.get(
-  "/list",
+  "/list-menu",
   protect("user"),
   permissionCheck("view_menu"),
   RestaurantStatus.checkRestaurantStatus,
@@ -20,7 +20,7 @@ router.get(
 );
 
 router.post(
-  "/create",
+  "/create-menu",
   protect("user"),
   authorize("restaurant_admin"),
   RestaurantStatus.checkRestaurantStatus,
@@ -28,7 +28,7 @@ router.post(
 );
 
 router.put(
-  "/update/:id",
+  "/update-menu",
   protect("user"),
   permissionCheck("edit_menu"),
   RestaurantStatus.checkRestaurantStatus,
@@ -36,25 +36,17 @@ router.put(
 );
 
 router.delete(
-  "/delete/:id",
+  "/delete-menu",
   protect("user"),
   permissionCheck("delete_menu"),
   RestaurantStatus.checkRestaurantStatus,
   MenuController.deleteMenu
 );
 
-// router.patch(
-//   "/toggle-activation/:id",
-//   protect("user"),
-//   permissionCheck("toggle_menu_activation"),
-//   RestaurantStatus.checkRestaurantStatus,
-//   MenuController.toggleMenuActivation
-// );
-
 // ======================== Menu Category
 
 router.get(
-  "/menu-category/list",
+  "/list-menu-category",
   protect("user"),
   permissionCheck("view_menu_category"),
   RestaurantStatus.checkRestaurantStatus,
@@ -62,7 +54,7 @@ router.get(
 );
 
 router.get(
-  "/menu-category/byID/:id",
+  "/menu-category-byID/:id",
   protect("user"),
   permissionCheck("view_menu_category"),
   RestaurantStatus.checkRestaurantStatus,
@@ -76,7 +68,7 @@ router.get(
 );
 
 router.post(
-  "/menu-category/create",
+  "/create-menu-category",
   protect("user"),
   permissionCheck("create_menu_category"),
   RestaurantStatus.checkRestaurantStatus,
@@ -84,7 +76,7 @@ router.post(
 );
 
 router.put(
-  "/menu-category/update/:id",
+  "/update-menu-category/:id",
   protect("user"),
   permissionCheck("edit_menu_category"),
   RestaurantStatus.checkRestaurantStatus,
@@ -92,7 +84,7 @@ router.put(
 );
 
 router.delete(
-  "/menu-category/delete/:id",
+  "/delete-menu-category/:id",
   protect("user"),
   permissionCheck("delete_menu_category"),
   RestaurantStatus.checkRestaurantStatus,
@@ -110,27 +102,34 @@ router.patch(
 // ========================= Menu Items
 
 router.post(
-  "/menu-item/create",
+  "create-menu-item",
   protect("user"),
   permissionCheck("create_menu_item"),
   RestaurantStatus.checkRestaurantStatus,
-  ValidateUploadedFiles.validateUploadedFiles("menuItem"),
-  Upload.uploadMenuItemImage,
   MenuController.createMenuItem
 );
 
 router.put(
-  "/menu-item/update/:id",
+  "/upload-image/:id",
   protect("user"),
-  permissionCheck("edit_menu_item"),
+  permissionCheck("update_menu_item"),
   RestaurantStatus.checkRestaurantStatus,
-  ValidateUploadedFiles.validateUploadedFiles("menuItem"),
   Upload.uploadMenuItemImage,
+  ValidateUploadedFiles.validateUploadedFiles("menuItem"),
+  checkStorageQuota,
+  MenuController.uploadImage
+);
+
+router.put(
+  "update-menu-item/:id",
+  protect("user"),
+  permissionCheck("update_menu_item"),
+  RestaurantStatus.checkRestaurantStatus,
   MenuController.updateMenuItem
 );
 
 router.delete(
-  "/menu-item/delete/:id",
+  "delete-menu-item/id",
   protect("user"),
   permissionCheck("delete_menu_item"),
   RestaurantStatus.checkRestaurantStatus,
@@ -138,7 +137,7 @@ router.delete(
 );
 
 router.patch(
-  "/menu-item/toggle-seasonal/:id",
+  "menu-item/toggle-seasonal/:id",
   protect("user"),
   permissionCheck("toggle_seasonal"),
   RestaurantStatus.checkRestaurantStatus,
@@ -154,7 +153,7 @@ router.patch(
 );
 
 router.get(
-  "/menu-item/byID/:id",
+  "/menu-item-byID/:id",
   protect("user"),
   permissionCheck("view_menu_item"),
   RestaurantStatus.checkRestaurantStatus,
@@ -162,7 +161,7 @@ router.get(
 );
 
 router.get(
-  "/menu-item/list",
+  "/list-all-menu-item",
   protect("user"),
   permissionCheck("view_menu_item"),
   RestaurantStatus.checkRestaurantStatus,
@@ -170,3 +169,6 @@ router.get(
 );
 
 module.exports = router;
+
+//  ValidateUploadedFiles.validateUploadedFiles("menuItem"),
+//  Upload.uploadMenuItemImage,

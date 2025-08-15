@@ -4,7 +4,6 @@ const validateRequest = require("../../middleware/validateRequest");
 const { protect } = require("../../middleware/protect");
 
 const { loginValidator } = require("../../validators/auth_validator");
-const { auth } = require("google-auth-library");
 
 const router = express.Router();
 
