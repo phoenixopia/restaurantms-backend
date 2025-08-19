@@ -127,11 +127,7 @@ module.exports = (sequelize) => {
       onDelete: "CASCADE",
       onUpdate: "CASCADE",
     });
-    Restaurant.hasMany(models.ImageGallery, {
-      foreignKey: "restaurant_id",
-      onDelete: "CASCADE",
-      onUpdate: "CASCADE",
-    });
+
     Restaurant.hasMany(models.RestaurantBankAccount, {
       foreignKey: "restaurant_id",
       onDelete: "CASCADE",

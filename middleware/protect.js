@@ -16,6 +16,7 @@ exports.protect = (type = "user") => {
         message: "Not authorized to access this route",
       });
     }
+    1;
 
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);

@@ -138,7 +138,7 @@ const UserService = {
         creatorMode,
       } = data;
 
-      if (!first_name || !last_name || !password || role_id)
+      if (!first_name || !last_name || !password || !role_id)
         throwError("Missing required fields", 400);
       if (creatorMode === "email" && !email)
         throwError("Email is required for email mode", 400);
@@ -151,44 +151,44 @@ const UserService = {
       if (!creator) throwError("Creator not found", 404);
       if (!creator.restaurant_id) throwError("Creator has no restaurant", 400);
 
-      const activeSubscription = await Subscription.findOne({
-        where: {
-          restaurant_id: creator.restaurant_id,
-          status: "active",
-        },
-        order: [["created_at", "DESC"]],
-        transaction: t,
-      });
+      // const activeSubscription = await Subscription.findOne({
+      //   where: {
+      //     restaurant_id: creator.restaurant_id,
+      //     status: "active",
+      //   },
+      //   order: [["created_at", "DESC"]],
+      //   transaction: t,
+      // });
 
-      if (!activeSubscription) throwError("No active subscription found", 403);
+      // if (!activeSubscription) throwError("No active subscription found", 403);
 
-      const plan = await Plan.findByPk(activeSubscription.plan_id, {
-        include: [{ model: PlanLimit }],
-        transaction: t,
-      });
+      // const plan = await Plan.findByPk(activeSubscription.plan_id, {
+      //   include: [{ model: PlanLimit }],
+      //   transaction: t,
+      // });
 
-      const maxStaffLimit = plan.PlanLimits.find(
-        (limit) => limit.key === "max_staff"
-      );
+      // const maxStaffLimit = plan.PlanLimits.find(
+      //   (limit) => limit.key === "max_staff"
+      // );
 
-      if (!maxStaffLimit)
-        throwError("Plan does not define max_staff limit", 400);
+      // if (!maxStaffLimit)
+      //   throwError("Plan does not define max_staff limit", 400);
 
-      const maxStaff = parseInt(maxStaffLimit.value, 10);
+      // const maxStaff = parseInt(maxStaffLimit.value, 10);
 
-      const currentStaffCount = await User.count({
-        where: {
-          created_by: restaurantAdminId,
-        },
-        transaction: t,
-      });
+      // const currentStaffCount = await User.count({
+      //   where: {
+      //     created_by: restaurantAdminId,
+      //   },
+      //   transaction: t,
+      // });
 
-      if (currentStaffCount >= maxStaff) {
-        throwError(
-          `You have reached your staff limit (${maxStaff}) for your current subscription plan.`,
-          403
-        );
-      }
+      // if (currentStaffCount >= maxStaff) {
+      //   throwError(
+      //     `You have reached your staff limit (${maxStaff}) for your current subscription plan.`,
+      //     403
+      //   );
+      // }
 
       if (branch_id) {
         const branch = await Branch.findOne({
@@ -429,7 +429,7 @@ const UserService = {
               sequelize.literal(`(
               SELECT COUNT(*)
               FROM role_permissions AS rp
-              WHERE rp.role_id = Role.id
+              WHERE rp.role_id = "Role"."id"
             )`),
               "total_permission",
             ],

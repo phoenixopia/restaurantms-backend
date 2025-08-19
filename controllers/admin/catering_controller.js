@@ -4,42 +4,68 @@ const { success } = require("../../utils/apiResponse");
 
 exports.createCatering = asyncHandler(async (req, res) => {
   const data = req.body;
-  const file = req.file;
-  const catering = await CateringService.createCatering({ data, file });
+  const catering = await CateringService.createCatering(req.user, data);
 
   return success(res, "Catering created successfully", catering, 201);
 });
 
-exports.updateCatering = asyncHandler(async (req, res) => {
-  const { id } = req.params;
-  const { restaurant_id } = req.body;
+exports.updateBasicInfo = asyncHandler(async (req, res) => {
   const data = req.body;
-  const file = req.file;
+  const result = await CateringService.updateBasicInfo(
+    req.params.id,
+    req.user,
+    data
+  );
 
-  const updated = await CateringService.updateCatering(
-    id,
-    restaurant_id,
-    data,
-    file
+  return success(res, "Catering updated successfully", result);
+});
+
+exports.uploadImage = asyncHandler(async (req, res) => {
+  const updated = await CateringService.uploadImage(
+    req.params.id,
+    req.files,
+    req.user
   );
 
   return success(res, "Catering updated successfully", updated);
 });
 
-exports.deleteCatering = asyncHandler(async (req, res) => {
-  const { id } = req.params;
-  const restaurant_id = req.user.restaurant_id;
+exports.getAllCateringSerivces = asyncHandler(async (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
 
-  const result = await CateringService.deleteCatering(id, restaurant_id);
+  const result = await CateringService.getAllCateringSerivce(req.user, {
+    page,
+    limit,
+  });
+
+  return success(res, "Caterings fetched successfully", result);
+});
+
+exports.getCateringServiceById = asyncHandler(async (req, res) => {
+  const cateringId = req.params.id;
+
+  const catering = await CateringService.getCateringServiceById(
+    req.user,
+    cateringId
+  );
+
+  return success(res, "Catering fetched successfully", catering);
+});
+
+exports.deleteCatering = asyncHandler(async (req, res) => {
+  const cateringId = req.params.id;
+
+  const result = await CateringService.deleteCatering(cateringId, req.user);
   return success(res, result.message);
 });
 
 exports.toggleCateringStatus = asyncHandler(async (req, res) => {
-  const { id } = req.params;
-  const restaurant_id = req.user.restaurant_id;
+  const cateringId = req.params.id;
 
-  const result = await CateringService.toggleCateringStatus(id, restaurant_id);
-  return success(res, "Catering status toggled successfully", result);
+  const updated = await CateringService.toggleStatus(req.user, cateringId);
+
+  return success(res, "Catering status updated successfully", updated);
 });
 
 exports.getCateringById = asyncHandler(async (req, res) => {
@@ -58,6 +84,50 @@ exports.listCaterings = asyncHandler(async (req, res) => {
     parseInt(limit)
   );
   return success(res, "Caterings fetched successfully", result);
+});
+
+// ================ Catering request ==============
+
+exports.viewCateringRequests = asyncHandler(async (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const status = req.query.status;
+
+  const result = await CateringService.getCateringRequests(req.user, {
+    page,
+    limit,
+    status,
+  });
+
+  return success(res, "Catering requests fetched successfully", result);
+});
+
+exports.viewCateringRequestById = asyncHandler(async (req, res) => {
+  const cateringRequestId = req.params.id;
+
+  const result = await CateringService.getCateringRequestById(
+    cateringRequestId,
+    req.user
+  );
+
+  return success(res, "Catering request fetched successfully", result);
+});
+
+exports.giveResponseCateringRequest = asyncHandler(async (req, res) => {
+  const cateringRequestId = req.params.id;
+  const { status } = req.body;
+
+  const result = await CateringService.giveResponseCateringRequest(
+    cateringRequestId,
+    req.user,
+    { status }
+  );
+
+  return success(
+    res,
+    "Response given to catering request successfully",
+    result
+  );
 });
 
 exports.listOneCateringPerRestaurant = asyncHandler(async (req, res) => {

@@ -33,10 +33,6 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.INTEGER,
         allowNull: true,
       },
-      delivery_location: {
-        type: DataTypes.STRING,
-        allowNull: true,
-      },
       event_date: {
         type: DataTypes.DATE,
         allowNull: true,
@@ -49,6 +45,14 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.ENUM("pending", "approved", "rejected"),
         defaultValue: "pending",
         allowNull: false,
+      },
+      delivery_location_id: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        references: {
+          model: "locations",
+          key: "id",
+        },
       },
     },
     {
@@ -69,6 +73,10 @@ module.exports = (sequelize, DataTypes) => {
       foreignKey: "customer_id",
       onDelete: "CASCADE",
       onUpdate: "CASCADE",
+    });
+
+    CateringRequest.belongsTo(models.Location, {
+      foreignKey: "delivery_location_id",
     });
 
     CateringRequest.hasOne(models.CateringQuote, {

@@ -165,7 +165,7 @@ const RbacService = {
 
   async createRole(
     user,
-    { name, role_tag_id, description, permissionIds = [] }
+    { name, description, permissionIds = [], role_tag_id }
   ) {
     const t = await sequelize.transaction();
     try {
@@ -183,7 +183,7 @@ const RbacService = {
         if (exists) throwError("Role with this name already exists", 400);
       }
 
-      let finalRoleTagId = role_tag_id;
+      let finalRoleTagId;
 
       if (isRestaurantAdmin) {
         const staffTag = await RoleTag.findOne({
@@ -192,30 +192,26 @@ const RbacService = {
         });
         if (!staffTag) throwError("Staff role tag not found", 500);
         finalRoleTagId = staffTag.id;
+      } else {
+        if (!role_tag_id) throwError("role_tag_id is required", 400);
+        finalRoleTagId = role_tag_id;
+      }
 
-        if (permissionIds.length) {
-          const foundPermissions = await Permission.findAll({
-            where: { id: { [Op.in]: permissionIds } },
-            transaction: t,
-          });
-          if (foundPermissions.length !== permissionIds.length)
-            throwError("One or more permissions do not exist", 400);
+      if (permissionIds.length) {
+        const foundPermissions = await Permission.findAll({
+          where: { id: { [Op.in]: permissionIds } },
+          transaction: t,
+        });
+        if (foundPermissions.length !== permissionIds.length)
+          throwError("One or more permissions do not exist", 400);
 
+        if (isRestaurantAdmin) {
           const adminGranted = await this.getUserPermissionIds(user.id);
           const unauthorized = permissionIds.filter(
             (pid) => !adminGranted.includes(pid)
           );
           if (unauthorized.length)
             throwError("You cannot assign permissions you do not have", 403);
-        }
-      } else {
-        if (permissionIds.length) {
-          const foundPermissions = await Permission.findAll({
-            where: { id: { [Op.in]: permissionIds } },
-            transaction: t,
-          });
-          if (foundPermissions.length !== permissionIds.length)
-            throwError("One or more permissions do not exist", 400);
         }
       }
 
@@ -254,7 +250,6 @@ const RbacService = {
       throw err;
     }
   },
-
   async updateRole(roleId, user, updates) {
     const t = await sequelize.transaction();
 
@@ -593,23 +588,12 @@ const RbacService = {
 
   async getMyOwn(userId) {
     const user = await User.findByPk(userId, {
-      attributes: [
-        "id",
-        "first_name",
-        "last_name",
-        "profile_picture",
-        "restaurant_id",
-        "branch_id",
-      ],
+      attributes: ["id"],
       include: [
         {
           model: Role,
-          attributes: ["id", "name", "role_tag_id"],
+          attributes: ["id"],
           include: [
-            {
-              model: RoleTag,
-              attributes: ["name"],
-            },
             {
               model: Permission,
               attributes: ["id", "name"],
@@ -625,20 +609,12 @@ const RbacService = {
     }
 
     return {
-      user_id: user.id,
-      full_name: user.full_name,
-      profile_picture: user.profile_picture,
-      role: user.Role
-        ? {
-            id: user.Role.id,
-            name: user.Role.name,
-            role_tag_name: user.Role.RoleTag ? user.Role.RoleTag.name : null,
-            permissions: user.Role.Permissions.map((p) => ({
-              id: p.id,
-              name: p.name,
-            })),
-          }
-        : null,
+      permissions: user.Role
+        ? user.Role.Permissions.map((p) => ({
+            id: p.id,
+            name: p.name,
+          }))
+        : [],
     };
   },
 

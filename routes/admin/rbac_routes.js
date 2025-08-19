@@ -25,6 +25,7 @@ router.put(
 router.get(
   "/role-tag-byId/:id",
   protect("user"),
+  permissionCheck("view_role_tag"),
   rbacController.getRoleTagById
 );
 

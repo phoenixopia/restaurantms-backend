@@ -77,31 +77,6 @@ exports.validateUploadedFiles = (type) => {
       }
     }
 
-    if (type === "image-gallery") {
-      const images = req.files || [];
-
-      if (!Array.isArray(images) || images.length === 0) {
-        errors.push(
-          "At least one image must be uploaded for the image gallery"
-        );
-      }
-
-      if (images.length > 5) {
-        errors.push(
-          "You can upload up to 5 images for the image gallery at a time"
-        );
-      }
-
-      images.forEach((img, index) => {
-        if (!img.mimetype.startsWith("image/")) {
-          errors.push(`Gallery image ${index + 1} must be an image file`);
-        }
-        if (img.size > 5 * 1024 * 1024) {
-          errors.push(`Gallery image ${index + 1} must be less than 5MB`);
-        }
-      });
-    }
-
     if (type === "catering-card") {
       const image = req.file;
       if (!image) return next();

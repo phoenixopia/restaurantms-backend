@@ -63,20 +63,13 @@ module.exports = (sequelize, DataTypes) => {
       cover_image_url: {
         type: DataTypes.STRING,
       },
-      gallery_image_ids: {
-        type: DataTypes.ARRAY(DataTypes.UUID),
-        allowNull: true,
-      },
-
       contact_person: {
         type: DataTypes.STRING(100),
         allowNull: false,
       },
-      contact_phone: {
+      contact_info: {
         type: DataTypes.STRING(50),
-      },
-      contact_email: {
-        type: DataTypes.STRING(100),
+        allowNull: false,
       },
       is_active: {
         type: DataTypes.BOOLEAN,

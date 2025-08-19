@@ -43,7 +43,6 @@ module.exports = (sequelize, DataTypes) => {
           "logo",
           "restaurant-image",
           "menu-item",
-          "gallery",
           "video",
           "catering-card",
           "video-thumbnail"

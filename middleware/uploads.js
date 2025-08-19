@@ -89,31 +89,6 @@ exports.uploadProfilePicture = multer({
   limits: { fileSize: 5 * 1024 * 1024 },
 }).single("profile");
 
-// ============= Image Gallery
-const IMAGE_GALLERY_DIR = path.resolve(__dirname, "../uploads/image-gallery");
-
-const imageGalleryStorage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, IMAGE_GALLERY_DIR),
-  filename: (req, file, cb) => {
-    const unique = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(null, `${file.fieldname}-${unique}${path.extname(file.originalname)}`);
-  },
-});
-
-exports.uploadGalleryImages = multer({
-  storage: imageGalleryStorage,
-  fileFilter: (req, file, cb) => {
-    const allowed = ["image/jpeg", "image/png", "image/jpg"];
-    allowed.includes(file.mimetype)
-      ? cb(null, true)
-      : cb(new Error("Invalid file type. Only JPEG/PNG allowed"), false);
-  },
-  limits: {
-    fileSize: 5 * 1024 * 1024,
-    files: 5,
-  },
-}).array("images", 5);
-
 // ========== Catering Card ==========
 const CATERING_DIR = path.resolve(__dirname, "../uploads/catering-card");
 

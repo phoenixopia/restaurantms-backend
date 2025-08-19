@@ -24,10 +24,7 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
-const allowedOrigins =
-  process.env.NODE_ENV === "production"
-    ? [process.env.PROD_FRONTEND_URL]
-    : [process.env.DEV_FRONTEND_URL];
+const allowedOrigins = ["http://localhost:3000"];
 
 const corsOptions = {
   origin: (origin, callback) => {

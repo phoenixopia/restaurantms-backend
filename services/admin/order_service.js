@@ -10,6 +10,7 @@ const {
   Location,
   Restaurant,
   SystemSetting,
+  Customer,
   MenuItem,
   sequelize,
 } = require("../../models");
@@ -176,6 +177,7 @@ const OrderService = {
       throw error;
     }
   },
+
   async cancelOrder(orderId, user) {
     const t = await sequelize.transaction();
     try {
@@ -244,6 +246,7 @@ const OrderService = {
       throw err;
     }
   },
+
   async getActiveOrders(customerId, page = 1, limit = 10) {
     page = parseInt(page);
     limit = parseInt(limit);
@@ -388,113 +391,120 @@ const OrderService = {
     };
   },
 
-  async listOrders(user) {
-    const t = await sequelize.transaction();
-    try {
-      const { role_name, restaurant_id, branch_id } = user;
+  async listOrders(query, user) {
+    const { page = 1, limit = 10, status, from, to } = query;
+    const offset = (page - 1) * limit;
 
-      let filter = {};
+    let where = {};
 
-      if (role_name === "restaurant_admin") {
-        if (!restaurant_id) throwError("restaurant_id is missing", 400);
-        filter.restaurant_id = restaurant_id;
-      } else if (role_name === "staff") {
-        if (!branch_id) throwError("branch_id is missing", 400);
-        filter.branch_id = branch_id;
-      } else {
-        throwError("Unauthorized role to list orders", 403);
-      }
-
-      const orders = await Order.findAll({
-        where: filter,
-        include: [{ model: OrderItem }],
-        order: [["created_at", "DESC"]],
-        transaction: t,
-      });
-
-      await t.commit();
-      return orders;
-    } catch (error) {
-      await t.rollback();
-      throw error;
+    if (user.restaurant_id) {
+      where.restaurant_id = user.restaurant_id;
+    } else if (user.branch_id) {
+      where.branch_id = user.branch_id;
+    } else {
+      throwError("Access denied", 403);
     }
+
+    if (status) {
+      where.status = status;
+    }
+
+    let orderWhere = {};
+    if (from && to) {
+      orderWhere.created_at = { [Op.between]: [new Date(from), new Date(to)] };
+    } else if (from) {
+      orderWhere.created_at = { [Op.gte]: new Date(from) };
+    } else if (to) {
+      orderWhere.created_at = { [Op.lte]: new Date(to) };
+    }
+
+    const { rows: kdsOrders, count } = await KdsOrder.findAndCountAll({
+      where,
+      include: [
+        {
+          model: Order,
+          where: orderWhere,
+          include: [
+            { model: Restaurant, attributes: ["id", "restaurant_name"] },
+            { model: Branch, attributes: ["id", "name"] },
+            { model: Customer, attributes: ["id", "first_name", "last_name"] },
+            { model: Table, attributes: ["id", "table_number"] },
+            {
+              model: Location,
+              attributes: ["id", "address", "latitude", "longitude"],
+            },
+          ],
+        },
+      ],
+      order: [["created_at", "DESC"]],
+      limit: parseInt(limit),
+      offset: parseInt(offset),
+    });
+
+    const formattedOrders = kdsOrders.map((kds) => {
+      const order = kds.Order;
+
+      return {
+        id: order.id,
+        type: order.type,
+        status: kds.status,
+        total_amount: order.total_amount,
+        payment_status: order.payment_status,
+        order_date: order.order_date,
+        created_at: order.created_at,
+
+        restaurant_name: order.Restaurant?.restaurant_name || null,
+        branch_name: order.Branch?.name || null,
+        customer_name: order.Customer
+          ? `${order.Customer.first_name} ${order.Customer.last_name}`
+          : null,
+
+        table_number:
+          order.type === "dine-in" ? order.Table?.table_number || null : null,
+
+        delivery_location:
+          order.type === "delivery"
+            ? {
+                address: order.Location?.address || null,
+                latitude: order.Location?.latitude || null,
+                longitude: order.Location?.longitude || null,
+              }
+            : null,
+      };
+    });
+
+    return {
+      total: count,
+      page: parseInt(page),
+      limit: parseInt(limit),
+      orders: formattedOrders,
+    };
   },
 
   async updateOrderStatus(id, status, user) {
     const t = await sequelize.transaction();
     try {
-      const order = await Order.findByPk(id, {
-        include: [{ model: KdsOrder }],
-        transaction: t,
-      });
+      const kdsOrder = await KdsOrder.findByPk(id, { transaction: t });
+      if (!kdsOrder) throwError("KDS order not found", 404);
 
-      if (!order) throwError("Order not found", 404);
-
-      const { role_name, restaurant_id, branch_id } = user;
-
-      if (role_name === "restaurant_admin") {
-        const branch = await Branch.findByPk(order.branch_id, {
-          transaction: t,
-        });
-        if (!branch || branch.restaurant_id !== restaurant_id) {
-          throwError("Unauthorized to modify this order", 403);
-        }
-      } else if (role_name === "staff") {
-        if (order.branch_id !== branch_id) {
-          throwError("Unauthorized to modify this order", 403);
+      if (user.restaurant_id) {
+        if (kdsOrder.restaurant_id !== user.restaurant_id)
+          throwError("Not authorized to update this order", 403);
+      } else if (user.branch_id) {
+        if (kdsOrder.branch_id !== user.branch_id) {
+          throwError("Not authorized to update this order", 403);
         }
       } else {
-        throwError("Unauthorized role", 403);
+        throwError("Invalid user context", 403);
       }
 
-      order.status = status;
-      await order.save({ transaction: t });
+      kdsOrder.status = status;
+      await kdsOrder.save({ transaction: t });
 
-      if (order.KdsOrder) {
-        order.KdsOrder.status = status;
-        await order.KdsOrder.save({ transaction: t });
-      }
-
-      await t.commit();
-
-      return {
-        id: order.id,
-        status: order.status,
-        branch_id: order.branch_id,
-        restaurant_id: order.restaurant_id,
-        customer_id: order.customer_id,
-      };
-    } catch (error) {
-      await t.rollback();
-      throw error;
-    }
-  },
-
-  async getSingleOrder(id, user) {
-    const t = await sequelize.transaction();
-    try {
-      const order = await Order.findByPk(id, {
-        include: [{ model: OrderItem }],
-        transaction: t,
-      });
-
-      if (!order) throwError("Order not found", 404);
-
-      const { role_name, restaurant_id, branch_id } = user;
-
-      if (role_name === "restaurant_admin") {
-        const branch = await Branch.findByPk(order.branch_id, {
-          transaction: t,
-        });
-        if (!branch || branch.restaurant_id !== restaurant_id) {
-          throwError("Unauthorized to view this order", 403);
-        }
-      } else if (role_name === "staff") {
-        if (order.branch_id !== branch_id) {
-          throwError("Unauthorized to view this order", 403);
-        }
-      } else {
-        throwError("Unauthorized role", 403);
+      const order = await Order.findByPk(kdsOrder.order_id, { transaction: t });
+      if (order) {
+        order.status = status;
+        await order.save({ transaction: t });
       }
 
       await t.commit();
@@ -503,6 +513,72 @@ const OrderService = {
       await t.rollback();
       throw error;
     }
+  },
+
+  async getSingleOrder(orderId, user) {
+    const kdsOrder = await KdsOrder.findOne({
+      where: { order_id: orderId },
+      include: [
+        {
+          model: Order,
+          include: [
+            { model: Restaurant, attributes: ["id", "restaurant_name"] },
+            { model: Branch, attributes: ["id", "name"] },
+            { model: Customer, attributes: ["id", "name"] },
+            { model: Table, attributes: ["id", "table_number"] },
+            {
+              model: Location,
+              attributes: ["id", "address", "latitude", "longitude"],
+            },
+          ],
+        },
+      ],
+    });
+
+    if (!kdsOrder) {
+      throw new NotFoundError("Order not found.");
+    }
+
+    const order = kdsOrder.Order;
+
+    if (user.restaurant_id) {
+      if (order.restaurant_id !== user.restaurant_id) {
+        throwError("Not authorized to view this order.", 403);
+      }
+    } else if (user.branch_id) {
+      if (order.branch_id !== user.branch_id) {
+        throwError("Not authorized to view this order.", 403);
+      }
+    } else {
+      throwError("Invalid user context.", 403);
+    }
+
+    return {
+      id: order.id,
+      kds_id: kdsOrder.id,
+      type: order.type,
+      status: kdsOrder.status,
+      total_amount: order.total_amount,
+      payment_status: order.payment_status,
+      order_date: order.order_date,
+      created_at: order.created_at,
+
+      restaurant_name: order.Restaurant?.restaurant_name || null,
+      branch_name: order.Branch?.name || null,
+      customer_name: order.Customer?.name || null,
+
+      table_number:
+        order.type === "dine-in" ? order.Table?.table_number || null : null,
+
+      delivery_location:
+        order.type === "delivery"
+          ? {
+              address: order.Location?.address || null,
+              latitude: order.Location?.latitude || null,
+              longitude: order.Location?.longitude || null,
+            }
+          : null,
+    };
   },
 
   async getOrderByIdForCustomer(orderId, customerId) {

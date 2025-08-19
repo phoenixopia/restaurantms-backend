@@ -54,7 +54,7 @@ router.get(
 );
 
 router.get(
-  "/menu-category-byID/:id",
+  "/menu-category-byId/:id",
   protect("user"),
   permissionCheck("view_menu_category"),
   RestaurantStatus.checkRestaurantStatus,
@@ -169,6 +169,3 @@ router.get(
 );
 
 module.exports = router;
-
-//  ValidateUploadedFiles.validateUploadedFiles("menuItem"),
-//  Upload.uploadMenuItemImage,

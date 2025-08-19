@@ -95,7 +95,7 @@ exports.createMenuItem = asyncHandler(async (req, res) => {
 });
 
 exports.uploadImage = asyncHandler(async (req, res) => {
-  const result = await MenuItemService.uploadLogoImage(
+  const result = await MenuItemService.uploadImage(
     req.files,
     req.params.id,
     req.user
