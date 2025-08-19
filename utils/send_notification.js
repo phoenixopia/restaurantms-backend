@@ -1,5 +1,3 @@
-// const twilio = require("twilio");
-
 function sendInAppNotification(io, roomId, title, body) {
   if (!io) {
     console.warn("Socket.IO instance not available for in-app notification.");

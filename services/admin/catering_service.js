@@ -16,6 +16,8 @@ const { getFileUrl, getFilePath } = require("../../utils/file");
 
 const UPLOAD_FOLDER = "catering-card";
 const CateringService = {
+  // ============ Catering =================
+
   async createCatering(user, data) {
     const t = await sequelize.transaction();
     try {
@@ -346,88 +348,7 @@ const CateringService = {
     return catering;
   },
 
-  async getCateringById(id) {
-    const catering = await Catering.findByPk(id);
-    if (!catering) throwError("Catering not found", 404);
-
-    const restaurant_id = catering.restaurant_id;
-
-    const restaurant = await Restaurant.findByPk(restaurant_id, {
-      attributes: ["id", "restaurant_name"],
-    });
-
-    const setting = await SystemSetting.findOne({
-      where: { restaurant_id },
-      attributes: ["logo_url"],
-    });
-
-    const mainBranch = await Branch.findOne({
-      where: { restaurant_id, main_branch: true },
-      include: [
-        {
-          model: Location,
-          attributes: ["address", "latitude", "longitude"],
-        },
-      ],
-    });
-
-    return {
-      ...catering.toJSON(),
-      restaurant: {
-        id: restaurant_id,
-        name: restaurant?.restaurant_name || null,
-        logo_url: setting?.logo_url || null,
-        main_branch_location: mainBranch?.Location?.toJSON() || null,
-      },
-    };
-  },
-  async listCaterings(restaurant_id, page = 1, limit = 10) {
-    page = parseInt(page);
-    limit = parseInt(limit);
-    const offset = (page - 1) * limit;
-
-    const { count, rows } = await Catering.findAndCountAll({
-      where: { restaurant_id },
-      limit,
-      offset,
-      order: [["created_at", "DESC"]],
-    });
-
-    const setting = await SystemSetting.findOne({
-      where: { restaurant_id },
-      attributes: ["logo_url"],
-    });
-
-    const mainBranch = await Branch.findOne({
-      where: { restaurant_id, main_branch: true },
-      include: [
-        {
-          model: Location,
-          attributes: ["address", "latitude", "longitude"],
-        },
-      ],
-    });
-
-    const enrichedCaterings = rows.map((catering) => {
-      return {
-        ...catering.toJSON(),
-        restaurant: {
-          id: restaurant_id,
-          logo_url: setting?.logo_url || null,
-          main_branch_location: mainBranch?.Location?.toJSON() || null,
-        },
-      };
-    });
-
-    return {
-      totalItems: count,
-      totalPages: Math.ceil(count / limit),
-      currentPage: page,
-      caterings: enrichedCaterings,
-    };
-  },
-
-  // ================ Catering requests
+  // ================ Catering Requests ==============
 
   async getCateringRequests(user, { page = 1, limit = 10, status }) {
     let restaurantId;
@@ -621,143 +542,271 @@ const CateringService = {
     };
   },
 
-  async listOneCateringPerRestaurant({ page = 1, limit = 10 }) {
-    page = parseInt(page);
-    limit = parseInt(limit);
+  // ================ Catering Quote ===============
+
+  async prepareCateringQuote(cateringRequestId, user, data) {
+    const t = await sequelize.transaction();
+    try {
+      let restaurantId;
+
+      if (user.restaurant_id) {
+        restaurantId = user.restaurant_id;
+      } else if (user.branch_id) {
+        const branch = await Branch.findByPk(user.branch_id, {
+          transaction: t,
+        });
+        if (!branch) throwError("Branch not found", 404);
+        restaurantId = branch.restaurant_id;
+      } else {
+        throwError("User does not belong to a restaurant or branch", 404);
+      }
+
+      const request = await CateringRequest.findOne({
+        where: { id: cateringRequestId },
+        include: [{ model: Catering, attributes: ["id", "restaurant_id"] }],
+        transaction: t,
+        lock: t.LOCK.UPDATE,
+      });
+
+      if (!request) throwError("Catering request not found", 404);
+
+      if (request.Catering.restaurant_id !== restaurantId) {
+        throwError("Not authorized to prepare a quote for this request", 403);
+      }
+
+      if (request.status !== "approved") {
+        throwError(
+          "You can only prepare a quote for approved catering requests",
+          400
+        );
+      }
+
+      const existingQuote = await CateringQuote.findOne({
+        where: { catering_request_id: cateringRequestId },
+        transaction: t,
+        lock: t.LOCK.UPDATE,
+      });
+
+      if (existingQuote) {
+        throwError("A quote has already been prepared for this request", 400);
+      }
+
+      const quote = await CateringQuote.create(
+        {
+          catering_request_id: request.id,
+          catering_id: request.catering_id,
+          estimated_price: data.estimated_price,
+          description: data.description || null,
+          status: "pending",
+        },
+        { transaction: t }
+      );
+
+      await t.commit();
+
+      return {
+        id: quote.id,
+        catering_request_id: quote.catering_request_id,
+        catering_id: quote.catering_id,
+        estimated_price: quote.estimated_price,
+        description: quote.description,
+        status: quote.status,
+        created_at: quote.createdAt,
+      };
+    } catch (err) {
+      await t.rollback();
+      throw err;
+    }
+  },
+
+  async updateCateringQuote(quoteId, user, updates) {
+    const t = await sequelize.transaction();
+    try {
+      let restaurantId;
+
+      if (user.restaurant_id) {
+        restaurantId = user.restaurant_id;
+      } else if (user.branch_id) {
+        const branch = await Branch.findByPk(user.branch_id, {
+          transaction: t,
+        });
+        if (!branch) throwError("Branch not found", 404);
+        restaurantId = branch.restaurant_id;
+      } else {
+        throwError("User does not belong to a restaurant or branch", 404);
+      }
+
+      const quote = await CateringQuote.findOne({
+        where: { id: quoteId },
+        include: [{ model: Catering, attributes: ["id", "restaurant_id"] }],
+        transaction: t,
+        lock: t.LOCK.UPDATE,
+      });
+
+      if (!quote) throwError("Catering quote not found", 404);
+
+      if (quote.Catering.restaurant_id !== restaurantId) {
+        throwError("Not authorized to update this quote", 403);
+      }
+
+      if (quote.status !== "pending") {
+        throwError("Only quotes with status 'pending' can be updated", 400);
+      }
+
+      if (updates.estimated_price !== undefined) {
+        quote.estimated_price = updates.estimated_price;
+      }
+      if (updates.description !== undefined) {
+        quote.description = updates.description;
+      }
+
+      await quote.save({ transaction: t });
+
+      await t.commit();
+
+      return {
+        id: quote.id,
+        catering_request_id: quote.catering_request_id,
+        catering_id: quote.catering_id,
+        estimated_price: quote.estimated_price,
+        description: quote.description,
+        status: quote.status,
+        updated_at: quote.updatedAt,
+      };
+    } catch (err) {
+      await t.rollback();
+      throw err;
+    }
+  },
+
+  async listCateringQuotes(user, { page = 1, limit = 10, status }) {
+    let restaurantId;
+
+    if (user.restaurant_id) {
+      restaurantId = user.restaurant_id;
+    } else if (user.branch_id) {
+      const branch = await Branch.findByPk(user.branch_id);
+      if (!branch) throwError("Branch not found", 404);
+      restaurantId = branch.restaurant_id;
+    } else {
+      throwError("User does not belong to a restaurant or branch", 403);
+    }
+
     const offset = (page - 1) * limit;
 
-    const [results] = await sequelize.query(`
-    SELECT DISTINCT ON (restaurant_id) *
-    FROM "caterings"
-    ORDER BY restaurant_id, created_at DESC
-  `);
+    const whereClause = {};
+    if (status) {
+      whereClause.status = status;
+    }
 
-    const totalItems = results.length;
-    const paginated = results.slice(offset, offset + limit);
-
-    const enriched = await Promise.all(
-      paginated.map(async (catering) => {
-        const setting = await SystemSetting.findOne({
-          where: { restaurant_id: catering.restaurant_id },
-          attributes: ["logo_url"],
-        });
-
-        const mainBranch = await Branch.findOne({
-          where: { restaurant_id: catering.restaurant_id, main_branch: true },
+    const { rows, count } = await CateringQuote.findAndCountAll({
+      where: whereClause,
+      include: [
+        {
+          model: Catering,
+          attributes: ["id", "title", "prepayment_percentage"],
+          where: { restaurant_id: restaurantId },
+        },
+        {
+          model: CateringRequest,
+          attributes: ["id"],
           include: [
             {
-              model: Location,
-              attributes: ["address", "latitude", "longitude"],
+              model: Customer,
+              attributes: ["id", "first_name", "last_name"],
             },
           ],
-        });
-
-        return {
-          ...catering,
-          restaurant: {
-            id: catering.restaurant_id,
-            logo_url: setting?.logo_url || null,
-            main_branch_location: mainBranch?.Location?.toJSON() || null,
-          },
-        };
-      })
-    );
+        },
+      ],
+      order: [["created_at", "DESC"]],
+      limit,
+      offset,
+    });
 
     return {
-      totalItems,
-      totalPages: Math.ceil(totalItems / limit),
-      currentPage: page,
-      caterings: enriched,
+      data: rows.map((quote) => ({
+        id: quote.id,
+        status: quote.status,
+        estimated_price: quote.estimated_price,
+        created_at: quote.createdAt,
+        catering_title: quote.Catering.title,
+        prepayment_percentage: quote.Catering.prepayment_percentage,
+        customer_name: quote.CateringRequest?.Customer
+          ? `${quote.CateringRequest.Customer.first_name} ${quote.CateringRequest.Customer.last_name}`
+          : null,
+      })),
+      pagination: {
+        total: count,
+        page: Number(page),
+        limit: Number(limit),
+        totalPages: Math.ceil(count / limit),
+      },
     };
   },
 
-  async createCateringRequest({ customerId, data }) {
-    const {
-      catering_id,
-      event_type,
-      guest_count,
-      delivery_location,
-      event_date,
-      notes,
-    } = data;
-    const catering = await Catering.findByPk(catering_id);
-    if (!catering) throwError("Catering not found", 404);
+  async getCateringQuoteById(user, quoteId) {
+    let restaurantId;
 
-    if (delivery_location && !catering.delivery_available) {
-      throwError("This catering service does not support delivery", 400);
+    if (user.restaurant_id) {
+      restaurantId = user.restaurant_id;
+    } else if (user.branch_id) {
+      const branch = await Branch.findByPk(user.branch_id);
+      if (!branch) throwError("Branch not found", 404);
+      restaurantId = branch.restaurant_id;
+    } else {
+      throwError("User does not belong to a restaurant or branch", 403);
     }
 
-    if (guest_count !== null && guest_count !== undefined) {
-      if (guest_count < catering.min_guest_count) {
-        throwError(
-          `Guest count is below the minimum required (${catering.min_guest_count})`,
-          400
-        );
-      }
-
-      if (guest_count > catering.max_guest_count) {
-        throwError(
-          `Guest count exceeds the maximum allowed (${catering.max_guest_count})`,
-          400
-        );
-      }
-    }
-
-    const request = await CateringRequest.create({
-      catering_id,
-      customer_id: customerId,
-      event_type,
-      guest_count,
-      delivery_location: delivery_location || null,
-      event_date,
-      notes,
+    const quote = await CateringQuote.findOne({
+      where: { id: quoteId },
+      include: [
+        {
+          model: Catering,
+          attributes: ["id", "title", "prepayment_percentage", "restaurant_id"],
+        },
+        {
+          model: CateringRequest,
+          attributes: ["id", "status"],
+          include: [
+            {
+              model: Customer,
+              attributes: ["id", "first_name", "last_name", "phone", "email"],
+            },
+          ],
+        },
+      ],
     });
 
-    return request;
-  },
+    if (!quote) throwError("Catering quote not found", 404);
 
-  async respondToCateringRequest(
-    requestId,
-    userId,
-    role,
-    restaurant_id,
-    branch_id,
-    status
-  ) {
-    const allowedStatuses = ["approved", "rejected"];
-    if (!allowedStatuses.includes(status)) {
-      throwError(
-        "Invalid status. Must be either 'approved' or 'rejected'",
-        400
-      );
+    if (quote.Catering.restaurant_id !== restaurantId) {
+      throwError("Not authorized to view this catering quote", 403);
     }
 
-    const request = await CateringRequest.findByPk(requestId);
-    if (!request) throwError("Catering request not found", 404);
-
-    const catering = await Catering.findByPk(request.catering_id);
-    if (!catering) throwError("Associated catering not found", 404);
-
-    let allowedRestaurantId = null;
-
-    if (role === "restaurant_admin") {
-      allowedRestaurantId = restaurant_id;
-    } else if (role === "staff" && branch_id) {
-      const branch = await Branch.findByPk(branch_id);
-      if (!branch) throwError("Branch not found", 404);
-      allowedRestaurantId = branch.restaurant_id;
-    } else {
-      throwError("Unauthorized role to respond to catering requests", 403);
-    }
-
-    if (catering.restaurant_id !== allowedRestaurantId) {
-      throwError("Access denied: You cannot manage this catering request", 403);
-    }
-
-    request.status = status;
-    await request.save();
-
-    return request;
+    return {
+      id: quote.id,
+      status: quote.status,
+      estimated_price: quote.estimated_price,
+      description: quote.description,
+      created_at: quote.createdAt,
+      catering: {
+        id: quote.Catering.id,
+        title: quote.Catering.title,
+        prepayment_percentage: quote.Catering.prepayment_percentage,
+      },
+      request: {
+        id: quote.CateringRequest.id,
+        status: quote.CateringRequest.status,
+        customer: quote.CateringRequest.Customer
+          ? {
+              id: quote.CateringRequest.Customer.id,
+              name: `${quote.CateringRequest.Customer.first_name} ${quote.CateringRequest.Customer.last_name}`,
+              phone: quote.CateringRequest.Customer.phone,
+              email: quote.CateringRequest.Customer.email,
+            }
+          : null,
+      },
+    };
   },
 };
 

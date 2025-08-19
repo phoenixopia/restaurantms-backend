@@ -33,14 +33,16 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.TEXT,
         allowNull: true,
       },
+
       status: {
         type: DataTypes.ENUM("pending", "accepted", "negotiate", "rejected"),
         allowNull: false,
         defaultValue: "pending",
       },
-      valid_until: {
-        type: DataTypes.DATE,
-        allowNull: true,
+
+      payment_status: {
+        type: DataTypes.ENUM("Paid", "Unpaid"),
+        defaultValue: "Unpaid",
       },
     },
     {

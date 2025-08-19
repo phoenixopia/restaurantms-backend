@@ -2,6 +2,8 @@ const asyncHandler = require("../../utils/asyncHandler");
 const CateringService = require("../../services/admin/catering_service");
 const { success } = require("../../utils/apiResponse");
 
+// =============== Catering ==================
+
 exports.createCatering = asyncHandler(async (req, res) => {
   const data = req.body;
   const catering = await CateringService.createCatering(req.user, data);
@@ -68,25 +70,7 @@ exports.toggleCateringStatus = asyncHandler(async (req, res) => {
   return success(res, "Catering status updated successfully", updated);
 });
 
-exports.getCateringById = asyncHandler(async (req, res) => {
-  const { id } = req.params;
-  const result = await CateringService.getCateringById(id);
-  return success(res, "Catering fetched successfully", result);
-});
-
-exports.listCaterings = asyncHandler(async (req, res) => {
-  const restaurant_id = req.params.id;
-  const { page = 1, limit = 10 } = req.query;
-
-  const result = await CateringService.listCaterings(
-    restaurant_id,
-    parseInt(page),
-    parseInt(limit)
-  );
-  return success(res, "Caterings fetched successfully", result);
-});
-
-// ================ Catering request ==============
+// ================ Catering Request ==============
 
 exports.viewCateringRequests = asyncHandler(async (req, res) => {
   const page = parseInt(req.query.page) || 1;
@@ -130,50 +114,43 @@ exports.giveResponseCateringRequest = asyncHandler(async (req, res) => {
   );
 });
 
-exports.listOneCateringPerRestaurant = asyncHandler(async (req, res) => {
-  const { page = 1, limit = 10 } = req.query;
+// ==================== Catering Quote ==============
 
-  const result = await CateringService.listOneCateringPerRestaurant({
-    page: parseInt(page),
-    limit: parseInt(limit),
-  });
+exports.prepareCateringQuote = asyncHandler(async (req, res) => {
+  const cateringRequestId = req.params.id;
+  const { estimated_price, description } = req.body;
 
-  return success(
-    res,
-    "One catering per restaurant fetched successfully",
-    result
+  const result = await CateringService.prepareCateringQuote(
+    cateringRequestId,
+    req.user,
+    { estimated_price, description }
   );
+
+  return success(res, "Catering quote prepared successfully", result);
 });
 
-exports.createRequest = asyncHandler(async (req, res) => {
-  const customerId = req.user.id;
-  const data = req.body;
+exports.updateCateringQuote = asyncHandler(async (req, res) => {
+  const { estimated_price, description } = req.body;
 
-  const result = await CateringService.createCateringRequest({
-    customerId,
-    data,
-  });
+  const result = await CateringService.updateCateringQuote(
+    req.params.id,
+    req.user,
+    {
+      estimated_price,
+      description,
+    }
+  );
 
-  return success(res, "Catering request submitted successfully", result, 201);
+  return success(res, "Catering quote updated successfully", result);
 });
 
-exports.giveResponse = asyncHandler(async (req, res) => {
-  const { id } = req.params; // CateringRequest ID
-  const { status } = req.body;
-  const { id: userId, restaurant_id, branch_id, role_name } = req.user;
-
-  const result = await CateringService.respondToCateringRequest({
-    requestId: id,
-    userId,
-    role: role_name,
-    restaurant_id,
-    branch_id,
+exports.listCateringQuotes = asyncHandler(async (req, res) => {
+  const { page, limit, status } = req.query;
+  const result = await CateringService.listCateringQuotes(req.user, {
+    page,
+    limit,
     status,
   });
 
-  return success(
-    res,
-    "Response to catering request recorded successfully",
-    result
-  );
+  return success(res, "Catering quotes fetched successfully", result);
 });

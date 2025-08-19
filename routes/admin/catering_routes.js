@@ -93,4 +93,26 @@ router.put(
 
 // ================== Catering Quote ====================
 
+router.post(
+  "/prepare-quote/:id",
+  protect("user"),
+  permissionCheck("prepare_catering_quote"),
+  CateringController.prepareCateringQuote
+);
+
+router.post(
+  "/update-quote/:id",
+  protect("user"),
+  permissionCheck("update_catering_quote"),
+  CateringController.updateCateringQuote
+);
+
+router.get(
+  "/list-catering-quotes",
+  protect("user"),
+  permissionCheck("view_catering_quote"),
+  RestaurantStatus.checkRestaurantStatus,
+  CateringController.listCateringQuotes
+);
+
 module.exports = router;

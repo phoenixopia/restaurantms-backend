@@ -27,15 +27,15 @@ module.exports = (sequelize, DataTypes) => {
       },
       event_type: {
         type: DataTypes.STRING(100),
-        allowNull: true,
+        allowNull: false,
       },
       guest_count: {
         type: DataTypes.INTEGER,
-        allowNull: true,
+        allowNull: false,
       },
       event_date: {
         type: DataTypes.DATE,
-        allowNull: true,
+        allowNull: false,
       },
       notes: {
         type: DataTypes.TEXT,
