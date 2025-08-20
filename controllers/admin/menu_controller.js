@@ -1,159 +1,149 @@
-const {
-  sequelize,
-  Menu,
-  Restaurant,
-  RestaurantMenu,
-  MenuCategory,
-  MenuItem,
-} = require("../../models/index");
-const { v4: uuidv4 } = require("uuid");
+"use strict";
 
-module.exports = {
-  async createMenu(req, res) {
-    const t = await sequelize.transaction();
-    try {
-      const { name, description, is_active, restaurant_id } = req.body;
+const asyncHandler = require("../../utils/asyncHandler");
+const MenuService = require("../../services/admin/menu_service");
+const MenuCategoryService = require("../../services/admin/menuCategory_service");
+const MenuItemService = require("../../services/admin/menuItem_service");
+const { success } = require("../../utils/apiResponse");
 
-      if (!restaurant_id) {
-        return res.status(400).json({ message: "restaurant_id is required" });
-      }
+// ====================== Menu
+exports.createMenu = asyncHandler(async (req, res) => {
+  const restaurantId = req.user.restaurant_id;
+  const menu = await MenuService.createMenu(req.body, restaurantId);
+  return success(res, "Menu created successfully", menu, 201);
+});
 
-      const restaurant = await Restaurant.findByPk(restaurant_id);
-      if (!restaurant) {
-        return res.status(404).json({ message: "Restaurant not found" });
-      }
+exports.getMenu = asyncHandler(async (req, res) => {
+  const menu = await MenuService.listMenu(req.user);
+  return success(res, "Menu fetched successfully", menu);
+});
 
-      const menu = await Menu.create(
-        {
-          id: uuidv4(),
-          name,
-          description,
-          is_active,
-        },
-        { transaction: t }
-      );
+exports.updateMenu = asyncHandler(async (req, res) => {
+  const menu = await MenuService.updateMenu(req.user, req.body);
+  return success(res, "Menu updated successfully", menu);
+});
 
-      await RestaurantMenu.create(
-        {
-          id: uuidv4(),
-          restaurant_id,
-          menu_id: menu.id,
-        },
-        { transaction: t }
-      );
+exports.deleteMenu = asyncHandler(async (req, res) => {
+  await MenuService.deleteMenu(req.user);
+  return success(res, "Menu deleted successfully");
+});
 
-      await t.commit();
+// ====================== Menu Category
 
-      res
-        .status(201)
-        .json({ message: "Menu created and linked successfully", menu });
-    } catch (error) {
-      await t.rollback();
-      console.error("Create Menu Error:", error);
-      res.status(500).json({ message: "Internal server error", error });
-    }
-  },
+exports.createMenuCategory = asyncHandler(async (req, res) => {
+  const category = await MenuCategoryService.createMenuCategory(
+    req.user,
+    req.body
+  );
+  return success(res, "Menu category created successfully", category, 201);
+});
 
-  async getMenusByRestaurant(req, res) {
-    try {
-      const { restaurant_id } = req.query;
+exports.updateMenuCategory = asyncHandler(async (req, res) => {
+  const updated = await MenuCategoryService.updateMenuCategory(
+    req.params.id,
+    req.user,
+    req.body
+  );
+  return success(res, "Menu category updated successfully", updated);
+});
 
-      if (!restaurant_id) {
-        return res.status(400).json({ message: "restaurant_id is required" });
-      }
+exports.deleteMenuCategory = asyncHandler(async (req, res) => {
+  await MenuCategoryService.deleteMenuCategory(req.params.id, req.user);
+  return success(res, "Menu category deleted successfully");
+});
 
-      const restaurant = await Restaurant.findByPk(restaurant_id);
-      if (!restaurant) {
-        return res.status(404).json({ message: "Restaurant not found" });
-      }
+exports.toggleMenuCategoryActivation = asyncHandler(async (req, res) => {
+  const toggled = await MenuCategoryService.toggleMenuCategoryActivation(
+    req.params.id,
+    req.user
+  );
+  return success(res, "Menu category activation toggled", toggled);
+});
 
-      const menus = await Menu.findAll({
-        include: [
-          {
-            model: Restaurant,
-            where: { id: restaurant_id },
-            attributes: ["id", "name"],
-            through: { attributes: [] },
-          },
-        ],
-      });
+exports.listMenuCategories = asyncHandler(async (req, res) => {
+  const { page = 1, limit = 10 } = req.query;
+  const result = await MenuCategoryService.listMenuCategoriesUnderRestaurant(
+    req.user,
+    parseInt(page),
+    parseInt(limit)
+  );
+  return success(res, "Menu categories fetched", result);
+});
 
-      res.status(200).json(menus);
-    } catch (error) {
-      console.error("Get Menus Error:", error);
-      res.status(500).json({ message: "Internal server error", error });
-    }
-  },
+exports.getMenuCategory = asyncHandler(async (req, res) => {
+  const category = await MenuCategoryService.getMenuCategoryById(
+    req.params.id,
+    req.user
+  );
+  return success(res, "Menu category fetched", category);
+});
 
-  // Get a single menu by ID
-  async getMenuById(req, res) {
-    try {
-      const { id } = req.params;
+exports.listCategoryTags = asyncHandler(async (req, res) => {
+  const { page = 1, limit = 10 } = req.query;
+  const tags = await MenuCategoryService.listAllCategoriesTags(
+    parseInt(page),
+    parseInt(limit)
+  );
+  return success(res, "Category tags fetched", tags);
+});
 
-      const menu = await Menu.findByPk(id, {
-        include: [
-          { model: MenuCategory },
-          { model: MenuItem },
-          { model: Restaurant, through: { attributes: [] } },
-        ],
-      });
+// ===================== Menu Items
 
-      if (!menu) {
-        return res.status(404).json({ message: "Menu not found" });
-      }
+exports.createMenuItem = asyncHandler(async (req, res) => {
+  const item = await MenuItemService.createMenuItem(req.body, req.user);
+  return success(res, "Menu item created successfully", item, 201);
+});
 
-      res.status(200).json(menu);
-    } catch (error) {
-      console.error("Get Menu By ID Error:", error);
-      res.status(500).json({ message: "Internal server error", error });
-    }
-  },
+exports.uploadImage = asyncHandler(async (req, res) => {
+  const result = await MenuItemService.uploadImage(
+    req.files,
+    req.params.id,
+    req.user
+  );
+  return success(res, "Restaurant updated successfully", result);
+});
 
-  async updateMenu(req, res) {
-    try {
-      const { id } = req.params;
-      const { name, description, is_active } = req.body;
+exports.listMenuItemsWithRestaurant = asyncHandler(async (req, res) => {
+  const items = await MenuItemService.listMenuItemsWithRestaurant(
+    req.query,
+    req.user
+  );
+  return success(res, "Menu items fetched successfully", items);
+});
 
-      const menu = await Menu.findByPk(id);
-      if (!menu) {
-        return res.status(404).json({ message: "Menu not found" });
-      }
+exports.updateMenuItem = asyncHandler(async (req, res) => {
+  const item = await MenuItemService.updateMenuItem(req.params.id, req.user);
+  return success(res, "Menu item updated successfully", item);
+});
 
-      await menu.update({ name, description, is_active });
+exports.deleteMenuItem = asyncHandler(async (req, res) => {
+  await MenuItemService.deleteMenuItem(req.params.id, req.user);
+  return success(res, "Menu item deleted successfully");
+});
 
-      res.status(200).json({ message: "Menu updated successfully", menu });
-    } catch (error) {
-      console.error("Update Menu Error:", error);
-      res.status(500).json({ message: "Internal server error", error });
-    }
-  },
+exports.toggleSeasonal = asyncHandler(async (req, res) => {
+  const item = await MenuItemService.toggleSeasonal(req.params.id, req.user);
+  return success(
+    res,
+    `Menu item is now ${item.seasonal ? "seasonal" : "non-seasonal"}`,
+    item
+  );
+});
 
-  // Delete menu and its restaurant association in a transaction
-  async deleteMenu(req, res) {
-    const t = await sequelize.transaction();
-    try {
-      const { id } = req.params;
+exports.toggleMenuItemActivation = asyncHandler(async (req, res) => {
+  const menuItem = await MenuItemService.toggleActivation(
+    req.params.id,
+    req.user
+  );
 
-      const menu = await Menu.findByPk(id, { transaction: t });
-      if (!menu) {
-        await t.rollback();
-        return res.status(404).json({ message: "Menu not found" });
-      }
+  return success(
+    res,
+    `Menu item is now ${menuItem.is_active ? "active" : "inactive"}`,
+    menuItem
+  );
+});
 
-      // Delete associated restaurant link
-      await RestaurantMenu.destroy({
-        where: { menu_id: id },
-        transaction: t,
-      });
-
-      await menu.destroy({ transaction: t });
-
-      await t.commit();
-      res.status(200).json({ message: "Menu and link deleted successfully" });
-    } catch (error) {
-      await t.rollback();
-      console.error("Delete Menu Error:", error);
-      res.status(500).json({ message: "Internal server error", error });
-    }
-  },
-};
+exports.getSingleMenuItem = asyncHandler(async (req, res) => {
+  const item = await MenuItemService.getSingleMenuItem(req.params.id, req.user);
+  return success(res, "Menu item fetched successfully", item);
+});

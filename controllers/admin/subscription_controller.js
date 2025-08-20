@@ -1,91 +1,68 @@
-const { Subscription, Restaurant, Plan, sequelize } = require("../../models/index");
-const { capitalizeName } = require("../../utils/capitalizeFirstLetter");
+const asyncHandler = require("../../utils/asyncHandler");
+const SubscriptionService = require("../../services/admin/subscription_service");
+const { success } = require("../../utils/apiResponse");
 
-exports.createSubscription = async (req, res) => {
-  const t = await sequelize.transaction();
+exports.subscribe = asyncHandler(async (req, res) => {
+  const receiptFile = req.file || null;
 
-  try {
-    const { restaurant_id, plan_name, billing_cycle, billing_provider } =
-      req.body;
+  const subscription = await SubscriptionService.subscribe(
+    req.body,
+    req.user,
+    receiptFile
+  );
 
-    if (!restaurant_id || !plan_name || !billing_cycle) {
-      return res.status(400).json({ message: "Missing required fields." });
-    }
+  return success(res, "Subscription submitted successfully", subscription, 201);
+});
 
-    if (!["monthly", "yearly"].includes(billing_cycle.toLowerCase())) {
-      return res
-        .status(400)
-        .json({ message: "Invalid billing cycle. Use 'monthly' or 'yearly'." });
-    }
+exports.updateSubscriptionStatus = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
 
-    const restaurant = await Restaurant.findByPk(restaurant_id, {
-      transaction: t,
+  const allowedStatuses = [
+    "active",
+    "pending",
+    "inactive",
+    "cancelled",
+    "expired",
+  ];
+  if (!allowedStatuses.includes(status)) {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid status value.",
     });
-    if (!restaurant) {
-      await t.rollback();
-      return res.status(404).json({ message: "Restaurant not found." });
-    }
-
-    const formattedPlanName = capitalizeName(plan_name);
-
-    const plan = await Plan.findOne({
-      where: { name: formattedPlanName },
-      transaction: t,
-    });
-
-    if (!plan) {
-      await t.rollback();
-      return res
-        .status(404)
-        .json({ message: `Plan '${formattedPlanName}' not found.` });
-    }
-
-    const existingSub = await Subscription.findOne({
-      where: {
-        restaurant_id,
-        status: "active",
-      },
-      transaction: t,
-    });
-
-    if (existingSub) {
-      await t.rollback();
-      return res.status(409).json({
-        message: "An active subscription already exists for this restaurant.",
-      });
-    }
-
-    const startDate = new Date();
-    const endDate = new Date(startDate);
-    if (billing_cycle.toLowerCase() === "monthly") {
-      endDate.setMonth(endDate.getMonth() + 1);
-    } else {
-      endDate.setFullYear(endDate.getFullYear() + 1);
-    }
-
-    const subscription = await Subscription.create(
-      {
-        restaurant_id,
-        plan_id: plan.id,
-        billing_cycle: billing_cycle.toLowerCase(),
-        start_date: startDate,
-        end_date: endDate,
-        billing_provider: billing_provider || null,
-        created_by_user_id: req.user?.id || null,
-        status: "active",
-      },
-      { transaction: t }
-    );
-
-    await t.commit();
-
-    return res.status(201).json({
-      message: "Subscription created successfully.",
-      data: subscription,
-    });
-  } catch (error) {
-    console.error("Subscription creation failed:", error);
-    await t.rollback();
-    return res.status(500).json({ message: "Internal server error." });
   }
-};
+
+  const updated = await SubscriptionService.updateStatus(id, status);
+
+  // req.app.locals.io
+  //   .to(updated.restaurant_id)
+  //   .emit("subscriptionStatusUpdated", {
+  //     subscriptionId: id,
+  //     newStatus: status,
+  //   });
+
+  return success(res, "Subscription status updated", updated);
+});
+
+exports.listSubscriptions = asyncHandler(async (req, res) => {
+  const subscriptions = await SubscriptionService.listSubscriptions(
+    req.user,
+    req.query
+  );
+  return success(res, "Subscriptions fetched successfully", subscriptions);
+});
+
+exports.exportSubscriptionsToExcel = asyncHandler(async (req, res) => {
+  const { excelBuffer, filename } = await SubscriptionService.exportToExcel(
+    req.query,
+    req.user
+  );
+
+  res.setHeader(
+    "Content-Type",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+  );
+  res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+
+  res.send(excelBuffer);
+});

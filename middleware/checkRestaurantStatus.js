@@ -1,42 +1,40 @@
-const { Restaurant } = require("../models/index");
+const { Restaurant, Branch } = require("../models");
 
-const checkRestaurantStatus = async (req, res, next) => {
+exports.checkRestaurantStatus = async (req, res, next) => {
   try {
-    const restaurantId = req.user?.restaurant_id;
+    let restaurant;
 
-    if (!restaurantId) {
-      return res.status(403).json({
-        success: false,
-        message: "No restaurant access linked to your account.",
-      });
+    if (req.user?.restaurant_id) {
+      restaurant = await Restaurant.findByPk(req.user.restaurant_id);
+    } else if (req.user?.branch_id) {
+      const branch = await Branch.findByPk(req.user.branch_id);
+      if (branch) {
+        restaurant = await Restaurant.findByPk(branch.restaurant_id);
+      }
     }
-
-    const restaurant = await Restaurant.findByPk(restaurantId);
 
     if (!restaurant) {
-      return res.status(404).json({
+      return res.status(403).json({
         success: false,
-        message: "Restaurant not found.",
+        message: "No associated restaurant found for this account",
       });
     }
 
-    const { status } = restaurant;
-
-    if (status === "active" || status === "trial") {
+    if (["active"].includes(restaurant.status)) {
       req.restaurant = restaurant;
       return next();
     }
 
-    if (status === "expired") {
+    if (restaurant.status === "expired") {
       return res.status(403).json({
         success: false,
-        message: "Your subscription has expired. Please subscribe to continue.",
+        message: "Subscription expired. Please renew to continue.",
       });
     }
 
     return res.status(403).json({
       success: false,
-      message: `Access denied. Restaurant status is: ${status}`,
+      message: `Access denied. Restaurant status is: ${restaurant.status}`,
     });
   } catch (err) {
     console.error("Error in checkRestaurantStatus middleware:", err);
@@ -46,5 +44,3 @@ const checkRestaurantStatus = async (req, res, next) => {
     });
   }
 };
-
-module.exports = checkRestaurantStatus;

@@ -1,247 +1,250 @@
 "use strict";
-
-const bcryptjs = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const { getGeneratedId } = require('../utils/idGenerator');
-
+const jwt = require("jsonwebtoken");
+const bcryptjs = require("bcryptjs");
 
 module.exports = (sequelize, DataTypes) => {
-    const User = sequelize.define("User",
-        {
-            id: {
-                type: DataTypes.STRING,
-                defaultValue: getGeneratedId,
-                primaryKey: true,
-                allowNull: false,
-            },
-            role_id: {
-                type: DataTypes.STRING,
-                allowNull: false,
-                references: {
-                    model: "roles",
-                    key: "id",
-                },
-            },
-            first_name: {
-                type: DataTypes.STRING,
-                allowNull: false
-            },
-            last_name: {
-                type: DataTypes.STRING,
-                allowNull: false
-            },
-            email: {
-                type: DataTypes.STRING,
-                allowNull: false,
-                unique: true,
-                validate: {
-                    isEmail: true,
-                },
-                set(value) {
-                    if (value) {
-                    this.setDataValue('email', value.toLowerCase());
-                    }
-                },
-            },
-            phone_number: {
-                type: DataTypes.STRING,
-                allowNull: true,
-                validate: {
-                    is: /^\+?[1-9]\d{1,14}$/ // E.164 format validation
-                }
-            },
-            password: {
-                type: DataTypes.TEXT,
-                allowNull: true,
-                validate: {
-                    len: [8, 100],
-                },
-            },         
-            confirmation_code: {
-                type: DataTypes.STRING,
-                allowNull: false,
-                defaultValue: () => Math.floor(100000 + Math.random() * 900000).toString(),
-            },
-            isConfirmed: {
-                type: DataTypes.BOOLEAN,
-                defaultValue: false,
-            },
-            email_verified_at: {
-                type: DataTypes.DATE,
-                allowNull: true,
-            },
-            phone_verified_at: {
-                type: DataTypes.DATE,
-                allowNull: true,
-            }, 
-            reset_token: {
-                type: DataTypes.STRING,
-                allowNull: true,
-                defaultValue: null,
-            },
-            profile_picture: {
-                type: DataTypes.STRING,
-                allowNull: true,
-                defaultValue: 'https://res.cloudinary.com/dqj8v1x4e/image/upload/v1695221232/restaurant/default-user.png',
-            },
-            provider: {
-                type: DataTypes.ENUM('local','google', 'facebook', 'apple', 'twitter', 'github', 'linkedin'),
-                allowNull: true,
-                defaultValue: 'local',
-            },
-            provider_id: {
-                type: DataTypes.STRING,
-                allowNull: true,
-                defaultValue: null,
-            },
-            last_login_at: {
-                type: DataTypes.DATE,
-                allowNull: true,
-            },
-            last_login_ip: {
-                type: DataTypes.STRING,
-                allowNull: true,
-            },
-            login_count: {
-                type: DataTypes.INTEGER,
-                defaultValue: 0,
-            },               
-            isActive: {
-                type: DataTypes.BOOLEAN,
-                defaultValue: true,
-            },
-            language: {
-                type: DataTypes.STRING,
-                allowNull: true,
-                defaultValue: 'en',
-            },
-            timezone: {
-                type: DataTypes.STRING,
-                allowNull: true,
-                defaultValue: 'UTC',
-            },
-            device_type: {
-                type: DataTypes.ENUM('web', 'android', 'ios', 'tablet', 'pos-terminal', 'test'),
-                allowNull: true,
-                defaultValue: 'test',
-            },
-            created_by: {
-                type: DataTypes.STRING,
-                allowNull: true,
-            },
-            updated_by: {
-                type: DataTypes.STRING,
-                allowNull: true,
-            },
-            failed_login_attempts: {
-                type: DataTypes.INTEGER,
-                defaultValue: 0,
-            },
-            locked_until: {
-                type: DataTypes.DATE,
-                allowNull: true,
-            },
+  const User = sequelize.define(
+    "User",
+    {
+      id: {
+        type: DataTypes.UUID,
+        defaultValue: DataTypes.UUIDV4,
+        allowNull: false,
+        primaryKey: true,
+      },
+      restaurant_id: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        references: {
+          model: "restaurants",
+          key: "id",
         },
-        {
-            tableName: "users",
-            timestamps: true,
-            //   underscored: true,
-            getterMethods: {
-                full_name() {
-                return `${this.first_name} ${this.last_name}`;
-                }
-            },
-                
-            defaultScope: {
-                attributes: { exclude: ['password', 'reset_token', 'confirmation_code'] }
-            },  
-        }
-    );
+      },
+      branch_id: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        references: {
+          model: "branches",
+          key: "id",
+        },
+      },
+      first_name: {
+        type: DataTypes.STRING(255),
+        allowNull: false,
+      },
+      last_name: {
+        type: DataTypes.STRING(255),
+        allowNull: false,
+      },
+      email: {
+        type: DataTypes.STRING,
+        unique: true,
+      },
+      phone_number: {
+        type: DataTypes.STRING(20),
+        unique: true,
+      },
+      password: {
+        type: DataTypes.TEXT,
+        validate: {
+          len: [6, 100],
+        },
+      },
 
-    // Hash password before creating or updating the user
-    const hashPassword = async (user) => {
-        if (user.password) {
-            try {
-                const salt = await bcryptjs.genSalt(10);
-                user.password = await bcryptjs.hash(user.password, salt);
-            } catch (error) {
-                throw new Error('Error hashing password.');
-            }
-        }
+      profile_picture: DataTypes.STRING(2083),
+
+      confirmation_code: {
+        type: DataTypes.STRING(6),
+        allowNull: true,
+      },
+      confirmation_code_expires: {
+        type: DataTypes.DATE,
+        allowNull: true,
+      },
+      email_verified_at: {
+        type: DataTypes.DATE,
+        allowNull: true,
+      },
+      phone_verified_at: {
+        type: DataTypes.DATE,
+        allowNull: true,
+      },
+      social_provider: {
+        type: DataTypes.ENUM("none", "google", "facebook"),
+        allowNull: true,
+        defaultValue: "none",
+      },
+      social_provider_id: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        defaultValue: null,
+      },
+      last_login_at: {
+        type: DataTypes.DATE,
+        allowNull: true,
+      },
+      is_active: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: true,
+      },
+      created_by: {
+        type: DataTypes.UUID,
+        allowNull: true,
+      },
+      failed_login_attempts: {
+        type: DataTypes.INTEGER,
+        defaultValue: 0,
+      },
+      locked_until: {
+        type: DataTypes.DATE,
+        allowNull: true,
+      },
+      role_id: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        references: {
+          model: "roles",
+          key: "id",
+        },
+      },
+      role_tag_id: {
+        type: DataTypes.UUID,
+        references: {
+          model: "role_tags",
+          key: "id",
+        },
+      },
+      password_changed_at: {
+        type: DataTypes.DATE,
+        allowNull: true,
+      },
+      full_name: {
+        type: DataTypes.VIRTUAL,
+        get() {
+          return `${this.first_name} ${this.last_name}`;
+        },
+      },
+    },
+    {
+      tableName: "users",
+      timestamps: true,
+      underscored: true,
+    }
+  );
+
+  const hashPassword = async (user) => {
+    if (user.password) {
+      try {
+        const salt = await bcryptjs.genSalt(10);
+        user.password = await bcryptjs.hash(user.password, salt);
+      } catch (error) {
+        throw new Error("Error hashing password");
+      }
+    }
+  };
+
+  User.beforeSave(async (user) => {
+    if (user.changed("password")) {
+      await hashPassword(user);
+    }
+  });
+
+  User.prototype.comparePassword = async function (candidatePassword) {
+    return await bcryptjs.compare(candidatePassword, this.password);
+  };
+
+  User.prototype.getJwtToken = async function () {
+    const tokenPayload = {
+      id: this.id,
+      role_id: this.role_id,
+      role_tag_id: this.role_tag_id,
+      restaurant_id: this.restaurant_id || null,
+      branch_id: this.branch_id || null,
     };
+    return jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: "6h" });
+  };
 
-    // Hash password before user is updated (if password is changed)
-    User.beforeSave(async (user) => {
-        if (user.changed('password')) {
-            await hashPassword(user);
-        }
-    });  
-
-    // === Instance Methods ===
-    User.prototype.comparePassword = async function (enteredPassword) {
-        return await bcryptjs.compare(enteredPassword, this.password);
+  User.prototype.getResetPasswordToken = async function () {
+    const tokenPayload = {
+      id: this.id,
+      role_id: this.role_id,
+      role_tag_id: this.role_tag_id,
     };
+    return jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: "10m" });
+  };
 
-    User.prototype.getJwtToken = function () {
-        return jwt.sign(
-            { id: this.id, role_id: this.role_id }, process.env.JWT_SECRET, { expiresIn: '6h' }
-        );
-    };
+  User.prototype.markSuccessfulLogin = async function () {
+    this.last_login_at = new Date();
+    this.failed_login_attempts = 0;
+    this.locked_until = null;
+    await this.save();
+  };
 
-    User.prototype.getResetPasswordToken = function () {
-        return jwt.sign(
-            { id: this.id, role_id: this.role_id }, process.env.JWT_SECRET, { expiresIn: '1h' }
-        );
-    };
+  User.prototype.markFailedLoginAttempt = async function (
+    lockThreshold = 5,
+    lockMinutes = 5
+  ) {
+    this.failed_login_attempts += 1;
 
-    // Mark successful login
-    User.prototype.markSuccessfulLogin = async function (ipAddress, deviceType) {
-        this.last_login_at = new Date();
-        this.last_login_ip = ipAddress;
-        this.device_type = deviceType || this.device_type;
-        this.login_count += 1;
-        this.failed_login_attempts = 0;
-        this.locked_until = null;
-        await this.save();
-        // await this.save({ silent: true }); // silent avoids triggering updated_by / audit hooks
-    };
+    if (this.failed_login_attempts >= lockThreshold) {
+      this.locked_until = new Date(Date.now() + lockMinutes * 60 * 1000); // lock for 5 min
+    }
 
-    // Mark failed login and possibly lock account
-    User.prototype.markFailedLoginAttempt = async function (lockThreshold = 5, lockMinutes = 15) {
-        this.failed_login_attempts += 1;
+    await this.save({ silent: true });
+  };
 
-        if (this.failed_login_attempts >= lockThreshold) {
-            this.locked_until = new Date(Date.now() + lockMinutes * 60 * 1000); // Lock for 15 min
-        }
+  User.prototype.isLocked = function () {
+    if (!this.locked_until) return false;
+    return new Date() < this.locked_until;
+  };
 
-        await this.save({ silent: true });
-    };
+  User.associate = (models) => {
+    // to get created users
+    User.hasMany(models.User, {
+      foreignKey: "created_by",
+      as: "createdUsers",
+    });
+    // to get the restaurant admins who created the users
+    User.belongsTo(models.User, {
+      foreignKey: "created_by",
+      as: "creator",
+    });
 
-    // Check if account is locked
-    User.prototype.isLocked = function () {
-        if (!this.locked_until) return false;
-        return new Date() < this.locked_until;
-    };
+    // staffs belongs to a branch
+    User.belongsTo(models.Branch, {
+      foreignKey: "branch_id",
+      as: "assigned_branch",
+    });
 
-    User.associate = models => {
-        User.belongsTo(models.Role, { foreignKey: "role_id", as: "role" });
-        User.belongsToMany(models.Restaurant, {
-            through: models.RestaurantUser,
-            foreignKey: "user_id",
-            as: "restaurants"
-        });
-        User.hasMany(models.Order, { foreignKey: "user_id", as: "orders" });
-        User.hasMany(models.Feedback, { foreignKey: "user_id", as: "feedbacks" });
-        User.hasMany(models.Reservation, { foreignKey: "customer_id", as: "reservations" });
-        User.hasMany(models.StaffSchedule, { foreignKey: "staff_id", as: "schedules" });
-        User.hasMany(models.SupportTicket, { foreignKey: "user_id", as: "support_tickets" });
-        User.hasMany(models.SupportTicket, { foreignKey: "assigned_to", as: "assigned_tickets" });
-        User.hasOne(models.LoyaltyPoint, { foreignKey: "customer_id", as: "loyalty_points" });
-        User.hasMany(models.Review, { foreignKey: "customer_id", as: "reviews" });
-        // User.hasMany(models.ActivityLog, { foreignKey: 'user_id', as: 'activity_logs'});
-          
-    };
+    // manager of a branch
+    User.hasOne(models.Branch, {
+      foreignKey: "manager_id",
+    });
 
-    return User;
+    User.belongsTo(models.Role, {
+      foreignKey: "role_id",
+    });
+
+    User.belongsTo(models.RoleTag, {
+      foreignKey: "role_tag_id",
+    });
+
+    User.hasMany(models.ActivityLog, {
+      foreignKey: "user_id",
+    });
+    User.hasMany(models.SupportTicket, {
+      foreignKey: "user_id",
+    });
+    User.hasMany(models.Notification, {
+      foreignKey: "user_id",
+    });
+    User.hasMany(models.Video, {
+      foreignKey: "uploaded_by",
+    });
+
+    User.hasMany(models.UploadedFile, {
+      foreignKey: "user_id",
+    });
+  };
+  return User;
 };
-

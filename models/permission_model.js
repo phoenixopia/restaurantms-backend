@@ -1,24 +1,19 @@
 "use strict";
-const { getGeneratedId } = require('../utils/idGenerator');
-
 module.exports = (sequelize, DataTypes) => {
   const Permission = sequelize.define(
     "Permission",
     {
       id: {
-        type: DataTypes.STRING,
-        defaultValue: getGeneratedId,
+        type: DataTypes.UUID,
+        defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
-        allowNull: false,
       },
       name: {
         type: DataTypes.STRING(100),
         allowNull: false,
         unique: true,
       },
-      description: {
-        type: DataTypes.TEXT
-      },
+      description: DataTypes.STRING(255),
     },
     {
       tableName: "permissions",
@@ -32,15 +27,7 @@ module.exports = (sequelize, DataTypes) => {
       through: models.RolePermission,
       foreignKey: "permission_id",
       otherKey: "role_id",
-      as: "roles",
     });
-
-    // Permission.belongsToMany(models.User, {
-    //   through: models.UserPermission,
-    //   foreignKey: "permission_id",
-    //   otherKey: "user_id",
-    //   as: "users",
-    // });
   };
 
   return Permission;

@@ -1,31 +1,15 @@
-const ErrorResponse= require('../utils/errorResponse');
+const { error: apiError } = require("../utils/apiResponse");
 
-const errorHandler= (err, req, res, next) => {
-let error = {...err};
-error.message = err.message;
+module.exports = (err, req, res, next) => {
+  console.error(err);
 
-if(err.name === "CastError"){
-    const message = `Resourse Not Found ${err.value}`;
-    error = new ErrorResponse(message, 404);
-}
+  if (res.headersSent) {
+    return next(err);
+  }
 
-//Mongoose duplicate value
-if(err.code === 11000){
-    const message = "Duplicate field value entered";
-    error = new ErrorResponse(message, 400);
-}
+  // add for custom error handling
+  const statusCode = err.statusCode || 500;
+  const message = err.message || "Internal Server Error";
 
-//Mongoose validation error
-if(err.name === "ValidationError"){
-    const message = Object.values(err.errors).map(val => ' ' + val.message);
-    error =new ErrorResponse(message, 401);
-}
-
-console.log(error.message || "server error", err)
-res.status(error.codeStatus || 500).json({
-    success: false,
-    error: error.message || "server error"
-})
-}
-
-module.exports = errorHandler;
+  return apiError(res, message, null, statusCode);
+};

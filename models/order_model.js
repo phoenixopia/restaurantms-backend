@@ -1,61 +1,85 @@
 "use strict";
-const { getGeneratedId } = require('../utils/idGenerator');
 
 module.exports = (sequelize, DataTypes) => {
   const Order = sequelize.define(
     "Order",
     {
       id: {
-        type: DataTypes.STRING,
-        defaultValue: getGeneratedId,
+        type: DataTypes.UUID,
+        defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
         allowNull: false,
       },
       restaurant_id: {
-        type: DataTypes.STRING,
+        type: DataTypes.UUID,
         allowNull: false,
         references: {
           model: "restaurants",
           key: "id",
         },
-        onDelete: 'CASCADE'
       },
-      user_id: {
-        type: DataTypes.STRING,
+      branch_id: {
+        type: DataTypes.UUID,
         allowNull: false,
         references: {
-          model: "users",
+          model: "branches",
+          key: "id",
+        },
+      },
+      customer_id: {
+        type: DataTypes.UUID,
+        allowNull: false,
+        references: {
+          model: "customers",
           key: "id",
         },
       },
       table_id: {
-        type: DataTypes.STRING,
+        type: DataTypes.UUID,
         allowNull: true,
         references: {
           model: "tables",
           key: "id",
         },
       },
-      date: {
+      order_date: {
         type: DataTypes.DATE,
-        defaultValue: Date.now()
+        defaultValue: Date.now(),
       },
       type: {
         type: DataTypes.ENUM("dine-in", "takeaway", "delivery"),
-        defaultValue: "dine-in"
+        allowNull: false,
       },
       status: {
-        type: DataTypes.ENUM("pending", "in_progress", "completed", "cancelled"),
-        defaultValue: 'pending'
+        type: DataTypes.ENUM(
+          "Pending",
+          "InProgress",
+          "Preparing",
+          "Ready",
+          "Served",
+          "Cancelled"
+        ),
+        defaultValue: "Pending",
       },
       total_amount: {
         type: DataTypes.DECIMAL(10, 2),
-        defaultValue: 0
       },
       payment_status: {
-        type: DataTypes.ENUM("paid", "un_paid"),
-        defaultValue: 'un_paid'
-      }
+        type: DataTypes.ENUM("Paid", "Unpaid"),
+        defaultValue: "Unpaid",
+      },
+      delivery_location_id: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        references: {
+          model: "locations",
+          key: "id",
+        },
+      },
+      is_seen_by_customer: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
+      },
     },
     {
       tableName: "orders",
@@ -65,13 +89,32 @@ module.exports = (sequelize, DataTypes) => {
   );
 
   Order.associate = (models) => {
-    Order.belongsTo(models.Restaurant, { foreignKey: "restaurant_id", as: "restaurant", onDelete: 'CASCADE' });
-    Order.belongsTo(models.User, { foreignKey: "user_id", as: "user", });
-    Order.belongsTo(models.Table, { foreignKey: "table_id", as: "table" });
-    Order.hasMany(models.OrderItem, { foreignKey: "order_id", as: "orderItems" });
-    Order.hasOne(models.Payment, { foreignKey: "order_id", as: "payment" });
-    Order.hasOne(models.KdsOrder, { foreignKey: "order_id", as: "kdsOrder" });
-    Order.hasOne(models.Feedback, { foreignKey: "order_id", as: "feedback" });
+    Order.belongsTo(models.Restaurant, {
+      foreignKey: "restaurant_id",
+    });
+
+    Order.belongsTo(models.Branch, { foreignKey: "branch_id" });
+
+    Order.belongsTo(models.Customer, { foreignKey: "customer_id" });
+
+    Order.belongsTo(models.Table, { foreignKey: "table_id" });
+
+    Order.belongsTo(models.Location, {
+      foreignKey: "delivery_location_id",
+    });
+
+    Order.hasMany(models.OrderItem, {
+      foreignKey: "order_id",
+    });
+    Order.hasOne(models.KdsOrder, {
+      foreignKey: "order_id",
+    });
+    Order.hasOne(models.Review, {
+      foreignKey: "order_id",
+    });
+    Order.hasOne(models.Payment, {
+      foreignKey: "order_id",
+    });
   };
 
   return Order;

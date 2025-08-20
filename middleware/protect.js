@@ -1,23 +1,81 @@
-const jwt = require('jsonwebtoken');
-const ErrorResponse = require('../utils/errorResponse');
+const jwt = require("jsonwebtoken");
+const { User, Role, RoleTag, Permission } = require("../models");
 
-// check the user authenticated
-exports.protect = async (req, res, next) => {
-  let token;
-  if (req.cookies.token) {
-    token = req.cookies.token;
-  } else if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
-    token = req.headers.authorization.split(' ')[1];
-  }
-  if (!token) {
-    return res.status(401).json({ success: false, message: "You must log in." });
-  }
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;
-    next();
-  } catch (error) {
-    console.log(error);
-    return res.status(500).json({ success: false, message: 'Server error!', error: error.message });
-  }
+exports.protect = (type = "user") => {
+  return async (req, res, next) => {
+    const token =
+      req.cookies?.token ||
+      (req.headers?.authorization
+        ? req.headers.authorization.split(" ")[1]
+        : null) ||
+      req.headers?.token;
+
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: "Not authorized to access this route",
+      });
+    }
+    1;
+
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+      if (type === "customer") {
+        const user = await Customer.findByPk(decoded.id, {
+          include: [{ model: TwoFA, as: "twoFA" }],
+        });
+
+        if (!user) {
+          return res.status(401).json({
+            success: false,
+            message: "User not found",
+          });
+        }
+
+        req.user = user;
+      } else {
+        const user = await User.findByPk(decoded.id, {
+          include: [
+            {
+              model: RoleTag,
+              attributes: ["id", "name"],
+            },
+            {
+              model: Role,
+              attributes: ["id", "name"],
+              include: [
+                {
+                  model: Permission,
+                  attributes: ["name"],
+                  through: { attributes: [] },
+                },
+              ],
+            },
+          ],
+        });
+
+        if (!user) {
+          return res.status(401).json({
+            success: false,
+            message: "User not found",
+          });
+        }
+
+        req.user = user;
+        req.user.role_tag_name = user.RoleTag?.name || null;
+        req.user.role_name = user.Role?.name || null;
+        req.user.restaurant_id = decoded.restaurant_id || null;
+        req.user.branch_id = decoded.branch_id || null;
+      }
+
+      next();
+    } catch (err) {
+      console.error("Auth error:", err);
+      return res.status(401).json({
+        success: false,
+        message: "Not authorized to access this route",
+      });
+    }
+  };
 };

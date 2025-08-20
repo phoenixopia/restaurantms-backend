@@ -1,33 +1,38 @@
 "use strict";
-
-const { getGeneratedId } = require("../utils/idGenerator");
-
 module.exports = (sequelize, DataTypes) => {
   const Role = sequelize.define(
     "Role",
-      {
-        id: {
-          type: DataTypes.STRING,
-          defaultValue: getGeneratedId,
-          primaryKey: true,
-          allowNull: false,
-        },
-        name: {
-          type: DataTypes.STRING,
-        //   type: DataTypes.ENUM(
-        //   "super_admin",
-        //   "admin",
-        //   "customer",
-        //   "staff"
-        // ), // we can remove the staff role.... i added in case of future use
-        unique: true,
-        description: DataTypes.TEXT,
+    {
+      id: {
+        type: DataTypes.UUID,
+        defaultValue: DataTypes.UUIDV4,
+        primaryKey: true,
       },
-      status: {
+      name: {
         type: DataTypes.STRING,
         allowNull: false,
-        defaultValue: "active"
-      }
+      },
+      role_tag_id: {
+        type: DataTypes.UUID,
+        allowNull: false,
+        references: {
+          model: "role_tags",
+          key: "id",
+        },
+      },
+      restaurant_id: {
+        type: DataTypes.UUID,
+        allowNull: true,
+      },
+
+      description: {
+        type: DataTypes.STRING(255),
+      },
+
+      created_by: {
+        type: DataTypes.UUID,
+        allowNull: false,
+      },
     },
     {
       tableName: "roles",
@@ -37,16 +42,24 @@ module.exports = (sequelize, DataTypes) => {
   );
 
   Role.associate = (models) => {
-    // Role.belongsToMany(models.User, {
-    //   through: models.UserRole,
-    //   foreignKey: "role_id",
-    //   as: "users",
-    // });
-    Role.hasMany(models.User, { foreignKey: 'role_id', as: 'users' });
     Role.belongsToMany(models.Permission, {
       through: models.RolePermission,
       foreignKey: "role_id",
-      as: "permissions",
+      otherKey: "permission_id",
+    });
+
+    Role.hasMany(models.User, {
+      foreignKey: "role_id",
+      onUpdate: "CASCADE",
+    });
+
+    Role.belongsTo(models.RoleTag, {
+      foreignKey: "role_tag_id",
+    });
+
+    Role.hasMany(models.Customer, {
+      foreignKey: "role_id",
+      onUpdate: "CASCADE",
     });
   };
 

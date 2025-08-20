@@ -1,47 +1,32 @@
 "use strict";
 
-const { getGeneratedId } = require("../utils/idGenerator");
-
-module.exports = (sequelize, DataTypes) => {
+const { DataTypes } = require("sequelize");
+module.exports = (sequelize) => {
   const Restaurant = sequelize.define(
     "Restaurant",
     {
       id: {
-        type: DataTypes.STRING,
-        defaultValue: getGeneratedId,
+        type: DataTypes.UUID,
+        defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
-        allowNull: false,
       },
-      subscription_id: {
-        type: DataTypes.STRING,
-        allowNull: false,
-        references: {
-          model: "subscriptions",
-          key: "id",
-        },
-      },
-      name: {
+
+      restaurant_name: {
         type: DataTypes.STRING(255),
-        validate: {
-          notEmpty: true,
-        },
+        unique: true,
+        allowNull: false,
       },
-      logo_url: DataTypes.TEXT,
-      primary_color: DataTypes.STRING(7),
-      language: DataTypes.STRING(10),
-      rtl_enabled: {
-        type: DataTypes.BOOLEAN,
-        defaultValue: false,
-      }, // ask tsebi its neccessity
+
       status: {
         type: DataTypes.ENUM(
           "active",
           "trial",
-          "suspended",
+          "inactive",
           "cancelled",
+          "expired",
           "pending"
         ),
-        defaultValue: "pending",
+        defaultValue: "trial",
       },
     },
     {
@@ -52,19 +37,142 @@ module.exports = (sequelize, DataTypes) => {
   );
 
   Restaurant.associate = (models) => {
-    // Restaurant.belongsTo(models.Plan, { foreignKey: "plan_id", });
-    // Restaurant.hasMany(models.User, { foreignKey: "restaurant_id", onDelete: 'CASCADE', hooks: true });
-    Restaurant.belongsToMany(models.User, { through: models.RestaurantUser, foreignKey: "restaurant_id", onDelete: 'CASCADE', hooks: true, as: "users" });
-    Restaurant.belongsTo(models.Subscription, { foreignKey: "subscription_id", as: "subscription" });
-    Restaurant.hasMany(models.Menu, { foreignKey: "restaurant_id", onDelete: 'CASCADE', hooks: true, as: "menus" });
-    Restaurant.hasMany(models.MenuCategory, { foreignKey: "restaurant_id", onDelete: 'CASCADE', hooks: true, as: "menusCategories" });
-    Restaurant.hasMany(models.MenuItem, { foreignKey: "restaurant_id", onDelete: 'CASCADE', hooks: true, as: "menusItems" });
-    Restaurant.hasMany(models.Location, { foreignKey: "restaurant_id", onDelete: 'CASCADE', hooks: true, as: "locations" });
-    Restaurant.hasMany(models.Reservation, { foreignKey: "restaurant_id", onDelete: 'CASCADE', hooks: true, as: "reservations" });
-    Restaurant.hasMany(models.Feedback, { foreignKey: "restaurant_id", onDelete: 'CASCADE', hooks: true, as: "feedbacks" });
-    Restaurant.hasMany(models.SupportTicket, { foreignKey: "restaurant_id", onDelete: 'CASCADE', hooks: true, as: "supportTickets" });
-    Restaurant.hasOne(models.SystemSetting, { foreignKey: "restaurant_id", onDelete: 'CASCADE', hooks: true, as: "systemSetting" });
-    Restaurant.hasMany(models.AnalyticsSnapshot, { foreignKey: "restaurant_id", onDelete: 'CASCADE', hooks: true, as: "analyticsSnapshots" });
+    Restaurant.hasOne(models.SystemSetting, {
+      foreignKey: "restaurant_id",
+      onUpdate: "CASCADE",
+      onDelete: "CASCADE",
+    });
+    // to show restaurant owned contact info
+    Restaurant.hasMany(models.ContactInfo, {
+      foreignKey: "restaurant_id",
+      as: "owned_contact_info",
+    });
+
+    Restaurant.hasOne(models.ChargeSetting, {
+      foreignKey: "restaurant_id",
+      onDelete: "CASCADE",
+    });
+
+    // to show contact info of restaurant branches
+    // Restaurant.hasMany(models.ContactInfo, {
+    //   foreignKey: "module_id",
+    //   constraints: false,
+    //   scope: {
+    //     module_type: "restaurant",
+    //   },
+    // });
+
+    Restaurant.hasMany(models.Subscription, {
+      foreignKey: "restaurant_id",
+      onUpdate: "CASCADE",
+      onDelete: "RESTRICT",
+    });
+
+    Restaurant.hasMany(models.Branch, {
+      foreignKey: "restaurant_id",
+      onDelete: "RESTRICT",
+      onUpdate: "CASCADE",
+    });
+
+    Restaurant.hasOne(models.Branch, {
+      as: "mainBranch",
+      foreignKey: "restaurant_id",
+      scope: { main_branch: true },
+    });
+
+    Restaurant.hasOne(models.Menu, {
+      foreignKey: "restaurant_id",
+      onDelete: "RESTRICT",
+      onUpdate: "CASCADE",
+    });
+
+    Restaurant.hasMany(models.LoyaltyPoint, {
+      foreignKey: "restaurant_id",
+    });
+
+    Restaurant.hasMany(models.MenuCategory, {
+      foreignKey: "restaurant_id",
+    });
+
+    Restaurant.hasMany(models.Order, {
+      foreignKey: "restaurant_id",
+    });
+
+    Restaurant.hasMany(models.Table, {
+      foreignKey: "restaurant_id",
+    });
+    Restaurant.hasMany(models.Reservation, {
+      foreignKey: "restaurant_id",
+    });
+    Restaurant.hasMany(models.KdsOrder, {
+      foreignKey: "restaurant_id",
+    });
+    Restaurant.hasMany(models.Review, {
+      foreignKey: "restaurant_id",
+    });
+    Restaurant.hasMany(models.SupportTicket, {
+      foreignKey: "restaurant_id",
+    });
+    Restaurant.hasMany(models.AnalyticsSnapshot, {
+      foreignKey: "restaurant_id",
+    });
+    Restaurant.hasMany(models.Payment, {
+      foreignKey: "restaurant_id",
+    });
+    Restaurant.hasMany(models.Promotion, {
+      foreignKey: "restaurant_id",
+    });
+    Restaurant.hasMany(models.Catering, {
+      foreignKey: "restaurant_id",
+      onDelete: "CASCADE",
+      onUpdate: "CASCADE",
+    });
+
+    Restaurant.hasMany(models.RestaurantBankAccount, {
+      foreignKey: "restaurant_id",
+      onDelete: "CASCADE",
+      onUpdate: "CASCADE",
+    });
+    Restaurant.hasMany(models.Video, {
+      foreignKey: "restaurant_id",
+    });
+    Restaurant.hasMany(models.RestaurantFollower, {
+      foreignKey: "restaurant_id",
+    });
+
+    Restaurant.belongsToMany(models.Customer, {
+      through: models.RestaurantFollower,
+      foreignKey: "restaurant_id",
+      otherKey: "customer_id",
+    });
+
+    Restaurant.hasMany(models.UploadedFile, {
+      foreignKey: "restaurant_id",
+    });
+  };
+
+  Restaurant.paginate = async function (page = 1, limit = 10, filter = {}) {
+    const offset = (page - 1) * limit;
+
+    const result = await this.findAndCountAll({
+      where: filter,
+      offset,
+      limit,
+      order: [["created_at", "DESC"]],
+      include: [
+        {
+          model: sequelize.models.Location,
+          attributes: ["name", "address"],
+        },
+      ],
+    });
+
+    return {
+      currentPage: page,
+      totalPages: Math.ceil(result.count / limit),
+      totalItems: result.count,
+      data: result.rows,
+    };
   };
 
   return Restaurant;

@@ -1,42 +1,67 @@
 "use strict";
 
-const { getGeneratedId } = require("../utils/idGenerator");
-
 module.exports = (sequelize, DataTypes) => {
   const Plan = sequelize.define(
     "Plan",
     {
       id: {
-        type: DataTypes.STRING,
-        defaultValue: getGeneratedId,
+        type: DataTypes.UUID,
+        defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
-        allowNull: false,
       },
       name: {
         type: DataTypes.STRING(50),
         allowNull: false,
         validate: { isIn: [["Basic", "Pro", "Enterprise"]] },
       },
-      max_locations: DataTypes.INTEGER,
-      max_staff: DataTypes.INTEGER,
-      max_users: DataTypes.INTEGER,
-      max_kds: DataTypes.INTEGER,
-      kds_enabled: DataTypes.BOOLEAN,
-      price: DataTypes.DECIMAL(10, 2),
+      price: {
+        type: DataTypes.DECIMAL(10, 2),
+        allowNull: false,
+      },
       billing_cycle: {
         type: DataTypes.ENUM("monthly", "yearly"),
+        allowNull: false,
       },
     },
     {
       tableName: "plans",
       timestamps: true,
       underscored: true,
+      defaultScope: {
+        attributes: {
+          exclude: ["created_at", "updated_at"],
+        },
+      },
     }
   );
 
   Plan.associate = (models) => {
-    // Plan.hasMany(models.Restaurant, { foreignKey: "plan_id" });
-    Plan.hasMany(models.Subscription, { foreignKey: "plan_id", as: "subscriptions" });
+    Plan.hasMany(models.Subscription, { foreignKey: "plan_id" });
+    Plan.hasMany(models.PlanLimit, {
+      foreignKey: "plan_id",
+      onDelete: "CASCADE",
+    });
+  };
+
+  Plan.getPlansWithPricing = async function () {
+    const plans = await this.findAll();
+    const groupedPlans = {};
+
+    plans.forEach((plan) => {
+      if (!groupedPlans[plan.name]) {
+        groupedPlans[plan.name] = {
+          id: plan.id,
+          name: plan.name,
+          pricing: [],
+        };
+      }
+      groupedPlans[plan.name].pricing.push({
+        cycle: plan.billing_cycle,
+        price: plan.price,
+      });
+    });
+
+    return Object.values(groupedPlans);
   };
 
   return Plan;

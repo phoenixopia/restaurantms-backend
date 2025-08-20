@@ -1,29 +1,53 @@
 "use strict";
-
-const { getGeneratedId } = require("../utils/idGenerator");
-
 module.exports = (sequelize, DataTypes) => {
   const Subscription = sequelize.define(
     "Subscription",
     {
       id: {
-        type: DataTypes.STRING,
-        defaultValue: getGeneratedId,
+        type: DataTypes.UUID,
+        defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
-        allowNull: false,
       },
+
+      restaurant_id: {
+        type: DataTypes.UUID,
+        allowNull: false,
+        references: {
+          model: "restaurants",
+          key: "id",
+        },
+      },
+
       plan_id: {
-        type: DataTypes.STRING,
+        type: DataTypes.UUID,
         allowNull: false,
         references: {
           model: "plans",
           key: "id",
         },
       },
+
       start_date: DataTypes.DATEONLY,
+
       end_date: DataTypes.DATEONLY,
-      billing_provider: DataTypes.ENUM("stripe", "paypal", "telebirr", "cash", "cbe"),
-      status: DataTypes.ENUM("active", "cancelled", "expired"),
+
+      payment_method: {
+        type: DataTypes.ENUM("card", "walet", "cash", "bank_transfer", "other"),
+        defaultValue: "other",
+      },
+
+      status: DataTypes.ENUM(
+        "active",
+        "pending",
+        "inactive",
+        "cancelled",
+        "expired"
+      ),
+
+      receipt: {
+        type: DataTypes.STRING(2083),
+        allowNull: true,
+      },
     },
     {
       tableName: "subscriptions",
@@ -33,8 +57,17 @@ module.exports = (sequelize, DataTypes) => {
   );
 
   Subscription.associate = (models) => {
-    Subscription.hasMany(models.Restaurant, { foreignKey: "subscription_id", as: "restaurants" });
-    Subscription.belongsTo(models.Plan, { foreignKey: "plan_id", as: "plan" });
+    Subscription.belongsTo(models.Restaurant, {
+      foreignKey: "restaurant_id",
+      onDelete: "CASCADE",
+    });
+    Subscription.belongsTo(models.Plan, {
+      foreignKey: "plan_id",
+      onDelete: "CASCADE",
+    });
+    Subscription.belongsTo(models.User, {
+      foreignKey: "user_id",
+    });
   };
 
   return Subscription;

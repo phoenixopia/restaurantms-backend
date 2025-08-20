@@ -1,153 +1,307 @@
-const { where } = require("sequelize");
-const { Restaurant, Plan, RestaurantUser, User } = require("../../models/index");
+const asyncHandler = require("../../utils/asyncHandler");
+const RestaurantService = require("../../services/admin/restaurant_service");
+const ContactInfoService = require("../../services/admin/contact_info_service");
+const BranchService = require("../../services/admin/branch_service");
+const RestaurantBankAccountService = require("../../services/admin/restaurant_bank_acc_service");
+const ChargeSettingService = require("../../services/admin/charge_setting_service");
+const { success } = require("../../utils/apiResponse");
+const throwError = require("../../utils/throwError");
 
-const getRestaurants = async (req, res) => {
-  try {
-    const userId = req.user.id;
+// =========================
+// ===== RESTAURANT CRUD ===
+// =========================
 
-    const restaurantLinks = await RestaurantUser.findAll({
-      where: { user_id: userId },
-      attributes: ["restaurant_id"],
-    });
+exports.getRestaurant = asyncHandler(async (req, res) => {
+  const restaurant = await RestaurantService.getUserRestaurants(req.user);
+  return success(res, "Restaurant fetched successfully", restaurant);
+});
 
-    const restaurantIds = restaurantLinks.map((link) => link.restaurant_id);
+exports.registerRestaurant = asyncHandler(async (req, res) => {
+  const restaurant = await RestaurantService.createRestaurant(
+    req.body,
+    req.user.id
+  );
+  return success(res, "Restaurant registered successfully", restaurant, 201);
+});
 
-    const restaurants = await Restaurant.findAll({
-      where: { id: restaurantIds },
-      include: [
-        {
-          model: Plan,
-          attributes: ["name", "price", "billing_cycle"],
-        },
-      ],
-    });
+exports.uploadLogoImage = asyncHandler(async (req, res) => {
+  const updatedRestaurant = await RestaurantService.uploadLogoImage(
+    req.files,
+    req.user
+  );
+  return success(res, "Restaurant updated successfully", updatedRestaurant);
+});
 
-    res.status(200).json({ restaurants });
-  } catch (error) {
-    console.error("Error fetching restaurants:", error);
-    res.status(500).json({ message: "Server error" });
-  }
-};
+exports.updateBasicInfo = asyncHandler(async (req, res) => {
+  const result = await RestaurantService.updateBasicInfo(
+    req.params.id,
+    req.body,
+    req.user
+  );
 
-const createRestaurant = async (req, res) => {
-  try {
-    const {
-      restaurant_name,
-      logo_url,
-      primary_color,
-      language,
-      rtl_enabled,
-      plan,
-    } = req.body;
+  return success(res, "Restaurant basic info updated successfully", result);
+});
 
-    const user = await User.findByPk(req.user.id);
-    if (!user) {
-      return res.status(404).json({ message: "User not found." });
+exports.deleteRestaurant = asyncHandler(async (req, res) => {
+  await RestaurantService.deleteRestaurant(req.params.id);
+  return success(res, "Restaurant deleted successfully");
+});
+
+exports.changeRestaurantStatus = asyncHandler(async (req, res) => {
+  const restaurant = await RestaurantService.changeRestaurantStatus(
+    req.params.id,
+    req.body.status
+  );
+  return success(res, "Restaurant status updated", restaurant);
+});
+
+// ===============================
+// ===== RESTAURANT RETRIEVAL ====
+// ===============================
+
+exports.getAllRestaurantsWithSubscriptions = asyncHandler(async (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+
+  const filters = {
+    search: req.query.search || null,
+    status: req.query.status || null,
+    createdFilter: req.query.created_filter || null,
+    billingCycle: req.query.billing_cycle || null,
+    subscriptionStatus: req.query.subscription_status || null,
+  };
+
+  const result = await RestaurantService.getAllRestaurantsWithSubscriptions({
+    page,
+    limit,
+    filters,
+  });
+
+  return success(
+    res,
+    "Restaurants with subscriptions fetched successfully",
+    result
+  );
+});
+
+exports.getRestaurantWithSubscriptionById = asyncHandler(async (req, res) => {
+  const restaurant = await RestaurantService.getRestaurantWithSubscriptionById(
+    req.params.id
+  );
+  return success(res, "Restaurant fetched successfully", restaurant);
+});
+
+exports.getRestaurantProfileWithVideos = asyncHandler(async (req, res) => {
+  const restaurantId = req.params.id;
+  const customerId = req.user?.id || null;
+  const { page = 1, limit = 10, filter = "latest" } = req.query;
+
+  const result = await RestaurantService.getRestaurantProfileWithVideos(
+    restaurantId,
+    customerId,
+    {
+      page: parseInt(page),
+      limit: parseInt(limit),
+      filter,
     }
+  );
 
-    if (!restaurant_name || !plan) {
-      return res
-        .status(400)
-        .json({ message: "Restaurant name and plan are required." });
-    }
+  return success(res, "Restaurant profile fetched successfully", result);
+});
 
-    const formattedPlan =
-      plan.charAt(0).toUpperCase() + plan.slice(1).toLowerCase();
-    const selectedPlan = await Plan.findOne({ where: { name: formattedPlan } });
+// ==========================
+// ===== BRANCH MANAGEMENT ==
+// ==========================
 
-    if (!selectedPlan) {
-      return res.status(404).json({ message: "Plan not found." });
-    }
+exports.createBranch = asyncHandler(async (req, res) => {
+  const { restaurantId } = req.restaurantData;
+  const branch = await BranchService.createBranch(
+    restaurantId,
+    req.body,
+    req.user.id
+  );
 
-    const newRestaurant = await Restaurant.create({
-      restaurant_name,
-      logo_url,
-      primary_color,
-      language,
-      rtl_enabled,
-      plan_id: selectedPlan.id,
-      status: "pending",
-    });
+  return success(res, "Branch created successfully", branch, 201);
+});
 
-    await RestaurantUser.create({
-      user_id: user.id,
-      restaurant_id: newRestaurant.id,
-    });
+exports.getAllBranches = asyncHandler(async (req, res) => {
+  const { page = 1, limit = 10 } = req.query;
 
-    await User.update(
-      { restaurant_id: newRestaurant.id },
-      { where: { id: user.id } }
-    );
+  const result = await BranchService.getAllBranches({
+    page: parseInt(page),
+    limit: parseInt(limit),
+    user: req.user,
+  });
 
-    return res.status(201).json({
-      message: "Restaurant created successfully",
-    });
-  } catch (error) {
-    console.error("Error creating restaurant:", error);
-    res.status(500).json({
-      message: "Server error while creating restaurant.",
-    });
-  }
-};
+  return success(res, "All branches fetched successfully", result);
+});
 
-const updateRestaurant = async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const { id } = req.params;
-    const updates = req.body;
+exports.getBranchById = asyncHandler(async (req, res) => {
+  const branch = await BranchService.getBranchById(req.params.id, req.user);
+  return success(res, "Branch fetched successfully", branch);
+});
 
-    const link = await RestaurantUser.findOne({
-      where: { user_id: userId, restaurant_id: id },
-    });
+exports.updateBranch = asyncHandler(async (req, res) => {
+  const updatedBranch = await BranchService.updateBranch(
+    req.user,
+    req.params.id,
+    req.body
+  );
 
-    if (!link) {
-      return res.status(403).json({ message: "Unauthorized" });
-    }
+  return success(res, "Branch updated successfully", updatedBranch);
+});
 
-    await Restaurant.update(updates, { where: { id } });
+exports.changeLocation = asyncHandler(async (req, res) => {
+  const updatedBranch = await BranchService.changeLocation(
+    req.user,
+    req.params.id,
+    req.body
+  );
 
-    res.status(200).json({ message: "Restaurant updated successfully" });
-  } catch (error) {
-    console.error("Error updating restaurant:", error);
-    res.status(500).json({ message: "Server error" });
-  }
-};
+  return success(res, "Branch updated successfully", updatedBranch);
+});
 
-const deleteRestaurant = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const userId = req.user.id;
+exports.deleteBranch = asyncHandler(async (req, res) => {
+  await BranchService.deleteBranch(req.params.id, req.user.id);
+  return success(res, "Branch deleted successfully");
+});
 
-    const link = await RestaurantUser.findOne({
-      where: {
-        user_id: userId,
-        restaurant_id: id,
-      },
-    });
+exports.toggleBranchStatus = asyncHandler(async (req, res) => {
+  const updatedBranch = await BranchService.toggleBranchStatus(
+    req.params.id,
+    req.body,
+    req.user
+  );
 
-    if (!link) {
-      return res
-        .status(403)
-        .json({ message: "You are not authorized to delete this restaurant." });
-    }
-    await RestaurantUser.destroy({
-      where: { user_id: userId, restaurant_id: id },
-    });
+  return success(res, "Branch status updated successfully", updatedBranch);
+});
 
-    await Restaurant.destroy({ where: { id } });
+exports.setDefaultBranch = asyncHandler(async (req, res) => {
+  const result = await BranchService.setDefault(req.user, req.params.id);
+  return success(res, "Branch updated successfully");
+});
 
-    return res.status(200).json({ message: "Restaurant deleted successfully." });
-  } catch (error) {
-    console.error("Error deleting restaurant:", error);
-    res
-      .status(500)
-      .json({ message: "Server error while deleting restaurant." });
-  }
-};
+// ==============================
+// ===== CONTACT Info =====
+// ==============================
 
-module.exports = {
-  getRestaurants,
-  createRestaurant,
-  updateRestaurant,
-  deleteRestaurant,
-};
+exports.addContactInfo = asyncHandler(async (req, res) => {
+  const contactInfo = await ContactInfoService.addContactInfo(
+    req.user,
+    req.body
+  );
+  return success(res, "Contact info added successfully", contactInfo);
+});
+
+exports.getAllContactInfo = asyncHandler(async (req, res) => {
+  const filters = {
+    module_type: req.query.module_type || null,
+    search_value: req.query.search_value || null,
+    page: parseInt(req.query.page) || 1,
+    limit: parseInt(req.query.limit) || 10,
+  };
+
+  const result = await ContactInfoService.getAllContactInfo(req.user, filters);
+
+  return success(res, "Contact info fetched successfully", result);
+});
+
+exports.getContactInfoById = asyncHandler(async (req, res) => {
+  const result = await ContactInfoService.getContactInfoById(
+    req.user,
+    req.params.id
+  );
+  return success(res, "Contact info fetched successfully", result);
+});
+
+exports.updateContactInfo = asyncHandler(async (req, res) => {
+  const result = await ContactInfoService.updateContactInfo(
+    req.user,
+    req.params.id,
+    req.body
+  );
+
+  return success(res, "Contact info updated successfully", result);
+});
+
+exports.deleteContactInfo = asyncHandler(async (req, res) => {
+  const result = await ContactInfoService.deleteContactInfo(
+    req.user,
+    req.params.id
+  );
+  return success(res, "Contact Info deleted successfully", result);
+});
+
+exports.setPrimaryContactInfo = asyncHandler(async (req, res) => {
+  const contactInfo = await ContactInfoService.setPrimaryContactInfo(
+    req.user,
+    req.params.id
+  );
+
+  return success(res, "Contact info set as primary successfully", contactInfo);
+});
+
+// ==============================
+// =========== Bank ============
+// ==============================
+
+exports.createBankAccount = asyncHandler(async (req, res) => {
+  const account = await RestaurantBankAccountService.createBankAccount(req);
+  return success(res, "Bank account created successfully", account);
+});
+
+exports.updateBankAccount = asyncHandler(async (req, res) => {
+  const account = await RestaurantBankAccountService.updateBankAccount(req);
+  return success(res, "Bank account updated successfully", account);
+});
+
+exports.getAllBankAccount = asyncHandler(async (req, res) => {
+  const account = await RestaurantBankAccountService.getAllBankAccounts(req);
+  return success(res, "Bank account fetched successfully", account);
+});
+
+exports.getBankAccountById = asyncHandler(async (req, res) => {
+  const bankAccountId = req.params.id;
+  const account = await RestaurantBankAccountService.getBankAccountById(
+    req.user,
+    bankAccountId
+  );
+  return success(res, "Bank account fetched successfully", account);
+});
+
+exports.deleteBankAccout = asyncHandler(async (req, res) => {
+  const bankAccountId = req.params.id;
+  await RestaurantBankAccountService.deleteBankAccount(req.user, bankAccountId);
+  return success(res, "Bank account deleted successfully");
+});
+
+exports.setDefaultBankAccount = asyncHandler(async (req, res) => {
+  const bankAccountId = req.params.id;
+  await RestaurantBankAccountService.setDefaultBankAccount(
+    req.user,
+    bankAccountId
+  );
+  return success(res, "Default bank account set successfully");
+});
+
+// ==============================
+// ==== Charge Settings =========
+// ==============================
+
+exports.getChargeSetting = asyncHandler(async (req, res) => {
+  const result = await ChargeSettingService.getChargeSetting(req.user);
+  return success(res, "Charge setting fetched successfully", result);
+});
+
+exports.syncUpsertChargeSetting = asyncHandler(async (req, res) => {
+  const result = await ChargeSettingService.syncUpsertChargeSetting(
+    req.user,
+    req.body
+  );
+  return success(res, "Charge setting updated successfully", result);
+});
+
+exports.deleteChargeSetting = asyncHandler(async (req, res) => {
+  await ChargeSettingService.deleteChargeSetting(req.user);
+  return success(res, "Charge setting deleted successfully");
+});

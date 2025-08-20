@@ -1,30 +1,39 @@
 "use strict";
-const { getGeneratedId } = require('../utils/idGenerator');
 
 module.exports = (sequelize, DataTypes) => {
   const Table = sequelize.define(
     "Table",
     {
       id: {
-        type: DataTypes.STRING,
-        defaultValue: getGeneratedId,
+        type: DataTypes.UUID,
+        defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
-        allowNull: false,
       },
-      location_id: {
-        type: DataTypes.STRING,
-        allowNull: true,
+      restaurant_id: {
+        type: DataTypes.UUID,
+        allowNull: false,
         references: {
-          model: "locations",
+          model: "restaurants",
+          key: "id",
+        },
+      },
+      branch_id: {
+        type: DataTypes.UUID,
+        allowNull: false,
+        references: {
+          model: "branches",
           key: "id",
         },
       },
       table_number: DataTypes.STRING(20),
-      capacity: DataTypes.INTEGER,
+
+      capacity: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+      },
       is_active: {
         type: DataTypes.BOOLEAN,
-        allowNull: false,
-        defaultValue: true
+        defaultValue: true,
       },
     },
     {
@@ -35,9 +44,15 @@ module.exports = (sequelize, DataTypes) => {
   );
 
   Table.associate = (models) => {
-    Table.belongsTo(models.Location, { foreignKey: "location_id", as: "location" });
-    Table.hasMany(models.Order, { foreignKey: "table_id", as: "orders" });
-    Table.hasMany(models.Reservation, { foreignKey: "table_id", as: "reservations" });
+    Table.hasMany(models.Order, { foreignKey: "table_id" });
+
+    Table.belongsTo(models.Restaurant, { foreignKey: "restaurant_id" });
+
+    Table.belongsTo(models.Branch, { foreignKey: "branch_id" });
+
+    Table.hasMany(models.Reservation, {
+      foreignKey: "table_id",
+    });
   };
 
   return Table;
