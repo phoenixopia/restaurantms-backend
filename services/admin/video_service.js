@@ -159,6 +159,7 @@ const VideoService = {
       throw err;
     }
   },
+
   async updateVideoStatus(videoId, newStatus, user) {
     const video = await Video.findByPk(videoId);
 
@@ -370,6 +371,8 @@ const VideoService = {
       },
     };
   },
+
+  // customer side
 
   async listApprovedVideos(user, query = {}) {
     const { page = 1, limit = 10 } = query;

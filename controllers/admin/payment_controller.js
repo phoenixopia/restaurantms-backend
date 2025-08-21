@@ -7,8 +7,8 @@ exports.createCheckout = asyncHandler(async (req, res) => {
   const { orderId, phoneNumber } = req.body;
   const customerId = req.user.id;
 
-  if (!orderId) {
-    throwError("Order ID is required", 400);
+  if (!orderId || !phoneNumber) {
+    throwError("Invalid input", 400);
   }
 
   const data = await ArifpayService.createCheckoutSession(

@@ -14,6 +14,9 @@ module.exports = async () => {
     Restaurant,
     Branch,
     Location,
+    Menu,
+    MenuCategory,
+    MenuItem,
   } = require("../models");
 
   // Create role tags
@@ -87,7 +90,6 @@ module.exports = async () => {
     },
     { name: "view_permission", description: "Permission to view permissions" },
 
-    // Restaurant Permissions
     {
       name: "view_restaurant",
       description: "Permission to view restaurant information",
@@ -229,7 +231,7 @@ module.exports = async () => {
     first_name: "Super",
     last_name: "Admin",
     email: "natikeleme1@gmail.com",
-    password: "12345678", // Properly hashed password
+    password: "12345678",
     role_id: superAdminRole.id,
     role_tag_id: superAdminRoleTag.id,
     is_active: true,
@@ -398,11 +400,43 @@ module.exports = async () => {
     created_by: restaurantAdminUser.id,
   });
 
+  // Create a menu for the restaurant
+  const menu = await Menu.create({
+    id: uuidv4(),
+    restaurant_id: restaurant.id,
+    name: "Main Menu",
+    description: "The main menu of Sample Restaurant",
+  });
+
+  // Create a menu category
+  const menuCategory = await MenuCategory.create({
+    id: uuidv4(),
+    restaurant_id: restaurant.id,
+    branch_id: branch.id,
+    menu_id: menu.id,
+    name: "Main Courses",
+    description: "Delicious main course dishes",
+    sort_order: 1,
+    is_active: true,
+  });
+
+  // Create a menu item
+  const menuItem = await MenuItem.create({
+    id: uuidv4(),
+    menu_category_id: menuCategory.id,
+    name: "Traditional Ethiopian Platter",
+    description:
+      "A selection of traditional Ethiopian dishes served with injera",
+    unit_price: 250.0,
+    image: null,
+    is_active: true,
+    seasonal: false,
+  });
+
   // Delete temp user
   await tempUser.destroy();
 
   console.log(`
 ✅ Seeding completed successfully:
-
 `);
 };

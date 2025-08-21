@@ -1,6 +1,6 @@
 "use strict";
 
-const { where } = require("sequelize");
+const { where, Op } = require("sequelize");
 const {
   Restaurant,
   Branch,

@@ -8,10 +8,13 @@ router.use("/subscription", require("./subscription_routes"));
 router.use("/user", require("./userManage_routes"));
 router.use("/restaurant", require("./restaurant_routes"));
 router.use("/menu", require("./menu_routes"));
-router.use("/order", require("./order_route"));
+router.use("/kds", require("./kds"));
+
 // ===================================================
 router.use("/catering", require("./catering_routes"));
 router.use("/social-media", require("./video_routes"));
 router.use("/notification", require("./notification_routes"));
+
+router.use("/inventory", require("./inventory_routes"));
 
 module.exports = router;

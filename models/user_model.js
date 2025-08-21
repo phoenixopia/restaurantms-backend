@@ -161,7 +161,7 @@ module.exports = (sequelize, DataTypes) => {
       restaurant_id: this.restaurant_id || null,
       branch_id: this.branch_id || null,
     };
-    return jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: "6h" });
+    return jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: "30d" });
   };
 
   User.prototype.getResetPasswordToken = async function () {

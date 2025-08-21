@@ -114,7 +114,8 @@ exports.getRestaurantProfileWithVideos = asyncHandler(async (req, res) => {
 // ==========================
 
 exports.createBranch = asyncHandler(async (req, res) => {
-  const { restaurantId } = req.restaurantData;
+  // const { restaurantId } = req.restaurantData;
+  const restaurantId = req.user.restaurant_id;
   const branch = await BranchService.createBranch(
     restaurantId,
     req.body,

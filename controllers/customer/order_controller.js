@@ -1,54 +1,52 @@
 const OrderService = require("../../services/admin/order_service");
-const NotificationService = require("../../services/admin/notification_service");
 const asyncHandler = require("../../utils/asyncHandler");
 const { success } = require("../../utils/apiResponse");
+const throwError = require("../../utils/throwError");
 
-exports.createOrder = asyncHandler(async (req, res) => {
-  const io = req.app.get("io");
-  const customer = req.user;
-
-  const order = await OrderService.createOrder(req.body, customer);
-
-  await NotificationService.handleOrderPlacedNotification({
-    order,
-    customer,
-    io,
-  });
-
-  return success(res, "Order created successfully.", order);
-});
-
-exports.cancelOrder = asyncHandler(async (req, res) => {
-  const canceled = await OrderService.cancelOrder(req.params.id, req.user);
-  return success(res, "Order cancelled successfully.", canceled);
-});
-
-exports.getActiveOrders = asyncHandler(async (req, res) => {
-  const customerId = req.user.id;
-  const { page = 1, limit = 10 } = req.query;
-
-  const result = await OrderService.getActiveOrders(customerId, page, limit);
-
-  return success(res, "Active orders fetched successfully", result);
-});
-
-exports.getOrderHistory = asyncHandler(async (req, res) => {
-  const { page = 1, limit = 10 } = req.query;
-
-  const result = await OrderService.getCustomerOrderHistory(
-    req.user,
-    page,
-    limit
-  );
-
-  return success(res, "Order history fetched successfully.", result);
+exports.listOrders = asyncHandler(async (req, res) => {
+  const orders = await OrderService.listOrders(req.query, req.user);
+  return success(res, "Orders fetched successfully.", orders);
 });
 
 exports.getOrderById = asyncHandler(async (req, res) => {
-  const customerId = req.user.id;
-  const { id: orderId } = req.params;
+  const order = await OrderService.getSingleOrder(req.params.id, req.user);
+  return success(res, "Order fetched successfully.", order);
+});
 
-  const order = await OrderService.getOrderByIdForCustomer(orderId, customerId);
+exports.updateOrderStatus = asyncHandler(async (req, res) => {
+  const { status } = req.body;
+  const allowedStatuses = [
+    "Pending",
+    "InProgress",
+    "Preparing",
+    "Ready",
+    "Served",
+    "Cancelled",
+  ];
 
-  return success(res, "Order fetched successfully", order);
+  if (!allowedStatuses.includes(status)) {
+    throwError("Invalid KDS order status.", 400);
+  }
+
+  const updated = await OrderService.updateOrderStatus(
+    req.params.id,
+    status,
+    req.user
+  );
+
+  // const io = req.app.get("io");
+
+  // io.to(`branch:${updated.branch_id}`).emit("orderStatusUpdated", {
+  //   order_id: updated.id,
+  //   status: updated.status,
+  //   branch_id: updated.branch_id,
+  //   restaurant_id: updated.restaurant_id,
+  // });
+
+  // io.to(`customer:${updated.customer_id}`).emit("customerOrderStatusUpdated", {
+  //   order_id: updated.id,
+  //   status: updated.status,
+  // });
+
+  return success(res, "Order status updated successfully.", updated);
 });

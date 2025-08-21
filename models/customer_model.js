@@ -157,8 +157,8 @@ module.exports = (sequelize, DataTypes) => {
   Customer.prototype.getJwtToken = async function () {
     const tokenPayload = {
       id: this.id,
-      role_id: this.role_id,
-      role_tag_id: this.role_tag_id,
+      role_id: this.role_id || null,
+      role_tag_id: this.role_tag_id || null,
     };
     return jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: "6h" });
   };
@@ -166,8 +166,8 @@ module.exports = (sequelize, DataTypes) => {
   Customer.prototype.getResetPasswordToken = async function () {
     const tokenPayload = {
       id: this.id,
-      role_id: this.role_id,
-      role_tag_id: this.role_tag_id,
+      role_id: this.role_id || null,
+      role_tag_id: this.role_tag_id || null,
     };
     return jwt.sign(tokenPayload, process.env.JWT_SECRET, { expiresIn: "10m" });
   };

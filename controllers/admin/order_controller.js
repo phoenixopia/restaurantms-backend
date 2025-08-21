@@ -1,6 +1,7 @@
 const OrderService = require("../../services/admin/order_service");
 const asyncHandler = require("../../utils/asyncHandler");
 const { success } = require("../../utils/apiResponse");
+const throwError = require("../../utils/throwError");
 
 exports.listOrders = asyncHandler(async (req, res) => {
   const orders = await OrderService.listOrders(req.query, req.user);
@@ -24,10 +25,7 @@ exports.updateOrderStatus = asyncHandler(async (req, res) => {
   ];
 
   if (!allowedStatuses.includes(status)) {
-    return res.status(400).json({
-      success: false,
-      message: "Invalid KDS order status.",
-    });
+    throwError("Invalid KDS order status.", 400);
   }
 
   const updated = await OrderService.updateOrderStatus(
