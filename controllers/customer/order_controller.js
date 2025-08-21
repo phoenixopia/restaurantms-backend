@@ -9,11 +9,11 @@ exports.createOrder = asyncHandler(async (req, res) => {
 
   const order = await OrderService.createOrder(req.body, customer);
 
-  await NotificationService.handleOrderPlacedNotification({
-    order,
-    customer,
-    io,
-  });
+  // await NotificationService.handleOrderPlacedNotification({
+  //   order,
+  //   customer,
+  //   io,
+  // });
 
   return success(res, "Order created successfully.", order);
 });

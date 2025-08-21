@@ -102,7 +102,7 @@ router.patch(
 // ========================= Menu Items
 
 router.post(
-  "create-menu-item",
+  "/create-menu-item",
   protect("user"),
   permissionCheck("create_menu_item"),
   RestaurantStatus.checkRestaurantStatus,

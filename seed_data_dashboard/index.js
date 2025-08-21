@@ -7,6 +7,7 @@ const { sequelize } = require("../models");
     await sequelize.sync({ force: true });
     console.log("🔁 Database synced");
     await require("./seed_roles_permissions")();
+    // await require("./seed_category_tag")();
     console.log("🎉 All seeders completed successfully");
   } catch (error) {
     console.error("❌ Seeding failed:", error);

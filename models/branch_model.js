@@ -128,6 +128,11 @@ module.exports = (sequelize, DataTypes) => {
       foreignKey: "restaurant_id",
       onDelete: "CASCADE",
     });
+    //===============
+    Branch.hasOne(models.Inventory, {
+      foreignKey: "branch_id",
+    });
+
     Branch.hasMany(models.RestaurantBankAccount, {
       foreignKey: "branch_id",
       onDelete: "CASCADE",

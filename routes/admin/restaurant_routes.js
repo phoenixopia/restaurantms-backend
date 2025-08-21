@@ -90,8 +90,8 @@ router.post(
   "/branches/create-branch",
   protect("user"),
   authorize("restaurant_admin"),
-  RestaurantStatus.checkRestaurantStatus,
-  branchLimit,
+  // RestaurantStatus.checkRestaurantStatus,
+  // branchLimit,
   RestaurantController.createBranch
 );
 

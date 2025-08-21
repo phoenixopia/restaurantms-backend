@@ -12,18 +12,14 @@ const { protect } = require("../../middleware/protect");
 const { authorize } = require("../../middleware/authorize");
 const { permissionCheck } = require("../../middleware/permissionCheck");
 
-// ================================
-// 🔹 Admin Video Management Routes
-// ================================
-
 // Upload a new video
 router.post(
   "/upload-video",
   protect("user"),
   permissionCheck("manage_social_media"),
   uploadVideoFile,
-  checkStorageQuota,
   validateVideoThumbnailSizes,
+  checkStorageQuota,
   VideoController.uploadVideo
 );
 

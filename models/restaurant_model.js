@@ -80,6 +80,10 @@ module.exports = (sequelize) => {
       scope: { main_branch: true },
     });
 
+    Restaurant.hasOne(models.Inventory, {
+      foreignKey: "restaurant_id",
+    });
+
     Restaurant.hasOne(models.Menu, {
       foreignKey: "restaurant_id",
       onDelete: "RESTRICT",
