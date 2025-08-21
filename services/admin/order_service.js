@@ -392,13 +392,16 @@ const OrderService = {
   },
 
   async listOrders(query, user) {
-    const { page = 1, limit = 10, status, from, to } = query;
+    const { page = 1, limit = 10, status, from, to, branchId } = query;
     const offset = (page - 1) * limit;
 
     let where = {};
 
     if (user.restaurant_id) {
       where.restaurant_id = user.restaurant_id;
+      if (branchId) {
+        where.branch_id = branchId;
+      }
     } else if (user.branch_id) {
       where.branch_id = user.branch_id;
     } else {
@@ -445,7 +448,8 @@ const OrderService = {
       const order = kds.Order;
 
       return {
-        id: order.id,
+        kds_id: kds.id,
+        order_id: order.id,
         type: order.type,
         status: kds.status,
         total_amount: order.total_amount,
@@ -495,7 +499,7 @@ const OrderService = {
           throwError("Not authorized to update this order", 403);
         }
       } else {
-        throwError("Invalid user context", 403);
+        throwError("Access denied", 403);
       }
 
       kdsOrder.status = status;

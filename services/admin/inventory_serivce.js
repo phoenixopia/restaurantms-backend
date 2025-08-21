@@ -51,8 +51,6 @@ const InventoryService = {
       limit,
       offset,
     });
-    if (!rows || rows.length === 0)
-      throwError("No inventory items found.", 404);
 
     return {
       items: rows,

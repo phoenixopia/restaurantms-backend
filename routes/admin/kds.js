@@ -2,7 +2,6 @@ const express = require("express");
 const router = express.Router();
 const OrderController = require("../../controllers/admin/order_controller");
 const { protect } = require("../../middleware/protect");
-// const { authorize } = require("../../middleware/authorize");
 const { permissionCheck } = require("../../middleware/permissionCheck");
 
 router.get(

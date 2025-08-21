@@ -39,7 +39,7 @@ router.delete(
   "/delete-menu",
   protect("user"),
   permissionCheck("delete_menu"),
-  RestaurantStatus.checkRestaurantStatus,
+  // RestaurantStatus.checkRestaurantStatus,
   MenuController.deleteMenu
 );
 

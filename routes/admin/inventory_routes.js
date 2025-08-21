@@ -10,7 +10,7 @@ const { permissionCheck } = require("../../middleware/permissionCheck");
 router.get(
   "/get-all-inventory",
   protect("user"),
-  permissionCheck("view_inventory"),
+  // permissionCheck("view_inventory"),
   InventoryController.getAllInventory
 );
 
@@ -24,7 +24,7 @@ router.put(
 router.post(
   "/create-inventory",
   protect("user"),
-  permissionCheck("create_inventory"),
+  // permissionCheck("create_inventory"),
   InventoryController.createInventory
 );
 
