@@ -69,19 +69,27 @@ const ArifpayService = {
       status: "pending",
     });
 
-    const bankAccount = await RestaurantBankAccount.findOne({
+    let bankAccount = await RestaurantBankAccount.findOne({
       where: {
-        restaurant_id: order.restaurant_id,
+        branch_id: order.branch_id,
         is_default: true,
         is_active: true,
       },
     });
 
-    console.log(bankAccount.account_number);
+    if (!bankAccount) {
+      bankAccount = await RestaurantBankAccount.findOne({
+        where: {
+          restaurant_id: order.restaurant_id,
+          is_default: true,
+          is_active: true,
+        },
+      });
+    }
 
     if (!bankAccount) {
       throwError(
-        "No active default bank account found for this restaurant",
+        "No active default bank account found for this branch or restaurant",
         400
       );
     }
