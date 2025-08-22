@@ -15,7 +15,7 @@ module.exports = async () => {
   // Super Admin gets everything
   for (const permissionId of Object.values(permissionMap)) {
     rolePermissions.push({
-      role_id: roleMap["Super Admin"],  // <-- fix key
+      role_id: roleMap["Super Admin"], // exact match
       permission_id: permissionId,
     });
   }
@@ -48,11 +48,11 @@ module.exports = async () => {
 
   for (const perm of allowed) {
     rolePermissions.push({
-      role_id: roleMap["Restaurant Admin"], // <-- fix key
+      role_id: roleMap["Restaurant Admin"], // exact match
       permission_id: permissionMap[perm],
     });
   }
 
-  await RolePermission.bulkCreate(rolePermissions);
+  await RolePermission.bulkCreate(rolePermissions, { ignoreDuplicates: true });
   console.log("✅ Role permissions seeded");
 };

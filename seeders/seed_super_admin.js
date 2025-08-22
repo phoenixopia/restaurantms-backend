@@ -5,7 +5,7 @@ const { v4: uuidv4 } = require("uuid");
 
 module.exports = async () => {
 
-  const superAdminRole = await Role.findOne({ where: { name: "super_admin" } });
+  const superAdminRole = await Role.findOne({ where: { name: "Super Admin" } });
   const now = new Date();
 
   await User.create({

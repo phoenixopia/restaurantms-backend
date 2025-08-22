@@ -10,6 +10,7 @@ const {
   Plan,
   CategoryTag,
   Restaurant,
+  SystemSetting,
   Branch,
   AnalyticsSnapshot,
   Table,
@@ -26,41 +27,21 @@ const {
 (async () => {
   try {
     console.log("Starting database seeding...");
+    // await sequelize.sync({ force: true });
     // await sequelize.sync({ alter: true });
-    // Drop tables in reverse dependency order
-    // console.log("Dropping tables...");
-    // await ActivityLog.drop();
-    // await Reservation.drop();
-    // await Table.drop();
-    // await Snapshot.drop();
-    // await Branch.drop();
-    // await Restaurant.drop();
-    // await Customer.drop();
-    // await MenuItem.drop();
-    // await MenuCategory.drop();
-    // await Menu.drop();
-    // await Catering.drop();
-    // await Video.drop();
-    // await User.drop();
-    // await RolePermission.drop();
-    // await Permission.drop();
-    // await Role.drop();
-    // await RoleTag.drop();
-    // await Plan.drop();
-    // await CategoryTag.drop();
-
-    // console.log("✅ All tables dropped");
+    
 
     // Recreate tables in dependency order
     console.log("Creating tables...");
     // await RoleTag.sync();
     // await Role.sync();
-    await Permission.sync();
-    await RolePermission.sync();
-    await User.sync();
-    await Plan.sync();
-    await CategoryTag.sync();
+    // await Permission.sync();
+    // await RolePermission.sync();
+    // await User.sync();
+    // await Plan.sync();
+    // await CategoryTag.sync();
     await Restaurant.sync();
+    await SystemSetting.sync();
     await Branch.sync();
     await AnalyticsSnapshot.sync();
     await Table.sync();
@@ -85,7 +66,7 @@ const {
     await require("./seed_role_permission")();
 
     // user seeders
-    // await require("./users-seeder")();
+    await require("./seed_super_admin")();
     await require("./staff_seeders")();
 
     // 2. Plans & Categories/Tags
@@ -93,28 +74,28 @@ const {
     await require("./seed_category_tag")();
 
     // 3. Core Entities
-    await require("./restaurants-seeder")();
-    await require("./branches-seeder")();
-    await require("./snapshots-seeder")();
+    await require("./seed_restaurant")();
+    await require("./branch_seeders")();
+    await require("./snapshot_seeders")();
 
     // 4. Reservations & Tables
-    await require("./tables-seeder")();
-    await require("./reservations-seeder")();
+    await require("./tables_seeders")();
+    await require("./reservation_seeders")();
 
     // 5. Menus
-    await require("./menus-seeder")();
-    await require("./menu-categories-items-seeder")();
+    await require("./menu_seeders")();
+    await require("./menu_category_items_seeders")();
 
     // 6. Customers
-    await require("./customers-seeder")();
+    await require("./customers_seeders")();
 
     // 7. Media & Packages
     // await require("./image-gallery-seeder")();
-    await require("./catering-seeder")();
-    await require("./videos-seeder")();
+    await require("./catering_seeder")();
+    await require("./video_seeders")();
 
     // snaphot analystics
-    await require("./snapshot_seeders")();
+    // await require("./snapshot_seeders")();
 
     console.log("🎉 All seeders completed successfully");
   } catch (error) {

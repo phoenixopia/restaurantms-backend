@@ -62,6 +62,7 @@ module.exports = async () => {
     // Roles
     const restaurantAdminRole = await Role.findOne({ where: { name: "restaurant_admin" } });
     const staffRole = await Role.findOne({ where: { name: "staff" } });
+    const now = new Date();
 
     const restaurants = await Restaurant.findAll({ include: [Branch] });
     const restaurantAdmins = await User.findAll({ where: { role_id: restaurantAdminRole.id } });
@@ -173,6 +174,18 @@ module.exports = async () => {
           VideoComment.bulkCreate(comments, { ignoreDuplicates: true }),
         ]);
       }
+    }
+
+     // Add interactions from customers
+    for (const customer of customers) {
+      await VideoInteraction.create({
+        id: uuidv4(),
+        video_id: video.id,
+        customer_id: customer.id,
+        type: "view", // can also add "like", "favorite", "comment"
+        created_at: now,
+        updated_at: now,
+      });
     }
 
     console.log("✅ Video seeding completed successfully");

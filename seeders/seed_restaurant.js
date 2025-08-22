@@ -1,6 +1,6 @@
 "use strict";
 
-const { Restaurant, Subscription, SystemSetting, Plan, Role } = require("../models");
+const { Restaurant, Subscription, SystemSetting, Plan, Role, User } = require("../models");
 const { v4: uuidv4 } = require("uuid");
 const moment = require("moment");
 
@@ -8,7 +8,7 @@ module.exports = async () => {
 
   const [basicPlan, restaurantAdminRole, superAdmin] = await Promise.all([
     Plan.findOne({ where: { name: "Basic" } }),
-    Role.findOne({ where: { name: "restaurant_admin" } }),
+    Role.findOne({ where: { name: "Restaurant Admin" } }),
     User.findOne({ where: { email: "superadmin@gmail.com" } }),
   ]);
 
@@ -100,6 +100,7 @@ module.exports = async () => {
       email: data.adminEmail,
       password: "1234567890",
       role_id: restaurantAdminRole.id,
+      role_tag_id: restaurantAdminRole.role_tag_id,
       created_by: superAdmin.id,
       is_active: true,
       email_verified_at: now,
