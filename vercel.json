@@ -11,5 +11,8 @@
       "src": "/(.*)",
       "dest": "server.js"
     }
-  ]
-}  
+  ],
+  "env": {
+    "NPM_CONFIG_OPTIONAL": "true"
+  }
+}
