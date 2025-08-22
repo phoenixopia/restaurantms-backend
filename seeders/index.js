@@ -7,6 +7,7 @@ const { sequelize } = require("../models");
     console.log("🔁 Database synced");
 
     // Run seeders in proper order
+    await require("./seed_role_tags")();
     await require("./seed_roles")();
     await require("./seed_permission")();
     await require("./seed_role_permission")();
