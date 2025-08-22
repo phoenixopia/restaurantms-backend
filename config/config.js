@@ -9,13 +9,11 @@ const commonConfig = {
   database: dbUrl.database,
   host: dbUrl.host,
   port: dbUrl.port,
-  dialect: "postgres",
+  dialect: 'postgres',
   logging: false,
+  dialectModule: require('pg'),
   dialectOptions: {
-    ssl: {
-      require: true,
-      rejectUnauthorized: false, 
-    },
+    ssl: { require: true, rejectUnauthorized: false }
   },
 };
 
