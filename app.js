@@ -48,6 +48,13 @@ app.options("*", cors(corsOptions));
 app.use(cors(corsOptions));
 
 app.use("/api/v1", require("./routes"));
+
+app.get("/", (req, res) => {
+  res.status(200).json({
+    status: "success",
+    message: "Welcome to the Restaurant Management System API",
+  });
+});
 app.use(errorHandler);
 
 module.exports = app;
