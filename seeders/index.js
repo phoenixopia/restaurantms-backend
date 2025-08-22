@@ -26,7 +26,7 @@ const {
 (async () => {
   try {
     console.log("Starting database seeding...");
-    await sequelize.sync({ alter: true });
+    // await sequelize.sync({ alter: true });
     // Drop tables in reverse dependency order
     // console.log("Dropping tables...");
     // await ActivityLog.drop();
