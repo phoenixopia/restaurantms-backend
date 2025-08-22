@@ -15,9 +15,8 @@ module.exports = async () => {
   // Super Admin gets everything
   for (const permissionId of Object.values(permissionMap)) {
     rolePermissions.push({
-      role_id: roleMap.super_admin,
+      role_id: roleMap["Super Admin"],  // <-- fix key
       permission_id: permissionId,
-      granted: true,
     });
   }
 
@@ -49,9 +48,8 @@ module.exports = async () => {
 
   for (const perm of allowed) {
     rolePermissions.push({
-      role_id: roleMap.restaurant_admin,
+      role_id: roleMap["Restaurant Admin"], // <-- fix key
       permission_id: permissionMap[perm],
-      granted: true,
     });
   }
 
