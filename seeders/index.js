@@ -32,18 +32,18 @@ const {
     console.log("Dropping and creating tables...");
     // Drop & recreate all tables in the correct order
     const models = [
-      RoleTag,
-      Role,
-      Permission,
-      RolePermission,
-      User,
-      Plan,
-      CategoryTag,
-      Restaurant,
-      Subscription,
-      SystemSetting,
-      Branch,
-      AnalyticsSnapshot,
+      // RoleTag,
+      // Role,
+      // Permission,
+      // RolePermission,
+      // User,
+      // Plan,
+      // CategoryTag,
+      // Restaurant,
+      // Subscription,
+      // SystemSetting,
+      // Branch,
+      // AnalyticsSnapshot,
       Table,
       Reservation,
       Menu,
@@ -66,45 +66,45 @@ const {
     console.log("✅ All tables dropped and recreated");
 
     // Begin seeding
-    console.log("Seeding roles...");
-    await require("./seed_roles")();
-    console.log("✅ Roles seeded");
+    // console.log("Seeding roles...");
+    // await require("./seed_roles")();
+    // console.log("✅ Roles seeded");
 
-    console.log("Seeding category tags...");
-    await require("./seed_category_tag")();
-    console.log("✅ Category tags seeded");
+    // console.log("Seeding category tags...");
+    // await require("./seed_category_tag")();
+    // console.log("✅ Category tags seeded");
 
-    console.log("Seeding permissions...");
-    await require("./seed_permission")();
-    console.log("✅ Permissions seeded");
+    // console.log("Seeding permissions...");
+    // await require("./seed_permission")();
+    // console.log("✅ Permissions seeded");
 
-    console.log("Seeding role-permissions...");
-    await require("./seed_role_permission")();
-    console.log("✅ Role-permissions seeded");
+    // console.log("Seeding role-permissions...");
+    // await require("./seed_role_permission")();
+    // console.log("✅ Role-permissions seeded");
 
-    console.log("Seeding plans...");
-    await require("./seed_plan")();
-    console.log("✅ Plans seeded");
+    // console.log("Seeding plans...");
+    // await require("./seed_plan")();
+    // console.log("✅ Plans seeded");
 
-    console.log("Seeding locations...");
-    await require("./location_seeder")();
-    console.log("✅ Location seeded");
+    // console.log("Seeding locations...");
+    // await require("./location_seeder")();
+    // console.log("✅ Location seeded");
 
-    console.log("Seeding restaurants...");
-    await require("./seed_restaurant")();
-    console.log("✅ Restaurants seeded");
+    // console.log("Seeding restaurants...");
+    // await require("./seed_restaurant")();
+    // console.log("✅ Restaurants seeded");
 
-    console.log("Seeding branches...");
-    await require("./branch_seeders")();
-    console.log("✅ Branches seeded");
+    // console.log("Seeding branches...");
+    // await require("./branch_seeders")();
+    // console.log("✅ Branches seeded");
 
-    console.log("Seeding staff...");
-    await require("./staff_seeders")();
-    console.log("✅ Staff seeded");
+    // console.log("Seeding staff...");
+    // await require("./staff_seeders")();
+    // console.log("✅ Staff seeded");
 
-    console.log("Seeding analytics snapshots...");
-    await require("./snapshot_seeders")();
-    console.log("✅ Analytics snapshots seeded");
+    // console.log("Seeding analytics snapshots...");
+    // await require("./snapshot_seeders")();
+    // console.log("✅ Analytics snapshots seeded");
 
     console.log("Seeding tables...");
     await require("./tables_seeders")();
