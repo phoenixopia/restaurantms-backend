@@ -4,8 +4,13 @@ const { v4: uuidv4 } = require("uuid");
 const { User, Role, RoleTag, Branch, Restaurant } = require("../models");
 
 module.exports = async () => {
-  const staffRoleTag = await RoleTag.findOne({ where: { name: "staff" } });
+  const [staffRoleTag, adminRole] = await Promise.all([
+    RoleTag.findOne({ where: { name: "staff" } }),
+    Role.findOne({ where: { name: "Restaurant Administrator" } }),
+  ]);
+
   if (!staffRoleTag) throw new Error("RoleTag 'staff' not found");
+  if (!adminRole) throw new Error("Role 'Restaurant Administrator' not found");
 
   const restaurants = await Restaurant.findAll({
     include: [{ model: Branch }],
@@ -18,55 +23,65 @@ module.exports = async () => {
     const restaurantAdmin = await User.findOne({
       where: {
         restaurant_id: restaurant.id,
-        role_tag_id: (
-          await RoleTag.findOne({ where: { name: "restaurant_admin" } })
-        ).id,
+        role_id: adminRole.id, // ✅ match by role_id, not role_tag_id
       },
     });
 
-    if (!restaurantAdmin) continue;
+    if (!restaurantAdmin) {
+      console.warn(
+        `⚠️ No admin found for restaurant ${restaurant.restaurant_name}`
+      );
+      continue;
+    }
 
-    // ✅ Create 5 roles only once per restaurant
+    // ✅ Create or reuse staff roles
     const roles = [];
     for (const roleName of staffRolesList) {
-      const staffRole = await Role.create({
-        id: uuidv4(),
-        name: roleName,
-        role_tag_id: staffRoleTag.id,
-        restaurant_id: restaurant.id,
-        created_by: restaurantAdmin.id,
-        description: `${roleName} role for ${restaurant.name}`,
+      const [staffRole] = await Role.findOrCreate({
+        where: { name: roleName, restaurant_id: restaurant.id },
+        defaults: {
+          id: uuidv4(),
+          role_tag_id: staffRoleTag.id,
+          created_by: restaurantAdmin.id,
+          description: `${roleName} role for ${restaurant.restaurant_name}`,
+        },
       });
       roles.push(staffRole);
     }
 
-    // ✅ Create 3 staff users for this restaurant
-    for (let i = 1; i <= 3; i++) {
-      const branch = restaurant.Branches[i - 1]; // assign to branch1, branch2, branch3
-      const assignedRole = roles[(i - 1) % roles.length]; // cycle through roles
+    // ✅ Create 5 staff users per restaurant
+    for (let i = 1; i <= 5; i++) {
+      const branch = restaurant.Branches.length
+        ? restaurant.Branches[(i - 1) % restaurant.Branches.length] // cycle branches
+        : null;
 
-      await User.create({
-        id: uuidv4(),
-        first_name: `Staff${i}`,
-        last_name: restaurant.name,
-        email: `staff${i}@${restaurant.name
-          .toLowerCase()
-          .replace(/\s+/g, "")}.example.com`,
-        password: "12345678",
-        branch_id: branch ? branch.id : null,
-        role_id: assignedRole.id,
-        role_tag_id: staffRoleTag.id,
-        created_by: restaurantAdmin.id,
-        is_active: true,
-        email_verified_at: now,
-        password_changed_at: now,
-        created_at: now,
-        updated_at: now,
+      const assignedRole = roles[(i - 1) % roles.length]; // cycle roles
+
+      await User.findOrCreate({
+        where: {
+          email: `staff${i}@${restaurant.restaurant_name
+            .toLowerCase()
+            .replace(/\s+/g, "")}.example.com`,
+        },
+        defaults: {
+          id: uuidv4(),
+          first_name: `Staff${i}`,
+          last_name: restaurant.restaurant_name,
+          password: "12345678",
+          branch_id: branch ? branch.id : null,
+          restaurant_id: restaurant.id,
+          role_id: assignedRole.id,
+          role_tag_id: staffRoleTag.id,
+          created_by: restaurantAdmin.id,
+          is_active: true,
+          email_verified_at: now,
+          password_changed_at: now,
+          created_at: now,
+          updated_at: now,
+        },
       });
     }
   }
 
-  console.log(
-    "✅ 5 staff roles and 3 staff users seeded successfully per restaurant"
-  );
+  console.log("✅ Staff roles and users seeded successfully per restaurant");
 };
