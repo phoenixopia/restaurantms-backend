@@ -17,12 +17,12 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 app.use(cookieParser());
 
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
-  message: "Too many requests from this IP, please try again later.",
-});
-app.use(limiter);
+// const limiter = rateLimit({
+//   windowMs: 15 * 60 * 1000,
+//   max: 100,
+//   message: "Too many requests from this IP, please try again later.",
+// });
+// app.use(limiter);
 
 const allowedOrigins = ["http://localhost:3000"];
 
