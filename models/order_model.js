@@ -28,7 +28,15 @@ module.exports = (sequelize, DataTypes) => {
       },
       customer_id: {
         type: DataTypes.UUID,
-        allowNull: false,
+        allowNull: true,
+        references: {
+          model: "customers",
+          key: "id",
+        },
+      },
+      user_id: {
+        type: DataTypes.UUID,
+        allowNull: true,
         references: {
           model: "customers",
           key: "id",
@@ -96,6 +104,7 @@ module.exports = (sequelize, DataTypes) => {
     Order.belongsTo(models.Branch, { foreignKey: "branch_id" });
 
     Order.belongsTo(models.Customer, { foreignKey: "customer_id" });
+    Order.belongsTo(models.Customer, { foreignKey: "user_id" });
 
     Order.belongsTo(models.Table, { foreignKey: "table_id" });
 

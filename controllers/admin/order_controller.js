@@ -13,6 +13,11 @@ exports.getOrderById = asyncHandler(async (req, res) => {
   return success(res, "Order fetched successfully.", order);
 });
 
+exports.createOrder = asyncHandler(async (req, res) => {
+  const order = await OrderService.createOrderByAdmin(req.body, req.user);
+  return success(res, "Order fetched successfully.", order);
+});
+
 exports.updateOrderStatus = asyncHandler(async (req, res) => {
   const { status } = req.body;
   const allowedStatuses = [

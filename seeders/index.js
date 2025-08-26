@@ -1,5 +1,3 @@
-// seeders/index.js
-// const { sequelize } = require("../models/index");
 const {
   sequelize,
   RoleTag,
@@ -10,111 +8,136 @@ const {
   Plan,
   CategoryTag,
   Restaurant,
+  Subscription,
+  SystemSetting,
   Branch,
   AnalyticsSnapshot,
   Table,
   Reservation,
   Menu,
   MenuCategory,
+  MenuCategoryTags,
   MenuItem,
   Customer,
   ActivityLog,
   Catering,
   Video,
+  Review,
 } = require("../models/index");
 
 (async () => {
   try {
     console.log("Starting database seeding...");
-    // await sequelize.sync({ alter: true });
-    // Drop tables in reverse dependency order
-    // console.log("Dropping tables...");
-    // await ActivityLog.drop();
-    // await Reservation.drop();
-    // await Table.drop();
-    // await Snapshot.drop();
-    // await Branch.drop();
-    // await Restaurant.drop();
-    // await Customer.drop();
-    // await MenuItem.drop();
-    // await MenuCategory.drop();
-    // await Menu.drop();
-    // await Catering.drop();
-    // await Video.drop();
-    // await User.drop();
-    // await RolePermission.drop();
-    // await Permission.drop();
-    // await Role.drop();
-    // await RoleTag.drop();
-    // await Plan.drop();
-    // await CategoryTag.drop();
 
-    // console.log("✅ All tables dropped");
+    console.log("Dropping and creating tables...");
+    // Drop & recreate all tables in the correct order
+    const models = [
+      // RoleTag,
+      // Role,
+      // Permission,
+      // RolePermission,
+      // User,
+      // Plan,
+      // CategoryTag,
+      // Restaurant,
+      // Subscription,
+      // SystemSetting,
+      // Branch,
+      // AnalyticsSnapshot,
+      // Table,
+      // Reservation,
+      // Menu,
+      // MenuCategory,
+      // MenuCategoryTags,
+      // MenuItem,
+      // Customer,
+      // ActivityLog,
+      // Catering,
+      // Video,
+    ];
 
-    // Recreate tables in dependency order
-    console.log("Creating tables...");
-    // await RoleTag.sync();
-    // await Role.sync();
-    await Permission.sync();
-    await RolePermission.sync();
-    await User.sync();
-    await Plan.sync();
-    await CategoryTag.sync();
-    await Restaurant.sync();
-    await Branch.sync();
-    await AnalyticsSnapshot.sync();
-    await Table.sync();
-    await Reservation.sync();
-    await Menu.sync();
-    await MenuCategory.sync();
-    await MenuItem.sync();
-    await Customer.sync();
-    await ActivityLog.sync();
-    await Catering.sync();
-    await Video.sync();
+    // for (const model of models) {
+    //   console.log(`⏳ Dropping & syncing table: ${model.name}`);
+    //   await model.sync({ force: true });
+    //   console.log(`✅ Table ${model.name} ready`);
+    // }
 
-    console.log("✅ All tables created");
+    await Review.sync({ force: true });
 
-    console.log("🔁 Database synced");
+    console.log("✅ All tables dropped and recreated");
 
+    // Begin seeding
+    // console.log("Seeding roles...");
+    // await require("./seed_roles")();
+    // console.log("✅ Roles seeded");
 
-    // 1. Auth & Access Control
-    await require("./seed_role_tags")();
-    await require("./seed_roles")();
-    await require("./seed_permission")();
-    await require("./seed_role_permission")();
+    // console.log("Seeding category tags...");
+    // await require("./seed_category_tag")();
+    // console.log("✅ Category tags seeded");
 
-    // user seeders
-    // await require("./users-seeder")();
-    await require("./staff_seeders")();
+    // console.log("Seeding permissions...");
+    // await require("./seed_permission")();
+    // console.log("✅ Permissions seeded");
 
-    // 2. Plans & Categories/Tags
-    await require("./seed_plan")();
-    await require("./seed_category_tag")();
+    // console.log("Seeding role-permissions...");
+    // await require("./seed_role_permission")();
+    // console.log("✅ Role-permissions seeded");
 
-    // 3. Core Entities
-    await require("./restaurants-seeder")();
-    await require("./branches-seeder")();
-    await require("./snapshots-seeder")();
+    // console.log("Seeding staff...");
+    // await require("./staff_seeders")();
+    // console.log("✅ Staff seeded");
 
-    // 4. Reservations & Tables
-    await require("./tables-seeder")();
-    await require("./reservations-seeder")();
+    // console.log("Seeding plans...");
+    // await require("./seed_plan")();
+    // console.log("✅ Plans seeded");
 
-    // 5. Menus
-    await require("./menus-seeder")();
-    await require("./menu-categories-items-seeder")();
+    // console.log("Seeding locations...");
+    // await require("./location_seeder")();
+    // console.log("✅ Location seeded");
 
-    // 6. Customers
-    await require("./customers-seeder")();
+    // console.log("Seeding restaurants...");
+    // await require("./seed_restaurant")();
+    // console.log("✅ Restaurants seeded");
 
-    // 7. Media & Packages
-    // await require("./image-gallery-seeder")();
-    await require("./catering-seeder")();
-    await require("./videos-seeder")();
+    // console.log("Seeding branches...");
+    // await require("./branch_seeders")();
+    // console.log("✅ Branches seeded");
 
-    // snaphot analystics
-    await require("./snapshot_seeders")();
+    // console.log("Seeding analytics snapshots...");
+    // await require("./snapshot_seeders")();
+    // console.log("✅ Analytics snapshots seeded");
+
+    // console.log("Seeding tables...");
+    // await require("./tables_seeders")();
+    // console.log("✅ Tables seeded");
+
+    // console.log("Seeding reservations...");
+    // await require("./reservation_seeders")();
+    // console.log("✅ Reservations seeded");
+
+    // console.log("Seeding menus...");
+    // await require("./menu_seeders")();
+    // console.log("✅ Menus seeded");
+
+    // console.log("Seeding menu categories & items...");
+    // await require("./menu_category_items_seeders")();
+    // console.log("✅ Menu categories & items seeded");
+
+    // console.log("Seeding customers...");
+    // await require("./customers_seeders")();
+    // console.log("✅ Customers seeded");
+
+    // console.log("Seeding catering...");
+    // await require("./catering_seeder")();
+    // console.log("✅ Catering seeded");
+
+    // console.log("Seeding videos...");
+    // await require("./video_seeders")();
+    // console.log("✅ Videos seeded");
+
+    // console.log("Seeding activity log...");
+    // await require("./activityLog_seeders")();
+    // console.log("✅ Activity Log seeded");
 
     console.log("🎉 All seeders completed successfully");
   } catch (error) {

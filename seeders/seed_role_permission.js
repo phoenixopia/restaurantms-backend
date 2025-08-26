@@ -1,58 +1,61 @@
+// seeders/seed_role_permissions.js
+"use strict";
+
 const { Role, RolePermission, Permission } = require("../models");
+const { v4: uuidv4 } = require("uuid");
 
 module.exports = async () => {
   const roles = await Role.findAll();
   const permissions = await Permission.findAll();
 
-  const roleMap = {};
-  roles.forEach((role) => (roleMap[role.name] = role.id));
+  const superAdminRole = roles.find((r) => r.name === "Super Administrator");
+  const restaurantAdminRole = roles.find(
+    (r) => r.name === "Restaurant Administrator"
+  );
 
-  const permissionMap = {};
-  permissions.forEach((p) => (permissionMap[p.name] = p.id));
+  if (!superAdminRole || !restaurantAdminRole) {
+    throw new Error(
+      "Super admin or restaurant admin role not found. Please seed roles first."
+    );
+  }
+
+  // Permissions to exclude for restaurant admin (RBAC management)
+  const excludedPermissionsForRestaurantAdmin = [
+    "create_role_tag",
+    "update_role_tag",
+    "view_role_tag",
+    "delete_role_tag",
+    "create_permission",
+    "update_permission",
+  ];
 
   const rolePermissions = [];
 
-  // Super Admin gets everything
-  for (const permissionId of Object.values(permissionMap)) {
+  // Grant all permissions to super admin
+  permissions.forEach((permission) => {
     rolePermissions.push({
-      role_id: roleMap["Super Admin"],  // <-- fix key
-      permission_id: permissionId,
+      id: uuidv4(),
+      role_id: superAdminRole.id,
+      permission_id: permission.id,
+      created_at: new Date(),
+      updated_at: new Date(),
     });
-  }
+  });
 
-  // Restaurant Admin limited
-  const allowed = [
-    "manage_users",
-    "assign_permissions",
-    "manage_restaurant",
-    "view_branch",
-    "manage_branches",
-    "manage_subscription",
-    "view_menu",
-    "create_menu",
-    "edit_menu",
-    "delete_menu",
-    "toggle_menu_activation",
-    "view_menu_category",
-    "create_menu_category",
-    "edit_menu_category",
-    "delete_menu_category",
-    "toggle_menu_category_activation",
-    "view_menu_item",
-    "create_menu_item",
-    "edit_menu_item",
-    "delete_menu_item",
-    "toggle_menu_item_activation",
-    "upload_video",
-  ];
-
-  for (const perm of allowed) {
-    rolePermissions.push({
-      role_id: roleMap["Restaurant Admin"], // <-- fix key
-      permission_id: permissionMap[perm],
-    });
-  }
+  // Grant only allowed permissions to restaurant admin
+  permissions.forEach((permission) => {
+    if (!excludedPermissionsForRestaurantAdmin.includes(permission.name)) {
+      rolePermissions.push({
+        id: uuidv4(),
+        role_id: restaurantAdminRole.id,
+        permission_id: permission.id,
+        created_at: new Date(),
+        updated_at: new Date(),
+      });
+    }
+  });
 
   await RolePermission.bulkCreate(rolePermissions);
-  console.log("✅ Role permissions seeded");
+
+  console.log("✅ Role-permission assignments seeded successfully");
 };

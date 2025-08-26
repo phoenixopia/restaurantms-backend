@@ -1,45 +1,33 @@
 "use strict";
 
-const { Table, Restaurant, Branch } = require("../models/index");
+const { Table, Restaurant, Branch } = require("../models");
+const { v4: uuidv4 } = require("uuid");
 
 module.exports = async () => {
-  try {
-    console.log("Seeding Tables...");
+  const restaurants = await Restaurant.findAll({ include: [Branch] });
 
-    // Get restaurant & branch (assuming you have at least one seeded already)
-    const restaurant = await Restaurant.findOne();
-    const branch = await Branch.findOne({ where: { restaurant_id: restaurant.id } });
+  for (const restaurant of restaurants) {
+    for (const branch of restaurant.Branches) {
+      // Decide how many tables per branch (e.g., 5 to 15)
+      const tableCount = Math.floor(Math.random() * 11) + 5;
 
-    if (!restaurant || !branch) {
-      console.warn("⚠️ No restaurant/branch found. Skipping tables seeder.");
-      return;
+      const tables = [];
+      for (let i = 1; i <= tableCount; i++) {
+        tables.push({
+          id: uuidv4(),
+          restaurant_id: restaurant.id,
+          branch_id: branch.id,
+          table_number: `T-${i}`, 
+          capacity: Math.floor(Math.random() * 6) + 2, 
+          is_active: Math.random() < 0.9, 
+          created_at: new Date(),
+          updated_at: new Date(),
+        });
+      }
+
+      await Table.bulkCreate(tables);
     }
-
-    const tablesData = [
-      {
-        restaurant_id: restaurant.id,
-        branch_id: branch.id,
-        table_number: "T1",
-        capacity: 2,
-      },
-      {
-        restaurant_id: restaurant.id,
-        branch_id: branch.id,
-        table_number: "T2",
-        capacity: 4,
-      },
-      {
-        restaurant_id: restaurant.id,
-        branch_id: branch.id,
-        table_number: "T3",
-        capacity: 6,
-      },
-    ];
-
-    await Table.bulkCreate(tablesData, { ignoreDuplicates: true });
-
-    console.log("✅ Tables seeded successfully");
-  } catch (error) {
-    console.error("❌ Error seeding Tables:", error);
   }
+
+  console.log("✅ Table seeding completed successfully for all branches.");
 };

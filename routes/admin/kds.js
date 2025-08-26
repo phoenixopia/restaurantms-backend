@@ -25,4 +25,11 @@ router.get(
   OrderController.getOrderById
 );
 
+router.post(
+  "/create-order",
+  protect("user"),
+  permissionCheck("create_order"),
+  OrderController.createOrder
+);
+
 module.exports = router;

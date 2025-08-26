@@ -41,9 +41,26 @@ exports.getReviewsByRestaurant = asyncHandler(async (req, res) => {
   return success(res, "Reviews retrieved successfully", data);
 });
 
+exports.getReview = asyncHandler(async (req, res) => {
+  const { page, limit } = req.query;
+
+  const data = await ReviewService.getReview(
+    req.user,
+    parseInt(page) || 1,
+    parseInt(limit) || 10
+  );
+
+  return success(res, "Reviews retrieved successfully", data);
+});
+
 exports.calculateRestaurantRating = asyncHandler(async (req, res) => {
   const { restaurantId } = req.params;
 
   const result = await ReviewService.calculateRestaurantRating(restaurantId);
+  return success(res, "Rating calculated successfully", result);
+});
+
+exports.seeTotalCaluclatedRating = asyncHandler(async (req, res) => {
+  const result = await ReviewService.seeTotalCaluclatedRating(req.user);
   return success(res, "Rating calculated successfully", result);
 });

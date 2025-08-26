@@ -1,6 +1,7 @@
 "use strict";
 
 const {
+  User,
   Order,
   OrderItem,
   Branch,
@@ -164,6 +165,101 @@ const OrderService = {
         {
           restaurant_id,
           branch_id,
+          order_id: order.id,
+          status: "Pending",
+        },
+        { transaction: t }
+      );
+
+      await t.commit();
+      return order;
+    } catch (error) {
+      await t.rollback();
+      throw error;
+    }
+  },
+
+  async createOrderByAdmin(data, user) {
+    const t = await sequelize.transaction();
+    try {
+      const {
+        items,
+        total_price,
+        branch_id: bodyBranchId,
+        type,
+        table_id,
+      } = data;
+
+      if (!items || items.length === 0) {
+        throwError("Order must contain at least one item", 400);
+      }
+
+      if (!["dine-in", "takeaway"].includes(type)) {
+        throwError("Invalid order type for admin order", 400);
+      }
+
+      let branchIdToUse;
+      if (user.branch_id) {
+        branchIdToUse = user.branch_id;
+      } else if (user.restaurant_id) {
+        if (!bodyBranchId)
+          throwError("Branch ID is required for users with restaurant_id", 400);
+        branchIdToUse = bodyBranchId;
+      } else {
+        throwError("Invalid user context", 403);
+      }
+
+      const branch = await Branch.findByPk(branchIdToUse, { transaction: t });
+      if (!branch) throwError("Branch not found", 404);
+
+      const restaurant_id = branch.restaurant_id;
+
+      const orderPayload = {
+        user_id: user.id,
+        branch_id: branchIdToUse,
+        restaurant_id,
+        total_amount: total_price,
+        status: "Pending",
+        type,
+        payment_status: "Unpaid",
+      };
+
+      if (type === "dine-in") {
+        if (!table_id) throwError("Table is required for dine-in orders", 400);
+
+        const table = await Table.findByPk(table_id, { transaction: t });
+        if (!table) throwError("Selected table not found", 404);
+
+        await table.update({ is_active: false }, { transaction: t });
+        orderPayload.table_id = table_id;
+      }
+
+      const order = await Order.create(orderPayload, { transaction: t });
+
+      const groupedItems = {};
+      for (const item of items) {
+        const key = item.menu_item_id;
+        if (!groupedItems[key]) {
+          groupedItems[key] = { quantity: 0, price: item.price };
+        }
+        groupedItems[key].quantity += item.quantity;
+      }
+
+      const orderItems = Object.entries(groupedItems).map(
+        ([menu_item_id, value]) => ({
+          order_id: order.id,
+          menu_item_id,
+          quantity: value.quantity,
+          unit_price: value.price,
+        })
+      );
+
+      await OrderItem.bulkCreate(orderItems, { transaction: t });
+
+      await KdsOrder.create(
+        {
+          restaurant_id,
+          branch_id: branchIdToUse,
           order_id: order.id,
           status: "Pending",
         },
@@ -399,27 +495,20 @@ const OrderService = {
 
     if (user.restaurant_id) {
       where.restaurant_id = user.restaurant_id;
-      if (branchId) {
-        where.branch_id = branchId;
-      }
+      if (branchId) where.branch_id = branchId;
     } else if (user.branch_id) {
       where.branch_id = user.branch_id;
     } else {
       throwError("Access denied", 403);
     }
 
-    if (status) {
-      where.status = status;
-    }
+    if (status) where.status = status;
 
     let orderWhere = {};
-    if (from && to) {
+    if (from && to)
       orderWhere.created_at = { [Op.between]: [new Date(from), new Date(to)] };
-    } else if (from) {
-      orderWhere.created_at = { [Op.gte]: new Date(from) };
-    } else if (to) {
-      orderWhere.created_at = { [Op.lte]: new Date(to) };
-    }
+    else if (from) orderWhere.created_at = { [Op.gte]: new Date(from) };
+    else if (to) orderWhere.created_at = { [Op.lte]: new Date(to) };
 
     const { rows: kdsOrders, count } = await KdsOrder.findAndCountAll({
       where,
@@ -431,6 +520,7 @@ const OrderService = {
             { model: Restaurant, attributes: ["id", "restaurant_name"] },
             { model: Branch, attributes: ["id", "name"] },
             { model: Customer, attributes: ["id", "first_name", "last_name"] },
+            { model: User, attributes: ["id", "first_name", "last_name"] },
             { model: Table, attributes: ["id", "table_number"] },
             {
               model: Location,
@@ -447,6 +537,12 @@ const OrderService = {
     const formattedOrders = kdsOrders.map((kds) => {
       const order = kds.Order;
 
+      const personName = order.Customer
+        ? `${order.Customer.first_name} ${order.Customer.last_name}`
+        : order.User
+        ? `${order.User.first_name} ${order.User.last_name}`
+        : null;
+
       return {
         kds_id: kds.id,
         order_id: order.id,
@@ -459,9 +555,7 @@ const OrderService = {
 
         restaurant_name: order.Restaurant?.restaurant_name || null,
         branch_name: order.Branch?.name || null,
-        customer_name: order.Customer
-          ? `${order.Customer.first_name} ${order.Customer.last_name}`
-          : null,
+        customer_name: personName,
 
         table_number:
           order.type === "dine-in" ? order.Table?.table_number || null : null,
@@ -519,16 +613,17 @@ const OrderService = {
     }
   },
 
-  async getSingleOrder(orderId, user) {
+  async getSingleOrder(kdsId, user) {
     const kdsOrder = await KdsOrder.findOne({
-      where: { order_id: orderId },
+      where: { id: kdsId },
       include: [
         {
           model: Order,
           include: [
             { model: Restaurant, attributes: ["id", "restaurant_name"] },
             { model: Branch, attributes: ["id", "name"] },
-            { model: Customer, attributes: ["id", "name"] },
+            { model: Customer, attributes: ["id", "first_name", "last_name"] },
+            { model: User, attributes: ["id", "first_name", "last_name"] },
             { model: Table, attributes: ["id", "table_number"] },
             {
               model: Location,
@@ -540,22 +635,24 @@ const OrderService = {
     });
 
     if (!kdsOrder) {
-      throw new NotFoundError("Order not found.");
+      throwError("Order not found.", 404);
     }
 
     const order = kdsOrder.Order;
 
-    if (user.restaurant_id) {
-      if (order.restaurant_id !== user.restaurant_id) {
-        throwError("Not authorized to view this order.", 403);
-      }
-    } else if (user.branch_id) {
-      if (order.branch_id !== user.branch_id) {
-        throwError("Not authorized to view this order.", 403);
-      }
-    } else {
+    if (user.restaurant_id && order.restaurant_id !== user.restaurant_id) {
+      throwError("Not authorized to view this order.", 403);
+    } else if (user.branch_id && order.branch_id !== user.branch_id) {
+      throwError("Not authorized to view this order.", 403);
+    } else if (!user.restaurant_id && !user.branch_id) {
       throwError("Invalid user context.", 403);
     }
+
+    const personName = order.Customer
+      ? `${order.Customer.first_name} ${order.Customer.last_name}`
+      : order.User
+      ? `${order.User.first_name} ${order.User.last_name}`
+      : null;
 
     return {
       id: order.id,
@@ -569,7 +666,7 @@ const OrderService = {
 
       restaurant_name: order.Restaurant?.restaurant_name || null,
       branch_name: order.Branch?.name || null,
-      customer_name: order.Customer?.name || null,
+      customer_name: personName,
 
       table_number:
         order.type === "dine-in" ? order.Table?.table_number || null : null,

@@ -1,49 +1,62 @@
 "use strict";
 
-const { Reservation, Restaurant, Branch, Table, Customer } = require("../models/index");
+const {
+  Reservation,
+  Restaurant,
+  Branch,
+  Table,
+  Customer,
+} = require("../models");
+const { v4: uuidv4 } = require("uuid");
 
 module.exports = async () => {
-  try {
-    console.log("Seeding Reservations...");
+  const restaurants = await Restaurant.findAll({ include: [Branch] });
+  const customers = await Customer.findAll();
 
-    const restaurant = await Restaurant.findOne();
-    const branch = await Branch.findOne({ where: { restaurant_id: restaurant.id } });
-    const table = await Table.findOne({ where: { branch_id: branch.id } });
-    const customer = await Customer.findOne();
+  for (const restaurant of restaurants) {
+    for (const branch of restaurant.Branches) {
+      const tables = await Table.findAll({
+        where: { branch_id: branch.id, is_active: true },
+      });
 
-    if (!restaurant || !branch || !table || !customer) {
-      console.warn("Missing restaurant/branch/table/customer. Skipping reservations seeder.");
-      return;
+      if (tables.length === 0 || customers.length === 0) continue;
+
+      const reservationCount = Math.floor(Math.random() * 10) + 5;
+
+      const reservations = [];
+      for (let i = 0; i < reservationCount; i++) {
+        const table = tables[Math.floor(Math.random() * tables.length)];
+        const customer =
+          customers[Math.floor(Math.random() * customers.length)];
+
+        const startTime = new Date();
+        startTime.setHours(Math.floor(Math.random() * 12) + 8);
+        startTime.setMinutes(Math.floor((Math.random() / 2) * 60));
+        const endTime = new Date(startTime);
+        endTime.setHours(startTime.getHours() + 2);
+
+        reservations.push({
+          id: uuidv4(),
+          restaurant_id: restaurant.id,
+          branch_id: branch.id,
+          table_id: table.id,
+          customer_id: customer.id,
+          start_time: startTime,
+          end_time: endTime,
+          guest_count: Math.floor(Math.random() * table.capacity) + 1,
+          status: ["pending", "confirmed", "cancelled"][
+            Math.floor(Math.random() * 3)
+          ],
+          created_at: new Date(),
+          updated_at: new Date(),
+        });
+      }
+
+      await Reservation.bulkCreate(reservations);
     }
-
-    const now = new Date();
-    const reservationsData = [
-      {
-        restaurant_id: restaurant.id,
-        branch_id: branch.id,
-        customer_id: customer.id,
-        table_id: table.id,
-        start_time: new Date(now.getTime() + 1 * 60 * 60 * 1000), // 1h from now
-        end_time: new Date(now.getTime() + 2 * 60 * 60 * 1000),   // 2h from now
-        guest_count: 2,
-        status: "confirmed",
-      },
-      {
-        restaurant_id: restaurant.id,
-        branch_id: branch.id,
-        customer_id: customer.id,
-        table_id: table.id,
-        start_time: new Date(now.getTime() + 3 * 60 * 60 * 1000), // 3h from now
-        end_time: new Date(now.getTime() + 4 * 60 * 60 * 1000),   // 4h from now
-        guest_count: 4,
-        status: "pending",
-      },
-    ];
-
-    await Reservation.bulkCreate(reservationsData, { ignoreDuplicates: true });
-
-    console.log("✅ Reservations seeded successfully");
-  } catch (error) {
-    console.error("❌ Error seeding Reservations:", error);
   }
+
+  console.log(
+    "✅ Reservation seeding completed successfully for all branches."
+  );
 };
