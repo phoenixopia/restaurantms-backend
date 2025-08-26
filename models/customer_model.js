@@ -206,7 +206,7 @@ module.exports = (sequelize, DataTypes) => {
     Customer.belongsTo(models.RoleTag, { foreignKey: "role_tag_id" });
 
     Customer.hasMany(models.LoyaltyPoint, { foreignKey: "customer_id" });
-    Customer.hasMany(models.ActivityLog, { foreignKey: "customer_id" });
+
     Customer.hasOne(models.TwoFA, { foreignKey: "customer_id", as: "twoFA" });
     Customer.hasMany(models.Order, { foreignKey: "customer_id" });
     Customer.hasMany(models.Reservation, { foreignKey: "customer_id" });

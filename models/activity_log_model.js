@@ -18,13 +18,6 @@ module.exports = (sequelize, DataTypes) => {
         },
       },
 
-      customer_id: {
-        type: DataTypes.UUID,
-        references: {
-          model: "customers",
-          key: "id",
-        },
-      },
       // affected module(model)
       module: {
         type: DataTypes.STRING(100),
@@ -53,9 +46,6 @@ module.exports = (sequelize, DataTypes) => {
   ActivityLog.associate = (models) => {
     ActivityLog.belongsTo(models.User, {
       foreignKey: "user_id",
-    });
-    ActivityLog.belongsTo(models.Customer, {
-      foreignKey: "customer_id",
     });
   };
 

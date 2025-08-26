@@ -1,4 +1,10 @@
-const { Review, Order, Restaurant, sequelize } = require("../../models");
+const {
+  Review,
+  Order,
+  Restaurant,
+  Branch,
+  sequelize,
+} = require("../../models");
 
 const ReviewService = {
   async createReview(
@@ -141,7 +147,97 @@ const ReviewService = {
     };
   },
 
+  async getReview(user, page = 1, limit = 10) {
+    let restaurantId = null;
+
+    if (user.restaurant_id) {
+      restaurantId = user.restaurant_id;
+    } else if (user.branch_id) {
+      const branch = await Branch.findByPk(user.branch_id);
+      if (!branch) throwError("Branch not found", 404);
+      restaurantId = branch.restaurant_id;
+    } else {
+      throwError("User is not associated with any restaurant or branch", 400);
+    }
+
+    if (!restaurantId) throwError("Restaurant ID is required", 400);
+
+    const offset = (page - 1) * limit;
+
+    const { count: total, rows: reviews } = await Review.findAndCountAll({
+      where: { restaurant_id: restaurantId },
+      include: [
+        {
+          model: Customer,
+          attributes: ["first_name", "last_name", "profile_picture"],
+        },
+      ],
+      order: [["created_at", "DESC"]],
+      limit,
+      offset,
+    });
+
+    const formattedReviews = reviews.map((review) => ({
+      comment: review.comment,
+      rating: parseInt(review.rating),
+      created_at: review.created_at,
+      customer: {
+        first_name: review.Customer.first_name,
+        last_name: review.Customer.last_name,
+        profile_picture: review.Customer.profile_picture,
+      },
+    }));
+
+    return {
+      total,
+      page,
+      limit,
+      total_pages: Math.ceil(total / limit),
+      reviews: formattedReviews,
+    };
+  },
+
   async calculateRestaurantRating(restaurantId) {
+    const reviews = await Review.findAll({
+      where: { restaurant_id: restaurantId },
+      attributes: ["rating"],
+    });
+
+    const totalReviews = reviews.length;
+    if (totalReviews === 0) {
+      return {
+        rating: 0,
+        total_reviews: 0,
+      };
+    }
+
+    const sum = reviews.reduce(
+      (acc, review) => acc + parseInt(review.rating),
+      0
+    );
+    const average = parseFloat((sum / totalReviews).toFixed(1));
+
+    return {
+      rating: average,
+      total_reviews: totalReviews,
+    };
+  },
+
+  async seeTotalCaluclatedRating(user) {
+    let restaurantId = null;
+
+    if (user.restaurant_id) {
+      restaurantId = user.restaurant_id;
+    } else if (user.branch_id) {
+      const branch = await Branch.findByPk(user.branch_id);
+      if (!branch) throwError("Branch not found", 404);
+      restaurantId = branch.restaurant_id;
+    } else {
+      throwError("User is not associated with any restaurant or branch", 400);
+    }
+
+    if (!restaurantId) throwError("Restaurant ID is required", 400);
+
     const reviews = await Review.findAll({
       where: { restaurant_id: restaurantId },
       attributes: ["rating"],

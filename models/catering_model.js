@@ -96,10 +96,6 @@ module.exports = (sequelize, DataTypes) => {
     Catering.hasMany(models.CateringQuote, {
       foreignKey: "catering_id",
     });
-
-    Catering.hasMany(models.CateringMenuItem, {
-      foreignKey: "catering_id",
-    });
   };
 
   return Catering;

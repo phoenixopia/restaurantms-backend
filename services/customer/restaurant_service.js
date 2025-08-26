@@ -6,6 +6,7 @@ const throwError = require("../../utils/throwError");
 
 const { buildPagination } = require("../../utils/pagination");
 const {
+  Review,
   SystemSetting,
   ContactInfo,
   Restaurant,

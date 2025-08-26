@@ -245,6 +245,10 @@ module.exports = (sequelize, DataTypes) => {
     User.hasMany(models.UploadedFile, {
       foreignKey: "user_id",
     });
+
+    User.hasMany(models.Order, {
+      foreignKey: "user_id",
+    });
   };
   return User;
 };
