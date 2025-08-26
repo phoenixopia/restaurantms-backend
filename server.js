@@ -11,6 +11,10 @@ sequelize
   .authenticate()
   .then(async () => {
     console.log("Connected to the database");
+    // Sync all defined models to the DB
+    await sequelize.sync({ alter: true });
+    console.log("Database synchronized");
+
     const server = http.createServer(app);
 
     const io = new Server(server, {
