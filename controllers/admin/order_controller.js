@@ -15,7 +15,7 @@ exports.getOrderById = asyncHandler(async (req, res) => {
 
 exports.createOrder = asyncHandler(async (req, res) => {
   const order = await OrderService.createOrderByAdmin(req.body, req.user);
-  return success(res, "Order fetched successfully.", order);
+  return success(res, "Order created successfully", order, 201);
 });
 
 exports.updateOrderStatus = asyncHandler(async (req, res) => {

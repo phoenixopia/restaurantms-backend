@@ -96,11 +96,11 @@ exports.createMenuItem = asyncHandler(async (req, res) => {
 
 exports.uploadImage = asyncHandler(async (req, res) => {
   const result = await MenuItemService.uploadImage(
-    req.files,
+    req.file,
     req.params.id,
     req.user
   );
-  return success(res, "Restaurant updated successfully", result);
+  return success(res, "Menu item image uploaded successfully", result, 201);
 });
 
 exports.listMenuItemsWithRestaurant = asyncHandler(async (req, res) => {
@@ -112,7 +112,11 @@ exports.listMenuItemsWithRestaurant = asyncHandler(async (req, res) => {
 });
 
 exports.updateMenuItem = asyncHandler(async (req, res) => {
-  const item = await MenuItemService.updateMenuItem(req.params.id, req.user);
+  const item = await MenuItemService.updateMenuItem(
+    req.params.id,
+    req.user,
+    req.body
+  );
   return success(res, "Menu item updated successfully", item);
 });
 

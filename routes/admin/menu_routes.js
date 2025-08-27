@@ -7,6 +7,7 @@ const { permissionCheck } = require("../../middleware/permissionCheck");
 const RestaurantStatus = require("../../middleware/checkRestaurantStatus");
 const ValidateUploadedFiles = require("../../middleware/validateUploadedFiles");
 const Upload = require("../../middleware/uploads");
+const checkStorageQuota = require("../../middleware/checkStorageCapacity");
 
 const router = express.Router();
 
@@ -121,7 +122,7 @@ router.put(
 );
 
 router.put(
-  "update-menu-item/:id",
+  "/update-menu-item/:id",
   protect("user"),
   // permissionCheck("update_menu_item"),
   RestaurantStatus.checkRestaurantStatus,
@@ -129,7 +130,7 @@ router.put(
 );
 
 router.delete(
-  "delete-menu-item/id",
+  "/delete-menu-item/:id",
   protect("user"),
   // permissionCheck("delete_menu_item"),
   RestaurantStatus.checkRestaurantStatus,
@@ -137,7 +138,7 @@ router.delete(
 );
 
 router.patch(
-  "menu-item/toggle-seasonal/:id",
+  "/menu-item/toggle-seasonal/:id",
   protect("user"),
   // permissionCheck("toggle_seasonal"),
   RestaurantStatus.checkRestaurantStatus,
