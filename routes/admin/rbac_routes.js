@@ -48,28 +48,28 @@ router.delete(
 router.post(
   "/create-role",
   protect("user"),
-  permissionCheck("create_role"),
+  // permissionCheck("create_role"),
   rbacController.createRole
 );
 
 router.put(
   "/update-role/:id",
   protect("user"),
-  permissionCheck("update_role"),
+  // permissionCheck("update_role"),
   rbacController.updateRole
 );
 
 router.get(
   "/all-roles",
   protect("user"),
-  permissionCheck("view_role"),
+  // permissionCheck("view_role"),
   rbacController.getAllRoles
 );
 
 router.get(
   "/roles/:id",
   protect("user"),
-  permissionCheck("view_role"),
+  // permissionCheck("view_role"),
   rbacController.getRoleById
 );
 
@@ -77,28 +77,28 @@ router.get(
 router.post(
   "/create-permission",
   protect("user"),
-  permissionCheck("create_permission"),
+  // permissionCheck("create_permission"),
   rbacController.createPermission
 );
 
 router.put(
   "/update-permission/:id",
   protect("user"),
-  permissionCheck("update_permission"),
+  // permissionCheck("update_permission"),
   rbacController.updatePermission
 );
 
 router.get(
   "/all-permission",
   protect("user"),
-  permissionCheck("view_permission"),
+  // permissionCheck("view_permission"),
   rbacController.getAllPermissions
 );
 
 router.get(
   "/permission-byId/:id",
   protect("user"),
-  permissionCheck("view_permission"),
+  // permissionCheck("view_permission"),
   rbacController.getPermissionById
 );
 
