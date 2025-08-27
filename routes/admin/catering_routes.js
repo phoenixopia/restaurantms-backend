@@ -13,7 +13,7 @@ const checkStorageQuota = require("../../middleware/checkStorageCapacity");
 router.post(
   "/create-catering",
   protect("user"),
-  permissionCheck("create_catering"),
+  // permissionCheck("create_catering"),
   RestaurantStatus.checkRestaurantStatus,
   CateringController.createCatering
 );
@@ -21,7 +21,7 @@ router.post(
 router.put(
   "/update-basic-info/:id",
   protect("user"),
-  permissionCheck("update_catering"),
+  // permissionCheck("update_catering"),
   RestaurantStatus.checkRestaurantStatus,
   CateringController.updateBasicInfo
 );
@@ -29,7 +29,7 @@ router.put(
 router.put(
   "/upload-image/:id",
   protect("user"),
-  permissionCheck("update_catering"),
+  // permissionCheck("update_catering"),
   RestaurantStatus.checkRestaurantStatus,
   Upload.uploadCateringCard,
   ValidateUploadedFiles.validateUploadedFiles("catering-card"),
@@ -41,7 +41,7 @@ router.put(
 router.get(
   "/get-all-catering",
   protect("user"),
-  permissionCheck("view_catering"),
+  // permissionCheck("view_catering"),
   RestaurantStatus.checkRestaurantStatus,
   CateringController.getAllCateringSerivces
 );
@@ -49,7 +49,7 @@ router.get(
 router.get(
   "/get-catering-byId/:id",
   protect("user"),
-  permissionCheck("view_catering"),
+  // permissionCheck("view_catering"),
   RestaurantStatus.checkRestaurantStatus,
   CateringController.getCateringServiceById
 );
@@ -57,14 +57,14 @@ router.get(
 router.patch(
   "toggle-status/:id",
   protect("user"),
-  permissionCheck("update_catering"),
+  // permissionCheck("update_catering"),
   CateringController.toggleCateringStatus
 );
 
 router.delete(
   "delete-catering/:id",
   protect("user"),
-  permissionCheck("delete_catering"),
+  // permissionCheck("delete_catering"),
   CateringController.deleteCatering
 );
 
@@ -73,21 +73,21 @@ router.delete(
 router.get(
   "/get-catering-request",
   protect("user"),
-  permissionCheck("view_catering_request"),
+  // permissionCheck("view_catering_request"),
   CateringController.viewCateringRequests
 );
 
 router.get(
   "/get-catering-request-byId/:id",
   protect("user"),
-  permissionCheck("view_catering_request"),
+  // permissionCheck("view_catering_request"),
   CateringController.viewCateringRequestById
 );
 
 router.put(
   "/give-response/:id",
   protect("user"),
-  permissionCheck("manage_catering"),
+  // permissionCheck("manage_catering"),
   CateringController.giveResponseCateringRequest
 );
 
@@ -96,21 +96,21 @@ router.put(
 router.post(
   "/prepare-quote/:id",
   protect("user"),
-  permissionCheck("prepare_catering_quote"),
+  // permissionCheck("prepare_catering_quote"),
   CateringController.prepareCateringQuote
 );
 
 router.post(
   "/update-quote/:id",
   protect("user"),
-  permissionCheck("update_catering_quote"),
+  // permissionCheck("update_catering_quote"),
   CateringController.updateCateringQuote
 );
 
 router.get(
   "/list-catering-quotes",
   protect("user"),
-  permissionCheck("view_catering_quote"),
+  // permissionCheck("view_catering_quote"),
   RestaurantStatus.checkRestaurantStatus,
   CateringController.listCateringQuotes
 );

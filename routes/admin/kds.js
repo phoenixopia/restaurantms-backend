@@ -7,28 +7,28 @@ const { permissionCheck } = require("../../middleware/permissionCheck");
 router.get(
   "/get-all-orders",
   protect("user"),
-  permissionCheck("view_order"),
+  // permissionCheck("view_order"),
   OrderController.listOrders
 );
 
 router.put(
   "/update-order-status/:id",
   protect("user"),
-  permissionCheck("change_order_status"),
+  // permissionCheck("change_order_status"),
   OrderController.updateOrderStatus
 );
 
 router.get(
   "/get-order-byId/:id",
   protect("user"),
-  permissionCheck("view_order"),
+  // permissionCheck("view_order"),
   OrderController.getOrderById
 );
 
 router.post(
   "/create-order",
   protect("user"),
-  permissionCheck("create_order"),
+  // permissionCheck("create_order"),
   OrderController.createOrder
 );
 

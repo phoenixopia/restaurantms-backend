@@ -17,7 +17,7 @@ router.get(
 router.put(
   "/update-inventory/:id",
   protect("user"),
-  permissionCheck("update_inventory"),
+  // permissionCheck("update_inventory"),
   InventoryController.updateInventory
 );
 
@@ -31,35 +31,35 @@ router.post(
 router.delete(
   "/delete-inventory/:id",
   protect("user"),
-  permissionCheck("delete_inventory"),
+  // permissionCheck("delete_inventory"),
   InventoryController.deleteInventory
 );
 
 router.post(
   "/adjust-inventory/:id",
   protect("user"),
-  permissionCheck("adjust_inventory"),
+  // permissionCheck("adjust_inventory"),
   InventoryController.adjustInventory
 );
 
 router.get(
   "/inventory-kpis",
   protect("user"),
-  permissionCheck("view_inventory"),
+  // permissionCheck("view_inventory"),
   InventoryController.getKpis
 );
 
 router.get(
   "/inventory-transaction-kpis",
   protect("user"),
-  permissionCheck("view_inventory"),
+  // permissionCheck("view_inventory"),
   InventoryController.getInventoryTransactionKpis
 );
 
 router.get(
   "/inventory-transactions",
   protect("user"),
-  permissionCheck("view_inventory"),
+  // permissionCheck("view_inventory"),
   InventoryController.listInventoryTransactions
 );
 

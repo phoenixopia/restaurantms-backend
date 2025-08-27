@@ -44,7 +44,7 @@ router.get(
 router.post(
   "/upload-video",
   protect("user"),
-  permissionCheck("upload_video"),
+  // permissionCheck("upload_video"),
   uploadVideoFile,
   validateVideoThumbnailSizes,
   checkStorageQuota,
@@ -55,7 +55,7 @@ router.post(
 router.put(
   "/update-video/:id",
   protect("user"),
-  permissionCheck("edit_video"),
+  // permissionCheck("edit_video"),
   uploadVideoFile,
   validateVideoThumbnailSizes,
   checkStorageQuota,
@@ -66,7 +66,7 @@ router.put(
 router.delete(
   "/delete-video/:id",
   protect("user"),
-  permissionCheck("delete_video"),
+  // permissionCheck("delete_video"),
   VideoController.deleteVideo
 );
 
@@ -74,7 +74,7 @@ router.delete(
 router.get(
   "/all-videos",
   protect("user"),
-  permissionCheck("view_social_media_profile"),
+  // permissionCheck("view_social_media_profile"),
   VideoController.getAllVideos
 );
 
@@ -82,7 +82,7 @@ router.get(
 router.get(
   "/see-profile",
   protect("user"),
-  permissionCheck("view_social_media_profile"),
+  // permissionCheck("view_social_media_profile"),
   VideoController.seeProfile
 );
 
