@@ -24,10 +24,10 @@ checkStorageQuota = async (req, res, next) => {
       });
     }
 
-    const files = req.files
-      ? Array.isArray(req.files)
+    const files = req.file
+      ? Array.isArray(req.file)
         ? req.files
-        : Object.values(req.files).flat()
+        : Object.values(req.file).flat()
       : req.file
       ? [req.file]
       : [];

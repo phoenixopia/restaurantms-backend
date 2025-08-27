@@ -1,5 +1,7 @@
 "use strict";
-const fs = require("fs");
+const fs = require("fs").promises;
+
+const path = require("path");
 const {
   MenuItem,
   MenuCategory,
@@ -128,57 +130,10 @@ const MenuItemService = {
     };
   },
 
-  async updateMenuItem(itemId, user, data) {
-    const t = await sequelize.transaction();
-    try {
-      const item = await MenuItem.findByPk(itemId, {
-        include: [{ model: MenuCategory }],
-        transaction: t,
-      });
-      if (!item) throwError("Menu item not found", 404);
-
-      const category = item.MenuCategory;
-      if (!category) throwError("Menu category not found", 400);
-
-      if (user.restaurant_id) {
-        if (category.restaurant_id !== user.restaurant_id) {
-          throwError("Not authorized to update this menu item", 403);
-        }
-      } else if (user.branch_id) {
-        if (category.branch_id !== user.branch_id) {
-          throwError("Not authorized to update this menu item", 403);
-        }
-      } else {
-        throwError("User must belong to a restaurant or branch", 400);
-      }
-
-      await item.update(
-        {
-          name: data.name ?? item.name,
-          description: data.description ?? item.description,
-          unit_price: data.unit_price ?? item.unit_price,
-          seasonal:
-            typeof data.seasonal !== "undefined"
-              ? data.seasonal
-              : item.seasonal,
-          is_active:
-            typeof data.is_active !== "undefined"
-              ? data.is_active
-              : item.is_active,
-        },
-        { transaction: t }
-      );
-
-      await t.commit();
-      return item;
-    } catch (error) {
-      await t.rollback();
-      throw error;
-    }
-  },
-
   async deleteMenuItem(itemId, user) {
     const t = await sequelize.transaction();
+    let filePath = null;
+
     try {
       const item = await MenuItem.findByPk(itemId, {
         include: [{ model: MenuCategory }],
@@ -188,27 +143,51 @@ const MenuItemService = {
       if (!item) throwError("Menu item not found", 404);
 
       const category = item.MenuCategory;
-
       if (!category) throwError("Menu category not found for this item", 400);
 
-      if (user.restaurant_id) {
-        if (category.restaurant_id !== user.restaurant_id) {
-          throwError("Not authorized to delete this menu item", 403);
-        }
-      } else if (user.branch_id) {
-        if (category.branch_id !== user.branch_id) {
-          throwError("Not authorized to delete this menu item", 403);
-        }
-      } else {
+      if (user.restaurant_id && category.restaurant_id !== user.restaurant_id)
+        throwError("Not authorized to delete this menu item", 403);
+      if (user.branch_id && category.branch_id !== user.branch_id)
+        throwError("Not authorized to delete this menu item", 403);
+      if (!user.restaurant_id && !user.branch_id)
         throwError("User must belong to a restaurant or branch", 400);
+
+      // Find the uploaded file
+      const uploadedFile = await UploadedFile.findOne({
+        where: { reference_id: item.id, type: "menu-item" },
+        transaction: t,
+      });
+
+      if (uploadedFile) {
+        filePath = path.join(process.cwd(), "uploads", uploadedFile.path);
+
+        try {
+          await fs.access(filePath);
+          await fs.unlink(filePath); // delete the file from disk
+        } catch (err) {
+          // skip if the file doesn't exist
+        }
+
+        await uploadedFile.destroy({ transaction: t }); // delete the DB record
       }
 
-      await item.destroy({ transaction: t });
+      await item.destroy({ transaction: t }); // delete menu item
       await t.commit();
+
       return true;
-    } catch (error) {
+    } catch (err) {
       await t.rollback();
-      throw error;
+
+      // If the file was partially created, clean it up
+      if (filePath) {
+        try {
+          await fs.unlink(filePath);
+        } catch (e) {
+          // ignore if already deleted
+        }
+      }
+
+      throw err;
     }
   },
 
@@ -332,11 +311,10 @@ const MenuItemService = {
 
   async uploadImage(file, itemId, user) {
     const t = await sequelize.transaction();
+    let oldFilePath = null;
 
     try {
-      if (!file) {
-        throwError("No image file uploaded", 400);
-      }
+      if (!file) throwError("No image file uploaded", 400);
 
       const menuItem = await MenuItem.findByPk(itemId, {
         include: [{ model: MenuCategory }],
@@ -344,53 +322,51 @@ const MenuItemService = {
       });
 
       if (!menuItem) {
+        await cleanupUploadedFiles([
+          { path: getFilePath(UPLOAD_FOLDER, file.filename) },
+        ]);
         throwError("Menu item not found", 404);
       }
 
       const category = menuItem.MenuCategory;
+      if (!category) throwError("Menu category not found for this item", 400);
 
-      if (!category) {
-        throwError("Menu category not found for this item", 400);
-      }
-
-      if (user.restaurant_id) {
-        if (category.restaurant_id !== user.restaurant_id) {
-          throwError("Not authorized to upload image for this menu item", 403);
-        }
-      } else if (user.branch_id) {
-        if (category.branch_id !== user.branch_id) {
-          throwError("Not authorized to upload image for this menu item", 403);
-        }
-      } else {
+      if (user.restaurant_id && category.restaurant_id !== user.restaurant_id)
+        throwError("Not authorized", 403);
+      if (user.branch_id && category.branch_id !== user.branch_id)
+        throwError("Not authorized", 403);
+      if (!user.restaurant_id && !user.branch_id)
         throwError("User must belong to a restaurant or branch", 400);
-      }
 
-      let uploadedFile = null;
+      const uploadDir = path.join(process.cwd(), "uploads", UPLOAD_FOLDER);
+      await fs.mkdir(uploadDir, { recursive: true });
 
-      if (menuItem.image_url) {
-        const oldFileRecord = await UploadedFile.findByPk(menuItem.image_url, {
-          transaction: t,
-        });
+      let uploadedFile = await UploadedFile.findOne({
+        where: { reference_id: menuItem.id, type: "menu-item" },
+        transaction: t,
+      });
 
-        if (oldFileRecord) {
-          const oldPath = getFilePath(UPLOAD_FOLDER, oldFileRecord.path);
-          if (fs.existsSync(oldPath)) {
-            fs.unlinkSync(oldPath);
-          }
-          oldFileRecord.path = file.filename;
-          oldFileRecord.size_mb = file.size / (1024 * 1024);
-          oldFileRecord.uploaded_by = user.id;
-          await oldFileRecord.save({ transaction: t });
-          uploadedFile = oldFileRecord;
+      const relativePath = path.join(UPLOAD_FOLDER, file.filename);
+
+      if (uploadedFile && uploadedFile.path) {
+        oldFilePath = path.join(process.cwd(), "uploads", uploadedFile.path);
+        try {
+          await fs.access(oldFilePath);
+          await fs.unlink(oldFilePath);
+        } catch (err) {
+          // skip if old file doesn’t exist
         }
-      }
 
-      if (!uploadedFile) {
+        uploadedFile.path = relativePath;
+        uploadedFile.size_mb = +(file.size / (1024 * 1024)).toFixed(2);
+        uploadedFile.uploaded_by = user.id;
+        await uploadedFile.save({ transaction: t });
+      } else {
         uploadedFile = await UploadedFile.create(
           {
             restaurant_id: category.restaurant_id,
-            path: file.filename,
-            size_mb: file.size / (1024 * 1024),
+            path: relativePath,
+            size_mb: +(file.size / (1024 * 1024)).toFixed(2),
             uploaded_by: user.id,
             type: "menu-item",
             reference_id: menuItem.id,
@@ -399,24 +375,23 @@ const MenuItemService = {
         );
       }
 
-      menuItem.image_url = uploadedFile.id;
+      menuItem.image = getFileUrl(UPLOAD_FOLDER, file.filename);
       await menuItem.save({ transaction: t });
 
       await t.commit();
 
-      const updatedMenuItem = await MenuItem.findByPk(menuItem.id, {
-        include: [{ model: MenuCategory }],
-      });
-
       return {
-        ...updatedMenuItem.toJSON(),
-        image_url: getFileUrl(UPLOAD_FOLDER, uploadedFile.path),
+        ...menuItem.toJSON(),
+        image_url: menuItem.image_url,
       };
     } catch (err) {
       await t.rollback();
+
       if (file) {
-        await cleanupUploadedFiles([file]);
+        const newFilePath = getFilePath(UPLOAD_FOLDER, file.filename);
+        await cleanupUploadedFiles([{ path: newFilePath }]);
       }
+
       throw err;
     }
   },

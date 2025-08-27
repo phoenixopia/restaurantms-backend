@@ -125,58 +125,85 @@ const ProfileService = {
     }
   },
 
-  async updateProfile(customerId, body, files = []) {
-    const { first_name, last_name, type, emailOrPhone, dob, notes } = body;
-    const profileFile = files.find((file) => file.fieldname === "profile");
-
+  async uploadImage(file, itemId, user) {
     const t = await sequelize.transaction();
 
     try {
-      const customer = await Customer.findByPk(customerId, { transaction: t });
+      if (!file) throwError("No image file uploaded", 400);
 
-      if (!customer) {
-        if (files.length) await cleanupUploadedFiles(files);
-        throwError("Customer not found", 404);
-      }
+      const menuItem = await MenuItem.findByPk(itemId, {
+        include: [{ model: MenuCategory }],
+        transaction: t,
+      });
 
-      if (profileFile && customer.profile_picture) {
-        const oldPath = getFilePath(UPLOAD_FOLDER, customer.profile_picture);
+      if (!menuItem) throwError("Menu item not found", 404);
+
+      const category = menuItem.MenuCategory;
+      if (!category) throwError("Menu category not found for this item", 400);
+
+      // Authorization
+      if (user.restaurant_id && category.restaurant_id !== user.restaurant_id)
+        throwError("Not authorized", 403);
+      if (user.branch_id && category.branch_id !== user.branch_id)
+        throwError("Not authorized", 403);
+      if (!user.restaurant_id && !user.branch_id)
+        throwError("User must belong to a restaurant or branch", 400);
+
+      // Check if an UploadedFile exists
+      let uploadedFile = await UploadedFile.findOne({
+        where: { reference_id: menuItem.id, type: "menu-item" },
+        transaction: t,
+      });
+
+      const newFilePath = getFilePath(UPLOAD_FOLDER, file.filename);
+
+      if (uploadedFile && uploadedFile.path) {
+        // Delete old file first
+        const oldPath = getFilePath(
+          UPLOAD_FOLDER,
+          path.basename(uploadedFile.path)
+        );
         await fs.unlink(oldPath).catch(() => {});
+
+        // Update uploaded file
+        uploadedFile.path = newFilePath;
+        uploadedFile.size_mb = file.size / (1024 * 1024);
+        uploadedFile.uploaded_by = user.id;
+        await uploadedFile.save({ transaction: t });
+      } else {
+        // Create new UploadedFile
+        uploadedFile = await UploadedFile.create(
+          {
+            restaurant_id: category.restaurant_id,
+            path: newFilePath,
+            size_mb: file.size / (1024 * 1024),
+            uploaded_by: user.id,
+            type: "menu-item",
+            reference_id: menuItem.id,
+          },
+          { transaction: t }
+        );
       }
 
-      if (first_name !== undefined) customer.first_name = first_name;
-      if (last_name !== undefined) customer.last_name = last_name;
+      // Update menuItem with URL (not disk path)
+      menuItem.image = getFileUrl(UPLOAD_FOLDER, file.filename);
+      await menuItem.save({ transaction: t });
 
-      if (type === "email" && emailOrPhone !== undefined) {
-        customer.email = emailOrPhone;
-      } else if (type === "phone" && emailOrPhone !== undefined) {
-        customer.phone_number = emailOrPhone;
-      }
-
-      if (dob !== undefined) customer.dob = dob;
-      if (notes !== undefined) customer.notes = notes;
-
-      if (profileFile) customer.profile_picture = profileFile.filename;
-
-      await customer.save({ transaction: t });
       await t.commit();
 
       return {
-        message: "Profile updated successfully",
-        data: {
-          id: customer.id,
-          first_name: customer.first_name,
-          last_name: customer.last_name,
-          phone_number: customer.phone_number,
-          email: customer.email,
-          dob: customer.dob,
-          notes: customer.notes,
-          profile: getFileUrl(UPLOAD_FOLDER, customer.profile_picture),
-        },
+        ...menuItem.toJSON(),
+        image_url: menuItem.image,
       };
     } catch (err) {
       await t.rollback();
-      if (files.length) await cleanupUploadedFiles(files);
+
+      // Delete newly uploaded file if error occurred
+      if (file) {
+        const newFilePath = getFilePath(UPLOAD_FOLDER, file.filename);
+        await fs.unlink(newFilePath).catch(() => {});
+      }
+
       throw err;
     }
   },
