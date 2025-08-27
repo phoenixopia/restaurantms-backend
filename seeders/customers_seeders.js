@@ -23,7 +23,7 @@ module.exports = async () => {
       first_name: "Nati",
       last_name: "Keleme",
       email: "nathnaelkeleme88@gmail.com",
-      password: "12345678",
+      password: "12345678", // will be hashed
       profile_picture:
         "https://static.vecteezy.com/system/resources/previews/002/002/403/non_2x/man-with-beard-avatar-character-isolated-icon-free-vector.jpg",
       dob: new Date(1990, 0, 1),
@@ -232,6 +232,9 @@ module.exports = async () => {
     },
   ];
 
-  await Customer.bulkCreate(customerData);
+  await Customer.bulkCreate(customerData, {
+    individualHooks: true,
+  });
+
   console.log("✅ 15 Customers seeded successfully");
 };
