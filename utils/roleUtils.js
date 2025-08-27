@@ -1,35 +1,25 @@
-const { Role, User, Customer } = require("../models");
+// utils/roleUtils.js
+const { Role, RoleTag, Customer } = require("../models");
 
-async function assignRoleToUser(userId, url, transaction) {
-  let roleName;
-  let ModelToUpdate;
+async function assignRoleToUser(customerId, url, transaction) {
+  const roleTag = await RoleTag.findOne({
+    where: { name: "customer" },
+    transaction,
+  });
+  if (!roleTag) throw new Error("RoleTag 'customer' not found");
 
-  if (url.includes("/admin")) {
-    roleName = "restaurant_admin";
-    ModelToUpdate = User;
-  } else {
-    roleName = "customer";
-    ModelToUpdate = Customer;
-  }
+  const role = await Role.findOne({
+    where: { role_tag_id: roleTag.id },
+    transaction,
+  });
+  if (!role) throw new Error("Role for 'customer' role tag not found");
 
-  let role = await Role.findOne({ where: { name: roleName }, transaction });
-
-  if (!role) {
-    role = await Role.create(
-      {
-        name: roleName,
-        description: `${roleName.replace("_", " ")} role`,
-      },
-      { transaction }
-    );
-  }
-
-  await ModelToUpdate.update(
-    { role_id: role.id },
+  await Customer.update(
     {
-      where: { id: userId },
-      transaction,
-    }
+      role_id: role.id,
+      role_tag_id: roleTag.id,
+    },
+    { where: { id: customerId }, transaction }
   );
 }
 
