@@ -126,8 +126,8 @@ router.put(
   RestaurantController.setDefaultBranch
 );
 
-router.put(
-  "update-branch/:id",
+router.patch(
+  "/update-branch/:id",
   protect("user"),
   RestaurantStatus.checkRestaurantStatus,
   // permissionCheck("update_branch"),
