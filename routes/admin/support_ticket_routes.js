@@ -2,7 +2,8 @@ const express = require("express");
 const router = express.Router();
 const TicketController = require("../../controllers/admin/ticket_controller");
 const { protect } = require("../../middleware/protect");
-const { permissionCheck } = require("../../middleware/permissionCheck"); // Uncomment if needed
+const { permissionCheck } = require("../../middleware/permissionCheck");
+const { authorize } = require("../../middleware/authorize");
 
 // Create a support ticket
 router.post(
@@ -12,7 +13,7 @@ router.post(
   TicketController.createTicket
 );
 
-// Get all support tickets
+// Get all support tickets (filtered by user scope)
 router.get(
   "/list-all-ticket",
   protect("user"),
@@ -28,11 +29,11 @@ router.get(
   TicketController.getTicketById
 );
 
-// Update ticket status
+// Update ticket status (super admin only)
 router.put(
   "/update-ticket-status/:id",
   protect("user"),
-  // permissionCheck("change_ticket_status"),
+  authorize("super_admin"),
   TicketController.updateTicketStatus
 );
 
@@ -43,5 +44,8 @@ router.delete(
   // permissionCheck("delete_ticket"),
   TicketController.deleteTicket
 );
+
+// Ticket KPIs
+router.get("/ticket-kpis", protect("user"), TicketController.getTicketKPIs);
 
 module.exports = router;
