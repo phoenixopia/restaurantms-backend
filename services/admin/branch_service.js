@@ -15,7 +15,7 @@ const {
 } = require("../../models");
 
 const { validateManagerById } = require("../../utils/validateManager");
-const { where } = require("sequelize");
+const { where, Op } = require("sequelize");
 
 const BranchService = {
   async createBranch(restaurantId, payload, userId) {
@@ -385,69 +385,102 @@ const BranchService = {
     }
   },
 
-  async updateBranchUnified(user, branchId, updates) {
+  async updateBranch(user, branchId, data = {}) {
     const transaction = await sequelize.transaction();
     try {
       const branch = await Branch.findByPk(branchId, { transaction });
       if (!branch) throwError("Branch not found", 404);
 
-      // ====== Authorization ======
-      if (user.restaurant_id && branch.restaurant_id !== user.restaurant_id) {
-        throwError("You are not authorized to update this branch", 403);
-      } else if (user.branch_id && branch.id !== user.branch_id) {
-        throwError("You are not authorized to update this branch", 403);
-      } else if (!user.restaurant_id && !user.branch_id) {
+      // ===== User Authorization =====
+      if (user.restaurant_id) {
+        if (branch.restaurant_id !== user.restaurant_id)
+          throwError("Unauthorized", 403);
+      } else if (user.branch_id) {
+        if (branch.id !== user.branch_id) throwError("Unauthorized", 403);
+      } else {
         throwError("User not associated with any restaurant or branch", 403);
       }
 
-      let updatedBranch;
+      // ===== Branch fields =====
+      const branchUpdates = {};
+      if (data.name !== undefined) branchUpdates.name = data.name;
+      if (data.opening_time !== undefined)
+        branchUpdates.opening_time = data.opening_time;
+      if (data.closing_time !== undefined)
+        branchUpdates.closing_time = data.closing_time;
+      if (data.status !== undefined) {
+        if (!["active", "inactive", "under_maintenance"].includes(data.status))
+          throwError("Invalid status value", 400);
+        branchUpdates.status = data.status;
+      }
+      if (data.main_branch !== undefined)
+        branchUpdates.main_branch = data.main_branch;
 
-      // ====== Case 1: Update branch fields ======
-      if (updates.name && updates.name !== branch.name) {
-        const exists = await Branch.findOne({
-          where: { restaurant_id: branch.restaurant_id, name: updates.name },
+      // ===== Manager check =====
+      if (data.manager_id !== undefined && data.manager_id !== null) {
+        // Check if user is already manager of another branch
+        const existingManager = await Branch.findOne({
+          where: {
+            manager_id: data.manager_id,
+            id: { [Op.ne]: branch.id }, // exclude current branch
+          },
           transaction,
         });
-        if (exists) throwError("Branch name already exists", 400);
-      }
-
-      if (updates.opening_time && updates.closing_time) {
-        const opening = moment(updates.opening_time, "HH:mm", true);
-        const closing = moment(updates.closing_time, "HH:mm", true);
-        if (!opening.isValid() || !closing.isValid()) {
-          throwError("Invalid opening or closing time format (use HH:mm)", 400);
+        if (existingManager) {
+          throwError("This user is already a manager for another branch", 400);
         }
+        branchUpdates.manager_id = data.manager_id;
+      } else if (data.manager_id === null) {
+        branchUpdates.manager_id = null; // remove manager
       }
 
-      // ====== Case 2: Toggle status ======
-      if (
-        updates.status &&
-        !["active", "inactive", "under_maintenance"].includes(updates.status)
-      ) {
-        throwError("Invalid status value", 400);
+      // ===== Location fields =====
+      const locationUpdates = {};
+      if (data.address !== undefined) locationUpdates.address = data.address;
+      if (data.latitude !== undefined) locationUpdates.latitude = data.latitude;
+      if (data.longitude !== undefined)
+        locationUpdates.longitude = data.longitude;
+
+      // ===== 1. Update branch =====
+      if (Object.keys(branchUpdates).length > 0) {
+        await branch.update(branchUpdates, { transaction });
       }
 
-      // ====== Case 3: Change location ======
-      if (updates.address || updates.latitude || updates.longitude) {
-        const location = await Location.findByPk(branch.location_id, {
+      // ===== 2. Update location =====
+      let updatedLocation = null;
+      if (Object.keys(locationUpdates).length > 0) {
+        const loc = await Location.findByPk(branch.location_id, {
           transaction,
         });
-        if (!location) throwError("Location not found", 404);
-
-        if (updates.address !== undefined) location.address = updates.address;
-        if (updates.latitude !== undefined)
-          location.latitude = updates.latitude;
-        if (updates.longitude !== undefined)
-          location.longitude = updates.longitude;
-
-        await location.save({ transaction });
+        if (!loc) throwError("Location not found", 404);
+        await loc.update(locationUpdates, { transaction });
+        updatedLocation = loc;
       }
 
-      // ====== Apply branch updates ======
-      updatedBranch = await branch.update(updates, { transaction });
+      // ===== 3. Update staff assignment =====
+      if (data.staff_ids !== undefined && Array.isArray(data.staff_ids)) {
+        // Remove users no longer assigned
+        await User.update(
+          { branch_id: null },
+          {
+            where: {
+              branch_id: branch.id,
+              id: { [Op.notIn]: data.staff_ids },
+            },
+            transaction,
+          }
+        );
+
+        // Assign new users
+        await User.update(
+          { branch_id: branch.id },
+          { where: { id: data.staff_ids }, transaction }
+        );
+      }
 
       await transaction.commit();
-      return updatedBranch;
+
+      return { branch, location: updatedLocation };
     } catch (err) {
       await transaction.rollback();
       throw err;
