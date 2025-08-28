@@ -241,7 +241,6 @@ const MenuCategoryService = {
         { model: Restaurant, attributes: ["id", "restaurant_name"] },
         {
           model: MenuItem,
-          attributes: ["id", "name", "unit_price", "is_active"],
         },
       ],
       attributes: {
@@ -304,7 +303,6 @@ const MenuCategoryService = {
       include: [
         {
           model: MenuItem,
-          attributes: ["id", "name", "unit_price", "is_active"],
         },
         { model: Branch, attributes: ["id", "name"] },
         { model: Restaurant, attributes: ["id", "restaurant_name"] },
