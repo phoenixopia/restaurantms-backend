@@ -452,7 +452,9 @@ const UserService = {
       data: rows.map((u) => ({
         id: u.id,
         email: u.email,
-        full_name: u.full_name,
+        first_name: u.first_name,
+        last_name: u.last_name,
+        // full_name: u.full_name,
         phone_number: u.phone_number,
         profile_picture: u.profile_picture,
         is_active: u.is_active,
