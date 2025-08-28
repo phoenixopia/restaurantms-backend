@@ -73,6 +73,13 @@ router.get(
   rbacController.getRoleById
 );
 
+router.delete(
+  "/delete-role/:id",
+  protect("user"),
+  // permissionCheck("delete_role"),
+  rbacController.deleteRole
+);
+
 // ================= PERMISSION
 router.post(
   "/create-permission",

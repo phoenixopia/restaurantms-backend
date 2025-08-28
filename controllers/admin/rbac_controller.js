@@ -65,6 +65,11 @@ exports.getRoleById = asyncHandler(async (req, res) => {
   return success(res, "Role fetched successfully", role);
 });
 
+exports.deleteRole = asyncHandler(async (req, res) => {
+  await RbacService.deleteRole(req.params.id, req.user);
+  return success(res, "Role deleted successfully");
+});
+
 // PERMISSION
 
 exports.createPermission = asyncHandler(async (req, res) => {
