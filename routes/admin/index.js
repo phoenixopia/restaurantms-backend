@@ -15,7 +15,7 @@ router.use("/inventory", require("./inventory_routes"));
 router.use("/review", require("./review_routes"));
 router.use("/activity-log", require("./activityLog_routes"));
 router.use("/social-media", require("./video_routes"));
-// router.use("/support-ticket", require("./support_ticket_routes"));
+router.use("/support-ticket", require("./support_ticket_routes"));
 
 // ===================================================
 router.use("/catering", require("./catering_routes"));

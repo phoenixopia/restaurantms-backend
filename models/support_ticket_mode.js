@@ -35,11 +35,21 @@ module.exports = (sequelize, DataTypes) => {
         },
       },
 
-      subject: DataTypes.STRING(255),
-      description: DataTypes.TEXT,
+      title: {
+        type: DataTypes.STRING,
+        allowNull: false,
+      },
+      description: {
+        type: DataTypes.TEXT,
+        allowNull: false,
+      },
       status: {
-        type: DataTypes.ENUM("Open", "InProgress", "Resolved", "Closed"),
-        defaultValue: "InProgress",
+        type: DataTypes.ENUM("open", "in-progress", "closed"),
+        defaultValue: "open",
+      },
+      priority: {
+        type: DataTypes.ENUM("low", "medium", "high"),
+        defaultValue: "medium",
       },
     },
     {
@@ -52,6 +62,9 @@ module.exports = (sequelize, DataTypes) => {
   SupportTicket.associate = (models) => {
     SupportTicket.belongsTo(models.Restaurant, {
       foreignKey: "restaurant_id",
+    });
+    SupportTicket.belongsTo(models.Branch, {
+      foreignKey: "branch_id",
     });
     SupportTicket.belongsTo(models.User, { foreignKey: "user_id" });
   };

@@ -402,6 +402,35 @@ const RbacService = {
       roles,
     };
   },
+
+  async deleteRole(roleId, user) {
+    const t = await sequelize.transaction();
+    try {
+      const role = await Role.findByPk(roleId, { transaction: t });
+
+      if (!role) throwError("Role not found", 404);
+
+      const isRestaurantAdmin = !!user.restaurant_id;
+
+      if (isRestaurantAdmin && role.created_by !== user.id) {
+        throwError("You can only delete roles you created", 403);
+      }
+
+      await RolePermission.destroy({
+        where: { role_id: roleId },
+        transaction: t,
+      });
+
+      await Role.destroy({ where: { id: roleId }, transaction: t });
+
+      await t.commit();
+      return true;
+    } catch (err) {
+      await t.rollback();
+      throw err;
+    }
+  },
+
   async getRoleById(roleId, user) {
     const where = { id: roleId };
 
