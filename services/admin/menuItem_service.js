@@ -81,7 +81,7 @@ const MenuItemService = {
     const include = [
       {
         model: MenuCategory,
-        attributes: ["id", "name", "branch_id", "restaurant_id"],
+
         include: [
           {
             model: Branch,
@@ -238,7 +238,7 @@ const MenuItemService = {
       include: [
         {
           model: MenuCategory,
-          attributes: ["id", "name", "branch_id", "restaurant_id"],
+
           include: [
             { model: Branch, attributes: ["id", "name"] },
             { model: Restaurant, attributes: ["id", "restaurant_name"] },
