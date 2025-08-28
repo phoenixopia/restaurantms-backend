@@ -153,7 +153,7 @@ exports.setDefaultBranch = asyncHandler(async (req, res) => {
 });
 
 exports.updateBranchUnified = asyncHandler(async (req, res) => {
-  const result = await BranchService.updateBranchUnified(
+  const result = await BranchService.updateBranch(
     req.user,
     req.params.id,
     req.body
