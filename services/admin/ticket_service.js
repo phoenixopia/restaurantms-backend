@@ -15,7 +15,9 @@ const TicketService = {
 
       const ticket = await SupportTicket.create(
         {
-          user_id: user.id, // from middleware
+          user_id: user.id,
+          restaurant_id: user.restaurant_id || null,
+          branch_id: user.branch_id || null,
           title,
           description,
           priority,
@@ -31,7 +33,7 @@ const TicketService = {
     }
   },
 
-  async getAllTickets(query) {
+  async getAllTickets(query, user) {
     let {
       page = 1,
       limit = 10,
@@ -47,6 +49,9 @@ const TicketService = {
     const offset = (page - 1) * limit;
 
     const where = {};
+    if (user.restaurant_id) where.restaurant_id = user.restaurant_id;
+    else if (user.branch_id) where.branch_id = user.branch_id;
+
     if (search) where.title = { [Op.iLike]: `%${search}%` };
     if (status) where.status = status;
     if (priority) where.priority = priority;
@@ -104,6 +109,48 @@ const TicketService = {
       await t.rollback();
       throw err;
     }
+  },
+
+  // ------------------ Ticket KPIs ------------------
+  async getTicketKPIs(user) {
+    const where = {};
+    if (user.restaurant_id) where.restaurant_id = user.restaurant_id;
+    if (user.branch_id) where.branch_id = user.branch_id;
+
+    const totalTickets = await SupportTicket.count({ where });
+    const highPriority = await SupportTicket.count({
+      where: { ...where, priority: "high" },
+    });
+    const mediumPriority = await SupportTicket.count({
+      where: { ...where, priority: "medium" },
+    });
+    const lowPriority = await SupportTicket.count({
+      where: { ...where, priority: "low" },
+    });
+
+    const openTickets = await SupportTicket.count({
+      where: { ...where, status: "open" },
+    });
+    const inProgressTickets = await SupportTicket.count({
+      where: { ...where, status: "in-progress" },
+    });
+    const closedTickets = await SupportTicket.count({
+      where: { ...where, status: "closed" },
+    });
+
+    return {
+      totalTickets,
+      priority: {
+        high: highPriority,
+        medium: mediumPriority,
+        low: lowPriority,
+      },
+      status: {
+        open: openTickets,
+        inProgress: inProgressTickets,
+        closed: closedTickets,
+      },
+    };
   },
 };
 
