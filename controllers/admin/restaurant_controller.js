@@ -142,44 +142,24 @@ exports.getBranchById = asyncHandler(async (req, res) => {
   return success(res, "Branch fetched successfully", branch);
 });
 
-exports.updateBranch = asyncHandler(async (req, res) => {
-  const updatedBranch = await BranchService.updateBranch(
-    req.user,
-    req.params.id,
-    req.body
-  );
-
-  return success(res, "Branch updated successfully", updatedBranch);
-});
-
-exports.changeLocation = asyncHandler(async (req, res) => {
-  const updatedBranch = await BranchService.changeLocation(
-    req.user,
-    req.params.id,
-    req.body
-  );
-
-  return success(res, "Branch updated successfully", updatedBranch);
-});
-
 exports.deleteBranch = asyncHandler(async (req, res) => {
   await BranchService.deleteBranch(req.params.id, req.user.id);
   return success(res, "Branch deleted successfully");
 });
 
-exports.toggleBranchStatus = asyncHandler(async (req, res) => {
-  const updatedBranch = await BranchService.toggleBranchStatus(
-    req.params.id,
-    req.body,
-    req.user
-  );
-
-  return success(res, "Branch status updated successfully", updatedBranch);
-});
-
 exports.setDefaultBranch = asyncHandler(async (req, res) => {
   const result = await BranchService.setDefault(req.user, req.params.id);
   return success(res, "Branch updated successfully");
+});
+
+exports.updateBranchUnified = asyncHandler(async (req, res) => {
+  const result = await BranchService.updateBranchUnified(
+    req.user,
+    req.params.id,
+    req.body
+  );
+
+  return success(res, "Branch updated successfully", result);
 });
 
 // ==============================

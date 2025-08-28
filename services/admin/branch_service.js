@@ -141,54 +141,6 @@ const BranchService = {
     }
   },
 
-  async updateBranch(user, branchId, updates) {
-    const transaction = await sequelize.transaction();
-    try {
-      const branch = await Branch.findByPk(branchId, { transaction });
-      if (!branch) throwError("Branch not found", 404);
-
-      if (user.restaurant_id) {
-        if (branch.restaurant_id !== user.restaurant_id) {
-          throwError("You are not authorized to update this branch", 403);
-        }
-      } else if (user.branch_id) {
-        if (branch.id !== user.branch_id) {
-          throwError("You are not authorized to update this branch", 403);
-        }
-      } else {
-        throwError("User not associated with any restaurant or branch", 403);
-      }
-
-      if (updates.name && updates.name !== branch.name) {
-        const exists = await Branch.findOne({
-          where: {
-            restaurant_id: branch.restaurant_id,
-            name: updates.name,
-          },
-          transaction,
-        });
-        if (exists) throwError("Branch name already exists", 400);
-      }
-
-      if (updates.opening_time && updates.closing_time) {
-        const opening = moment(updates.opening_time, "HH:mm", true);
-        const closing = moment(updates.closing_time, "HH:mm", true);
-
-        if (!opening.isValid() || !closing.isValid()) {
-          throwError("Invalid opening or closing time format (use HH:mm)", 400);
-        }
-      }
-
-      const updatedBranch = await branch.update(updates, { transaction });
-
-      await transaction.commit();
-      return updatedBranch;
-    } catch (err) {
-      await transaction.rollback();
-      throw err;
-    }
-  },
-
   async deleteBranch(branchId, userId) {
     const transaction = await sequelize.transaction();
     try {
@@ -398,78 +350,6 @@ const BranchService = {
     };
   },
 
-  async toggleBranchStatus(branchId, updates, user) {
-    const transaction = await sequelize.transaction();
-    try {
-      const branch = await Branch.findByPk(branchId, { transaction });
-      if (!branch) throwError("Branch not found", 404);
-
-      if (user.restaurant_id) {
-        if (branch.restaurant_id !== user.restaurant_id) {
-          throwError("You are not authorized to update this branch", 403);
-        }
-      } else if (user.branch_id) {
-        if (branch.id !== user.branch_id) {
-          throwError("You are not authorized to update this branch", 403);
-        }
-      } else {
-        throwError("User not associated with any restaurant or branch", 403);
-      }
-
-      if (
-        !updates.status ||
-        !["active", "inactive", "under_maintenance"].includes(updates.status)
-      ) {
-        throwError("Invalid status value", 400);
-      }
-
-      const updatedBranch = await branch.update(
-        { status: updates.status },
-        { transaction }
-      );
-
-      await transaction.commit();
-      return updatedBranch;
-    } catch (err) {
-      await transaction.rollback();
-      throw err;
-    }
-  },
-
-  async changeLocation(user, branchId, body) {
-    const transaction = await sequelize.transaction();
-    try {
-      const branch = await Branch.findByPk(branchId, { transaction });
-      if (!branch) throwError("Branch not found", 404);
-
-      if (user.restaurant_id && branch.restaurant_id !== user.restaurant_id) {
-        throwError("You are not authorized to update this branch", 403);
-      } else if (user.branch_id && branch.id !== user.branch_id) {
-        throwError("You are not authorized to update this branch", 403);
-      } else if (!user.restaurant_id && !user.branch_id) {
-        throwError("User not associated with any restaurant or branch", 403);
-      }
-
-      const location = await Location.findByPk(branch.location_id, {
-        transaction,
-      });
-      if (!location) throwError("Location not found", 404);
-
-      const { address, latitude, longitude } = body;
-      if (address !== undefined) location.address = address;
-      if (latitude !== undefined) location.latitude = latitude;
-      if (longitude !== undefined) location.longitude = longitude;
-
-      await location.save({ transaction });
-      await transaction.commit();
-
-      return location;
-    } catch (err) {
-      await transaction.rollback();
-      throw err;
-    }
-  },
-
   async setDefault(user, branchId) {
     const transaction = await sequelize.transaction();
     try {
@@ -499,6 +379,75 @@ const BranchService = {
       await branch.update({ main_branch: true }, { transaction });
       await transaction.commit();
       return branch;
+    } catch (err) {
+      await transaction.rollback();
+      throw err;
+    }
+  },
+
+  async updateBranchUnified(user, branchId, updates) {
+    const transaction = await sequelize.transaction();
+    try {
+      const branch = await Branch.findByPk(branchId, { transaction });
+      if (!branch) throwError("Branch not found", 404);
+
+      // ====== Authorization ======
+      if (user.restaurant_id && branch.restaurant_id !== user.restaurant_id) {
+        throwError("You are not authorized to update this branch", 403);
+      } else if (user.branch_id && branch.id !== user.branch_id) {
+        throwError("You are not authorized to update this branch", 403);
+      } else if (!user.restaurant_id && !user.branch_id) {
+        throwError("User not associated with any restaurant or branch", 403);
+      }
+
+      let updatedBranch;
+
+      // ====== Case 1: Update branch fields ======
+      if (updates.name && updates.name !== branch.name) {
+        const exists = await Branch.findOne({
+          where: { restaurant_id: branch.restaurant_id, name: updates.name },
+          transaction,
+        });
+        if (exists) throwError("Branch name already exists", 400);
+      }
+
+      if (updates.opening_time && updates.closing_time) {
+        const opening = moment(updates.opening_time, "HH:mm", true);
+        const closing = moment(updates.closing_time, "HH:mm", true);
+        if (!opening.isValid() || !closing.isValid()) {
+          throwError("Invalid opening or closing time format (use HH:mm)", 400);
+        }
+      }
+
+      // ====== Case 2: Toggle status ======
+      if (
+        updates.status &&
+        !["active", "inactive", "under_maintenance"].includes(updates.status)
+      ) {
+        throwError("Invalid status value", 400);
+      }
+
+      // ====== Case 3: Change location ======
+      if (updates.address || updates.latitude || updates.longitude) {
+        const location = await Location.findByPk(branch.location_id, {
+          transaction,
+        });
+        if (!location) throwError("Location not found", 404);
+
+        if (updates.address !== undefined) location.address = updates.address;
+        if (updates.latitude !== undefined)
+          location.latitude = updates.latitude;
+        if (updates.longitude !== undefined)
+          location.longitude = updates.longitude;
+
+        await location.save({ transaction });
+      }
+
+      // ====== Apply branch updates ======
+      updatedBranch = await branch.update(updates, { transaction });
+
+      await transaction.commit();
+      return updatedBranch;
     } catch (err) {
       await transaction.rollback();
       throw err;

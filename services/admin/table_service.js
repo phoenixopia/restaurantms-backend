@@ -1,6 +1,6 @@
 "use strict";
 
-const { Table, Branch, sequelize } = require("../../models");
+const { Table, Branch, Restaurant, sequelize } = require("../../models");
 const { Op } = require("sequelize");
 const throwError = require("../../utils/throwError");
 
@@ -79,6 +79,7 @@ const TableService = {
       limit,
       offset,
       order: [["created_at", "DESC"]],
+      include: [{ model: Branch }, { model: Restaurant }],
     });
 
     return {
@@ -91,7 +92,9 @@ const TableService = {
 
   // ------------------ Get Table By ID ------------------
   async getTableById(tableId, user) {
-    const table = await Table.findByPk(tableId);
+    const table = await Table.findByPk(tableId, {
+      include: [{ model: Branch }, { model: Restaurant }],
+    });
     if (!table) throwError("Table not found", 404);
 
     // Permission check

@@ -95,22 +95,6 @@ router.post(
   RestaurantController.createBranch
 );
 
-router.put(
-  "/update-branch/:id",
-  protect("user"),
-  // permissionCheck("update_branch"),
-  RestaurantStatus.checkRestaurantStatus,
-  RestaurantController.updateBranch
-);
-
-router.patch(
-  "/toggle-branch-status/:id",
-  protect("user"),
-  // permissionCheck("toggle_branch_status"),
-  RestaurantStatus.checkRestaurantStatus,
-  RestaurantController.toggleBranchStatus
-);
-
 router.delete(
   "/branches/:id",
   protect("user"),
@@ -135,19 +119,19 @@ router.get(
 );
 
 router.put(
-  "/update-location/:id",
-  protect("user"),
-  // permissionCheck("update_branch"),
-  RestaurantStatus.checkRestaurantStatus,
-  RestaurantController.changeLocation
-);
-
-router.put(
   "/set-default/:id",
   protect("user"),
   authorize("restaurant_admin"),
   RestaurantStatus.checkRestaurantStatus,
   RestaurantController.setDefaultBranch
+);
+
+router.put(
+  "update-branch/:id",
+  protect("user"),
+  RestaurantStatus.checkRestaurantStatus,
+  // permissionCheck("update_branch"),
+  RestaurantController.updateBranchUnified
 );
 
 // =============================== Contact Info =====================
