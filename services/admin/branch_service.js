@@ -208,88 +208,6 @@ const BranchService = {
     }
   },
 
-  // async getAllBranches({ page = 1, limit = 10, user }) {
-  //   const offset = (page - 1) * limit;
-  //   const where = {};
-
-  //   if (user.branch_id) {
-  //     where.id = user.branch_id;
-  //   } else if (user.restaurant_id) {
-  //     where.restaurant_id = user.restaurant_id;
-  //   } else {
-  //     throwError("User not associated with any branch or restaurant", 403);
-  //   }
-
-  //   const { count, rows } = await Branch.findAndCountAll({
-  //     where,
-  //     order: [["created_at", "DESC"]],
-  //     limit,
-  //     offset,
-  //     include: [
-  //       { model: Location, attributes: ["address", "latitude", "longitude"] },
-  //       { model: Restaurant, attributes: ["restaurant_name"] },
-  //       { model: User, as: "assigned_users", attributes: ["id"] },
-  //       {
-  //         model: MenuCategory,
-  //         attributes: ["id"],
-  //         include: [{ model: MenuItem, attributes: ["id"] }],
-  //       },
-  //     ],
-  //   });
-
-  //   const branchIds = rows.map((b) => b.id);
-  //   const contacts = await ContactInfo.findAll({
-  //     where: {
-  //       module_type: "branch",
-  //       module_id: branchIds,
-  //       is_primary: true,
-  //     },
-  //   });
-
-  //   const data = rows.map((branch) => {
-  //     const totalStaffs = branch.assigned_users.length;
-  //     const totalCategories = branch.MenuCategories.length;
-  //     const totalMenuItems = branch.MenuCategories.reduce(
-  //       (sum, cat) => sum + (cat.MenuItems ? cat.MenuItems.length : 0),
-  //       0
-  //     );
-
-  //     const primaryContact =
-  //       contacts.find((c) => c.module_id === branch.id) || null;
-
-  //     return {
-  //       id: branch.id,
-  //       name: branch.name,
-  //       status: branch.status,
-  //       main_branch: branch.main_branch,
-  //       opening_time: branch.opening_time,
-  //       closing_time: branch.closing_time,
-  //       created_at: branch.created_at,
-  //       updated_at: branch.updated_at,
-  //       location: branch.Location?.address || null,
-  //       restaurant_name: branch.Restaurant?.restaurant_name || null,
-  //       total_staffs: totalStaffs,
-  //       total_menu_categories: totalCategories,
-  //       total_menu_items: totalMenuItems,
-  //       primary_contact: primaryContact
-  //         ? { type: primaryContact.type, value: primaryContact.value }
-  //         : null,
-  //     };
-  //   });
-
-  //   const totalPages = Math.ceil(count / limit);
-
-  //   return {
-  //     data,
-  //     meta: {
-  //       totalItems: count,
-  //       totalPages,
-  //       currentPage: page,
-  //       pageSize: limit,
-  //     },
-  //   };
-  // },
-
   async getAllBranches({ page = 1, limit = 10, user }) {
     const offset = (page - 1) * limit;
     const where = {};
@@ -369,13 +287,7 @@ const BranchService = {
         closing_time: branch.closing_time,
         created_at: branch.created_at,
         updated_at: branch.updated_at,
-        location: branch.Location
-          ? {
-              address: branch.Location.address,
-              latitude: branch.Location.latitude,
-              longitude: branch.Location.longitude,
-            }
-          : null,
+        location: branch.Location?.address || null,
         restaurant_name: branch.Restaurant?.restaurant_name || null,
         manager: branch.manager
           ? {
@@ -405,7 +317,7 @@ const BranchService = {
     const totalPages = Math.ceil(count / limit);
 
     return {
-      data,
+      data, // <- directly an array, no nested "data.data"
       meta: {
         totalItems: count,
         totalPages,
@@ -414,6 +326,7 @@ const BranchService = {
       },
     };
   },
+
   async getBranchById(branchId, user) {
     const branch = await Branch.findByPk(branchId, {
       include: [

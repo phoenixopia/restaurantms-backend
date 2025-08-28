@@ -28,7 +28,6 @@ module.exports = {
     ...commonConfig,
   },
 };
-
 /*
 const { parse } = require("pg-connection-string");
 require("dotenv").config();
