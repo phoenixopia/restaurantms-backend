@@ -226,7 +226,10 @@ const BranchService = {
       limit,
       offset,
       include: [
-        { model: Location, attributes: ["address", "latitude", "longitude"] },
+        {
+          model: Location,
+          attributes: ["id", "address", "latitude", "longitude"],
+        },
         { model: Restaurant, attributes: ["restaurant_name"] },
         {
           model: User,
@@ -287,7 +290,14 @@ const BranchService = {
         closing_time: branch.closing_time,
         created_at: branch.created_at,
         updated_at: branch.updated_at,
-        location: branch.Location?.address || null,
+        location: branch.Location
+          ? {
+              id: branch.Location.id,
+              address: branch.Location.address,
+              latitude: branch.Location.latitude,
+              longitude: branch.Location.longitude,
+            }
+          : null,
         restaurant_name: branch.Restaurant?.restaurant_name || null,
         manager: branch.manager
           ? {
@@ -317,7 +327,7 @@ const BranchService = {
     const totalPages = Math.ceil(count / limit);
 
     return {
-      data, // <- directly an array, no nested "data.data"
+      data,
       meta: {
         totalItems: count,
         totalPages,
