@@ -37,6 +37,13 @@ router.put(
   TicketController.updateTicketStatus
 );
 
+router.put(
+  "/update-ticket/:id",
+  protect("user"),
+  permissionCheck("update_ticket"),
+  TicketController.updateTicket
+);
+
 // Delete a ticket
 router.delete(
   "/delete-ticket/:id",

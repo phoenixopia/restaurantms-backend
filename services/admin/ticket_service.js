@@ -1,6 +1,6 @@
 "use strict";
 
-const { SupportTicket, sequelize } = require("../../models");
+const { SupportTicket, User, sequelize } = require("../../models");
 const { Op } = require("sequelize");
 const throwError = require("../../utils/throwError");
 
@@ -61,6 +61,18 @@ const TicketService = {
       order: [[sortBy, order.toUpperCase()]],
       limit,
       offset,
+      include: [
+        {
+          model: User,
+          attributes: [
+            "id",
+            "first_name",
+            "last_name",
+            "email",
+            "phone_number",
+          ], // include only required fields
+        },
+      ],
     });
 
     return {
@@ -77,15 +89,41 @@ const TicketService = {
     return ticket;
   },
 
+  async updateTicket(id, data) {
+    const t = await sequelize.transaction();
+    try {
+      const ticket = await SupportTicket.findByPk(id, { transaction: t });
+      if (!ticket) throwError("Ticket not found", 404);
+
+      // Only allow update if status is "open"
+      if (ticket.status !== "open") {
+        throwError("Only tickets with status 'open' can be updated", 400);
+      }
+
+      // Update allowed fields
+      const { title, description, priority } = data;
+      if (title !== undefined) ticket.title = title;
+      if (description !== undefined) ticket.description = description;
+      if (priority !== undefined) ticket.priority = priority;
+
+      await ticket.save({ transaction: t });
+      await t.commit();
+
+      return ticket;
+    } catch (err) {
+      await t.rollback();
+      throw err;
+    }
+  },
+
   async updateTicketStatus(id, data) {
     const t = await sequelize.transaction();
     try {
-      const { status, priority } = data;
+      const { status } = data;
       const ticket = await SupportTicket.findByPk(id, { transaction: t });
       if (!ticket) throwError("Ticket not found", 404);
 
       ticket.status = status;
-      ticket.priority = priority;
       await ticket.save({ transaction: t });
 
       await t.commit();

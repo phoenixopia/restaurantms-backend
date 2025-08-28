@@ -1,3 +1,34 @@
+// const { parse } = require("pg-connection-string");
+// require("dotenv").config();
+
+// const dbUrl = parse(process.env.DATABASE_URL);
+
+// const commonConfig = {
+//   username: dbUrl.user,
+//   password: dbUrl.password,
+//   database: dbUrl.database,
+//   host: dbUrl.host,
+//   port: dbUrl.port,
+//   dialect: "postgres",
+//   logging: false,
+//   dialectModule: require("pg"),
+//   dialectOptions: {
+//     ssl: { require: true, rejectUnauthorized: false },
+//   },
+// };
+
+// module.exports = {
+//   development: {
+//     ...commonConfig,
+//   },
+//   test: {
+//     ...commonConfig,
+//   },
+//   production: {
+//     ...commonConfig,
+//   },
+// };
+
 const { parse } = require("pg-connection-string");
 require("dotenv").config();
 
@@ -28,36 +59,3 @@ module.exports = {
     ...commonConfig,
   },
 };
-
-/*
-const { parse } = require("pg-connection-string");
-require("dotenv").config();
-
-const dbUrl = parse(process.env.DATABASE_URL);
-
-const commonConfig = {
-  username: dbUrl.user,
-  password: dbUrl.password,
-  database: dbUrl.database,
-  host: dbUrl.host,
-  port: dbUrl.port,
-  dialect: "postgres",
-  logging: false,
-  dialectModule: require("pg"),
-  // dialectOptions: {
-  //   ssl: { require: true, rejectUnauthorized: false },
-  // },
-};
-
-module.exports = {
-  development: {
-    ...commonConfig,
-  },
-  test: {
-    ...commonConfig,
-  },
-  production: {
-    ...commonConfig,
-  },
-};
-*/

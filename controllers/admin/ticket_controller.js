@@ -29,6 +29,12 @@ exports.updateTicketStatus = asyncHandler(async (req, res) => {
   return success(res, "Ticket status updated successfully", ticket);
 });
 
+// Update ticket (only if status is open)
+exports.updateTicket = asyncHandler(async (req, res) => {
+  const ticket = await TicketService.updateTicket(req.params.id, req.body);
+  return success(res, "Ticket updated successfully", ticket);
+});
+
 // Delete ticket
 exports.deleteTicket = asyncHandler(async (req, res) => {
   await TicketService.deleteTicket(req.params.id);

@@ -21,4 +21,7 @@ router.use("/support-ticket", require("./support_ticket_routes"));
 router.use("/catering", require("./catering_routes"));
 router.use("/notification", require("./notification_routes"));
 
+//====================================================
+router.use("/table", require("./table_routes"));
+
 module.exports = router;
