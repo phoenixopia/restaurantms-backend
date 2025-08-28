@@ -395,6 +395,63 @@ const MenuItemService = {
       throw err;
     }
   },
+
+  async updateMenuItem(itemId, user, data) {
+    const t = await sequelize.transaction();
+    try {
+      const item = await MenuItem.findByPk(itemId, {
+        include: [{ model: MenuCategory }],
+        transaction: t,
+      });
+
+      if (!item) throwError("Menu item not found", 404);
+
+      const category = item.MenuCategory;
+      if (!category) throwError("Menu category not found for this item", 400);
+
+      // Authorization
+      if (user.restaurant_id && category.restaurant_id !== user.restaurant_id)
+        throwError("Not authorized to update this menu item", 403);
+      if (user.branch_id && category.branch_id !== user.branch_id)
+        throwError("Not authorized to update this menu item", 403);
+      if (!user.restaurant_id && !user.branch_id)
+        throwError("User must belong to a restaurant or branch", 400);
+
+      // Check for uniqueness of name within the same branch
+      if (data.name) {
+        const existingItem = await MenuItem.findOne({
+          where: {
+            name: data.name,
+            menu_category_id: category.id, // same category = same branch implicitly
+            id: { [sequelize.Op.ne]: item.id }, // exclude current item
+          },
+          transaction: t,
+        });
+
+        if (existingItem) {
+          throwError(
+            "Menu item with this name already exists in the branch",
+            400
+          );
+        }
+      }
+
+      // Update fields (without touching the image)
+      item.name = data.name ?? item.name;
+      item.description = data.description ?? item.description;
+      item.unit_price = data.unit_price ?? item.unit_price;
+      item.seasonal = data.seasonal ?? item.seasonal;
+      item.is_active = data.is_active ?? item.is_active;
+
+      await item.save({ transaction: t });
+      await t.commit();
+
+      return item;
+    } catch (err) {
+      await t.rollback();
+      throw err;
+    }
+  },
 };
 
 module.exports = MenuItemService;

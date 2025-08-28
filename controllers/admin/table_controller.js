@@ -15,22 +15,24 @@ exports.getTables = asyncHandler(async (req, res) => {
 });
 
 exports.getTableById = asyncHandler(async (req, res) => {
-  const { tableId } = req.params;
-  const result = await TableService.getTableById(tableId, req.user);
+  const result = await TableService.getTableById(req.params.id, req.user);
 
   return success(res, result.message, result.data, 200);
 });
 
 exports.updateTable = asyncHandler(async (req, res) => {
-  const { tableId } = req.params;
-  const result = await TableService.updateTable(tableId, req.body, req.user);
+  const result = await TableService.updateTable(
+    req.params.id,
+    req.body,
+    req.user
+  );
 
   return success(res, result.message, result.data, 200);
 });
 
 exports.deleteTable = asyncHandler(async (req, res) => {
   const { tableId } = req.params;
-  const result = await TableService.deleteTable(tableId, req.user);
+  const result = await TableService.deleteTable(req.params.id, req.user);
 
   return success(res, result.message, result.data, 200);
 });
