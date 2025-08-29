@@ -64,3 +64,12 @@ exports.removeBranchManager = asyncHandler(async (req, res) => {
 
   return success(res, result.message, result);
 });
+
+exports.updateStaff = asyncHandler(async (req, res) => {
+  const user = await UserService.updateStaff(
+    req.params.id,
+    req.body,
+    req.user.id
+  );
+  return success(res, "Staff user updated successfully", user);
+});

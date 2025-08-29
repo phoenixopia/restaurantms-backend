@@ -650,6 +650,38 @@ const UserService = {
       throw err;
     }
   },
+
+  async updateStaff(id, data, updaterId) {
+    const t = await sequelize.transaction();
+    try {
+      // update only role_id,
+      const { role_id } = data;
+      if (!role_id) throwError("No fields to update", 400);
+
+      const user = await User.findByPk(id, { transaction: t });
+      if (!user) throwError("User not found", 404);
+
+      if (user.created_by !== updaterId) {
+        throwError("You are not authorized to update this user", 403);
+      }
+
+      const role = await Role.findOne({
+        where: { id: role_id, created_by: updaterId },
+        transaction: t,
+      });
+      if (!role)
+        throwError("Role not found or does not belong to your restaurant", 404);
+      user.role_id = role.id;
+      user.role_tag_id = role.role_tag_id;
+
+      await user.save({ transaction: t });
+      await t.commit();
+      return user;
+    } catch (err) {
+      await t.rollback();
+      throw err;
+    }
+  },
 };
 
 module.exports = UserService;

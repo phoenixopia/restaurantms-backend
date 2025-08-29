@@ -77,4 +77,11 @@ router.post(
   UserController.removeBranchManager
 );
 
+router.patch(
+  "update-staff/:id",
+  protect("user"),
+  authorize("restaurant_admin"),
+  UserController.updateStaff
+);
+
 module.exports = router;
