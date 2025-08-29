@@ -38,7 +38,16 @@ module.exports = async () => {
       },
     ];
 
-    await ActivityLog.bulkCreate(logs);
+    for (const log of logs) {
+      await ActivityLog.findOrCreate({
+        where: {
+          user_id: log.user_id,
+          module: log.module,
+          action: log.action,
+        },
+        defaults: log,
+      });
+    }
 
     console.log("✅ ActivityLogs seeded successfully");
   } catch (error) {

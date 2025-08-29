@@ -11,21 +11,23 @@ module.exports = async () => {
       // Decide how many tables per branch (e.g., 5 to 15)
       const tableCount = Math.floor(Math.random() * 11) + 5;
 
-      const tables = [];
       for (let i = 1; i <= tableCount; i++) {
-        tables.push({
-          id: uuidv4(),
-          restaurant_id: restaurant.id,
-          branch_id: branch.id,
-          table_number: `T-${i}`, 
-          capacity: Math.floor(Math.random() * 6) + 2, 
-          is_active: Math.random() < 0.9, 
-          created_at: new Date(),
-          updated_at: new Date(),
+        const tableNumber = `T-${i}`;
+
+        await Table.findOrCreate({
+          where: { branch_id: branch.id, table_number },
+          defaults: {
+            id: uuidv4(),
+            restaurant_id: restaurant.id,
+            branch_id: branch.id,
+            table_number: tableNumber,
+            capacity: Math.floor(Math.random() * 6) + 2, // 2-7 seats
+            is_active: Math.random() < 0.9,
+            created_at: new Date(),
+            updated_at: new Date(),
+          },
         });
       }
-
-      await Table.bulkCreate(tables);
     }
   }
 
