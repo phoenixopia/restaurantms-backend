@@ -78,7 +78,7 @@ router.post(
 );
 
 router.patch(
-  "update-staff/:id",
+  "/update-staff/:id",
   protect("user"),
   authorize("restaurant_admin"),
   UserController.updateStaff
