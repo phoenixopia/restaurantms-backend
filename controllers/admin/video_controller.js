@@ -6,9 +6,12 @@ const { success } = require("../../utils/apiResponse");
 
 // Get all videos (admin)
 exports.getAllVideosForAdmin = asyncHandler(async (req, res) => {
-  const { page, limit, status } = req.query;
-  const filters = { page, limit, status };
+  const { page, limit, status, title, restaurant_name } = req.query;
+
+  const filters = { page, limit, status, title, restaurant_name };
+
   const videos = await VideoService.getAllVideosForAdmin(filters);
+
   return success(res, "Videos fetched successfully", videos);
 });
 

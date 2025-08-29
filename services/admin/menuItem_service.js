@@ -132,19 +132,15 @@ const MenuItemService = {
 
   async deleteMenuItem(itemId, user) {
     const t = await sequelize.transaction();
-    let filePath = null;
-
     try {
       const item = await MenuItem.findByPk(itemId, {
         include: [{ model: MenuCategory }],
         transaction: t,
       });
-
       if (!item) throwError("Menu item not found", 404);
 
       const category = item.MenuCategory;
       if (!category) throwError("Menu category not found for this item", 400);
-
       if (user.restaurant_id && category.restaurant_id !== user.restaurant_id)
         throwError("Not authorized to delete this menu item", 403);
       if (user.branch_id && category.branch_id !== user.branch_id)
@@ -159,7 +155,7 @@ const MenuItemService = {
       });
 
       if (uploadedFile) {
-        filePath = path.join(process.cwd(), "uploads", uploadedFile.path);
+        const filePath = path.join(process.cwd(), "uploads", uploadedFile.path);
 
         try {
           await fs.access(filePath);
@@ -167,28 +163,76 @@ const MenuItemService = {
         } catch (err) {
           // skip if the file doesn't exist
         }
-
         await uploadedFile.destroy({ transaction: t }); // delete the DB record
       }
 
-      await item.destroy({ transaction: t }); // delete menu item
+      await item.destroy({ transaction: t });
       await t.commit();
 
       return true;
-    } catch (err) {
+    } catch (error) {
       await t.rollback();
-
-      // If the file was partially created, clean it up
-      if (filePath) {
-        try {
-          await fs.unlink(filePath);
-        } catch (e) {
-          // ignore if already deleted
-        }
-      }
-
-      throw err;
+      throw error;
     }
+
+    // const t = await sequelize.transaction();
+    // let filePath = null;
+
+    // try {
+    //   const item = await MenuItem.findByPk(itemId, {
+    //     include: [{ model: MenuCategory }],
+    //     transaction: t,
+    //   });
+
+    //   if (!item) throwError("Menu item not found", 404);
+
+    //   const category = item.MenuCategory;
+    //   if (!category) throwError("Menu category not found for this item", 400);
+
+    //   if (user.restaurant_id && category.restaurant_id !== user.restaurant_id)
+    //     throwError("Not authorized to delete this menu item", 403);
+    //   if (user.branch_id && category.branch_id !== user.branch_id)
+    //     throwError("Not authorized to delete this menu item", 403);
+    //   if (!user.restaurant_id && !user.branch_id)
+    //     throwError("User must belong to a restaurant or branch", 400);
+
+    //   // Find the uploaded file
+    //   const uploadedFile = await UploadedFile.findOne({
+    //     where: { reference_id: item.id, type: "menu-item" },
+    //     transaction: t,
+    //   });
+
+    //   if (uploadedFile) {
+    //     filePath = path.join(process.cwd(), "uploads", uploadedFile.path);
+
+    //     try {
+    //       await fs.access(filePath);
+    //       await fs.unlink(filePath); // delete the file from disk
+    //     } catch (err) {
+    //       // skip if the file doesn't exist
+    //     }
+
+    //     await uploadedFile.destroy({ transaction: t }); // delete the DB record
+    //   }
+
+    //   await item.destroy({ transaction: t }); // delete menu item
+    //   await t.commit();
+
+    //   return true;
+    // } catch (err) {
+    //   await t.rollback();
+
+    //   // If the file was partially created, clean it up
+    //   if (filePath) {
+    //     try {
+    //       await fs.unlink(filePath);
+    //     } catch (e) {
+    //       // ignore if already deleted
+    //     }
+    //   }
+
+    //   throw err;
+    // }
   },
 
   async toggleSeasonal(itemId, user) {
@@ -423,7 +467,7 @@ const MenuItemService = {
           where: {
             name: data.name,
             menu_category_id: category.id, // same category = same branch implicitly
-            id: { [sequelize.Op.ne]: item.id }, // exclude current item
+            id: { [Op.ne]: item.id }, // exclude current item
           },
           transaction: t,
         });

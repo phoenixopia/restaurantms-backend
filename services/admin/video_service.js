@@ -138,12 +138,24 @@ const VideoService = {
   },
 
   async getAllVideosForAdmin(filters) {
-    const { page = 1, limit = 10, status } = filters;
+    const { page = 1, limit = 10, status, title, restaurant_name } = filters;
 
     const offset = (page - 1) * limit;
 
     const where = {};
-    if (status) where.status = status;
+
+    if (status) {
+      where.status = status;
+    }
+
+    if (title) {
+      where.title = { [Op.iLike]: `%${title}%` }; // Postgres only
+    }
+
+    const restaurantWhere = {};
+    if (restaurant_name) {
+      restaurantWhere.restaurant_name = { [Op.iLike]: `%${restaurant_name}%` };
+    }
 
     const videos = await Video.findAndCountAll({
       where,
@@ -151,6 +163,9 @@ const VideoService = {
         {
           model: Restaurant,
           attributes: ["id", "restaurant_name"],
+          where: Object.keys(restaurantWhere).length
+            ? restaurantWhere
+            : undefined,
           include: [
             {
               model: SystemSetting,
@@ -160,7 +175,7 @@ const VideoService = {
         },
       ],
       order: [["created_at", "DESC"]],
-      limit,
+      limit: Number(limit),
       offset,
     });
 
@@ -168,7 +183,7 @@ const VideoService = {
       total: videos.count,
       page: Number(page),
       limit: Number(limit),
-      has_next_page: offset + videos.rows.length < videos.count,
+      total_pages: Math.ceil(videos.count / limit),
       rows: videos.rows,
     };
   },
