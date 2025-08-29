@@ -1,19 +1,14 @@
 "use strict";
 
+const { v4: uuidv4 } = require("uuid");
 const {
-  Restaurant,
-  Branch,
   User,
   Role,
+  Restaurant,
   MenuCategory,
   MenuItem,
   Video,
-  VideoView,
-  VideoLike,
-  VideoFavorite,
-  VideoComment,
 } = require("../models");
-const { v4: uuidv4 } = require("uuid");
 
 const videoTitles = [
   "Delicious Food Experience",
@@ -32,11 +27,11 @@ const videoDescriptions = [
 ];
 
 const videoUrls = [
-  "https://youtu.be/xPPLbEFbCAo?si=bescuEhKTJU3gWwV",
-  "https://youtube.com/shorts/KKw-SbklJwM?si=TK-tG0TPFMCphovA",
-  "https://youtu.be/9OquUp6x5IU?si=D_cjdhL__TpIbU9-",
-  "https://youtube.com/shorts/cY3qSAw71qc?si=gzDfrxGpwze6ZMRY",
-  "https://youtube.com/shorts/9CfS_3ZK5FA?si=YgpGgsYHNmDyKRnJ",
+  "https://www.dailymotion.com/video/x8sansc",
+  "https://www.dailymotion.com/video/x8sansc",
+  "https://www.dailymotion.com/video/x8sansc",
+  "https://www.dailymotion.com/video/x8sansc",
+  "https://www.dailymotion.com/video/x8sansc",
 ];
 
 const thumbnailUrls = [
@@ -53,41 +48,18 @@ module.exports = async () => {
   try {
     console.log("Starting video seeding...");
 
-    // Ensure Restaurant Administrator role exists
-    let restaurantAdminRole = await Role.findOne({
+    const restaurantAdminRole = await Role.findOne({
       where: { name: "Restaurant Administrator" },
     });
-    if (!restaurantAdminRole) {
-      throw new Error(
-        "Required role 'Restaurant Administrator' not found. Please run role seeder first."
-      );
-    }
+    if (!restaurantAdminRole)
+      throw new Error("Role 'Restaurant Administrator' not found.");
 
-    const restaurants = await Restaurant.findAll({ include: [Branch] });
+    const restaurants = await Restaurant.findAll();
     const restaurantAdmins = await User.findAll({
       where: { role_id: restaurantAdminRole.id },
     });
+    const menuCategories = await MenuCategory.findAll({ include: [MenuItem] });
 
-    const menuCategories = await MenuCategory.findAll({
-      include: [MenuItem, Branch],
-    });
-
-    const allVideos = [];
-    const allViews = [];
-    const allLikes = [];
-    const allFavorites = [];
-    const allComments = [];
-
-    const commentTexts = [
-      "Great video!",
-      "This looks delicious!",
-      "I want to try this!",
-      "Amazing content!",
-      "When can I order this?",
-      "The chef did a great job!",
-    ];
-
-    // Seed videos
     for (const restaurant of restaurants) {
       const admin = restaurantAdmins.find(
         (a) => a.restaurant_id === restaurant.id
@@ -97,48 +69,38 @@ module.exports = async () => {
       const restaurantCategories = menuCategories.filter(
         (c) => c.restaurant_id === restaurant.id
       );
-
-      const menuItems = [];
-      for (const cat of restaurantCategories) {
-        for (const item of cat.MenuItems) {
-          menuItems.push({ ...item.toJSON(), branch_id: cat.branch_id });
-        }
-      }
+      const menuItems = restaurantCategories.flatMap((c) => c.MenuItems || []);
 
       const videoCount = Math.floor(Math.random() * 2) + 2; // 2-3 videos per restaurant
-
       for (let i = 0; i < videoCount; i++) {
-        const videoData = {
-          id: uuidv4(),
-          restaurant_id: restaurant.id,
-          title: videoTitles[Math.floor(Math.random() * videoTitles.length)],
-          description:
-            videoDescriptions[
-              Math.floor(Math.random() * videoDescriptions.length)
-            ],
-          video_url: videoUrls[Math.floor(Math.random() * videoUrls.length)],
-          thumbnail_url:
-            thumbnailUrls[Math.floor(Math.random() * thumbnailUrls.length)],
-          duration: Math.floor(Math.random() * 120) + 30,
-          status: "approved",
-          uploaded_by: admin.id,
-          branch_id: null,
-          created_at: now,
-          updated_at: now,
-        };
+        const title =
+          videoTitles[Math.floor(Math.random() * videoTitles.length)];
 
-        if (menuItems.length) {
-          videoData.menu_item_id =
-            menuItems[Math.floor(Math.random() * menuItems.length)].id;
-        }
-
-        allVideos.push(videoData);
+        await Video.findOrCreate({
+          where: { restaurant_id: restaurant.id, title },
+          defaults: {
+            id: uuidv4(),
+            restaurant_id: restaurant.id,
+            title,
+            description:
+              videoDescriptions[
+                Math.floor(Math.random() * videoDescriptions.length)
+              ],
+            video_url: videoUrls[Math.floor(Math.random() * videoUrls.length)],
+            thumbnail_url:
+              thumbnailUrls[Math.floor(Math.random() * thumbnailUrls.length)],
+            duration: Math.floor(Math.random() * 120) + 30,
+            status: "approved",
+            uploaded_by: admin.id,
+            branch_id: null,
+            menu_item_id: menuItems.length
+              ? menuItems[Math.floor(Math.random() * menuItems.length)].id
+              : null,
+            created_at: now,
+            updated_at: now,
+          },
+        });
       }
-    }
-
-    if (allVideos.length) {
-      const createdVideos = await Video.bulkCreate(allVideos);
-      console.log(`Created ${createdVideos.length} videos`);
     }
 
     console.log("✅ Video seeding completed successfully!");

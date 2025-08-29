@@ -23,7 +23,6 @@ module.exports = async () => {
 
       const reservationCount = Math.floor(Math.random() * 10) + 5;
 
-      const reservations = [];
       for (let i = 0; i < reservationCount; i++) {
         const table = tables[Math.floor(Math.random() * tables.length)];
         const customer =
@@ -35,28 +34,40 @@ module.exports = async () => {
         const endTime = new Date(startTime);
         endTime.setHours(startTime.getHours() + 2);
 
-        reservations.push({
-          id: uuidv4(),
-          restaurant_id: restaurant.id,
-          branch_id: branch.id,
-          table_id: table.id,
-          customer_id: customer.id,
-          start_time: startTime,
-          end_time: endTime,
-          guest_count: Math.floor(Math.random() * table.capacity) + 1,
-          status: ["pending", "confirmed", "cancelled"][
-            Math.floor(Math.random() * 3)
-          ],
-          created_at: new Date(),
-          updated_at: new Date(),
+        const [reservation, created] = await Reservation.findOrCreate({
+          where: {
+            restaurant_id: restaurant.id,
+            branch_id: branch.id,
+            table_id: table.id,
+            customer_id: customer.id,
+            start_time: startTime,
+          },
+          defaults: {
+            id: uuidv4(),
+            end_time: endTime,
+            guest_count: Math.floor(Math.random() * table.capacity) + 1,
+            status: ["pending", "confirmed", "cancelled"][
+              Math.floor(Math.random() * 3)
+            ],
+            created_at: new Date(),
+            updated_at: new Date(),
+          },
         });
-      }
 
-      await Reservation.bulkCreate(reservations);
+        if (created) {
+          console.log(
+            `✅ Reservation created for table ${table.id} at branch ${branch.name}`
+          );
+        } else {
+          console.log(
+            `ℹ️ Reservation already exists for table ${table.id} at branch ${branch.name}`
+          );
+        }
+      }
     }
   }
 
   console.log(
-    "✅ Reservation seeding completed successfully for all branches."
+    "🎉 Reservation seeding completed successfully for all branches."
   );
 };

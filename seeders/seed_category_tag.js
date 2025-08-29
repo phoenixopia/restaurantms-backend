@@ -1,3 +1,5 @@
+"use strict";
+
 const { CategoryTag } = require("../models");
 const { v4: uuidv4 } = require("uuid");
 
@@ -22,12 +24,20 @@ module.exports = async () => {
     "Specials",
   ];
 
-  await CategoryTag.bulkCreate(
-    names.map((name) => ({
-      id: uuidv4(),
-      name,
-    }))
-  );
+  for (const name of names) {
+    const [tag, created] = await CategoryTag.findOrCreate({
+      where: { name },
+      defaults: {
+        id: uuidv4(),
+      },
+    });
 
-  console.log("✅ Category tags seeded");
+    if (created) {
+      console.log(`✅ Category tag created: ${name}`);
+    } else {
+      console.log(`ℹ️ Category tag already exists: ${name}`);
+    }
+  }
+
+  console.log("🎉 All Category tags processed");
 };

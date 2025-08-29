@@ -6,7 +6,6 @@ const {
   SystemSetting,
   Plan,
   Role,
-  RoleTag,
   RestaurantBankAccount,
   User,
 } = require("../models");
@@ -19,6 +18,12 @@ module.exports = async () => {
     Role.findOne({ where: { name: "Restaurant Administrator" } }),
     User.findOne({ where: { email: "natikeleme1@gmail.com" } }),
   ]);
+
+  if (!basicPlan || !restaurantAdminRole || !superAdmin) {
+    throw new Error(
+      "Basic Plan, Restaurant Admin Role, or Super Admin not found."
+    );
+  }
 
   const restaurantData = [
     {
@@ -138,7 +143,6 @@ module.exports = async () => {
       updated_at: now,
     });
 
-    // Create subscription
     await Subscription.create({
       restaurant_id: restaurant.id,
       plan_id: basicPlan.id,
@@ -163,6 +167,6 @@ module.exports = async () => {
   }
 
   console.log(
-    "✅ Restaurants, Admin Users, Subscriptions, and Settings seeded successfully"
+    "✅ Restaurants, Admin Users, Subscriptions, Bank Accounts, and Settings seeded successfully"
   );
 };

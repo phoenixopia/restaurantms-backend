@@ -20,23 +20,15 @@ module.exports = async () => {
     });
 
     console.log(`Found ${restaurants.length} restaurants`);
-    if (restaurants.length > 0) {
-      console.log(
-        "First restaurant branches:",
-        restaurants[0].Branches ? restaurants[0].Branches.length : 0
-      );
-    }
 
     // Fetch category tags once
     const categoryTags = await CategoryTag.findAll();
-
     const getRandomTags = () => {
       if (categoryTags.length === 0) return [];
       const shuffled = [...categoryTags].sort(() => 0.5 - Math.random());
       return shuffled.slice(0, Math.floor(Math.random() * 2) + 2);
     };
 
-    // Predefined menu categories & items
     const menuData = [
       {
         category: "Appetizers",
@@ -88,7 +80,6 @@ module.exports = async () => {
       },
     ];
 
-    // Food images (rotated between items)
     const foodImages = [
       "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQMFUQWUr_5SKpmX24mZIWpQAYKj5iCJ9p7fA&s",
       "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT-coO6G2IuI734BMaQkhQk0NrYguFtEhJ8dw&s",
@@ -97,89 +88,69 @@ module.exports = async () => {
       "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ_h6zQdDnnf-WQsmf4ZP7bjskEG51CJEqH1g&s",
     ];
 
-    // Iterate over restaurants
     for (let i = 0; i < restaurants.length; i++) {
       const restaurant = restaurants[i];
-      console.log(
-        `Processing restaurant ${i + 1}/${restaurants.length}: ${
-          restaurant.restaurant_name
-        }`
-      );
-
       const menu = await Menu.findOne({
         where: { restaurant_id: restaurant.id },
       });
+      if (!menu) continue;
 
-      if (!menu) {
-        console.warn(
-          `⚠️ No menu found for ${restaurant.restaurant_name}, skipping...`
-        );
-        continue;
-      }
-
-      // Process branches
       for (let j = 0; j < restaurant.Branches.length; j++) {
         const branch = restaurant.Branches[j];
-        console.log(
-          `  Processing branch ${j + 1}/${restaurant.Branches.length}: ${
-            branch.name
-          }`
-        );
 
-        // Process categories
         for (let k = 0; k < menuData.length; k++) {
           const categoryData = menuData[k];
 
-          const menuCategory = await MenuCategory.create({
-            id: uuidv4(),
-            restaurant_id: restaurant.id,
-            branch_id: branch.id,
-            menu_id: menu.id,
-            name: categoryData.category,
-            description: `Delicious ${categoryData.category}`,
-            sort_order: k + 1,
-            is_active: true,
-            created_at: now,
-            updated_at: now,
+          const [menuCategory] = await MenuCategory.findOrCreate({
+            where: {
+              restaurant_id: restaurant.id,
+              branch_id: branch.id,
+              menu_id: menu.id,
+              name: categoryData.category,
+            },
+            defaults: {
+              id: uuidv4(),
+              description: `Delicious ${categoryData.category}`,
+              sort_order: k + 1,
+              is_active: true,
+              created_at: now,
+              updated_at: now,
+            },
           });
 
-          // Assign random tags if available
           const randomTags = getRandomTags();
-          if (randomTags.length > 0) {
-            await Promise.all(
-              randomTags.map((tag) =>
-                MenuCategoryTags.create({
-                  menu_category_id: menuCategory.id,
-                  category_tag_id: tag.id,
-                  created_at: now,
-                  updated_at: now,
-                })
-              )
-            );
+          for (const tag of randomTags) {
+            await MenuCategoryTags.findOrCreate({
+              where: {
+                menu_category_id: menuCategory.id,
+                category_tag_id: tag.id,
+              },
+              defaults: { created_at: now, updated_at: now },
+            });
           }
 
-          // Insert items in small batches to reduce DB pressure
           const itemBatchSize = 5;
           for (let l = 0; l < categoryData.items.length; l += itemBatchSize) {
             const batch = categoryData.items.slice(l, l + itemBatchSize);
-            await Promise.all(
-              batch.map((item, index) =>
-                MenuItem.create({
-                  id: uuidv4(),
+            for (let m = 0; m < batch.length; m++) {
+              const item = batch[m];
+              await MenuItem.findOrCreate({
+                where: {
                   menu_category_id: menuCategory.id,
                   name: item,
+                },
+                defaults: {
+                  id: uuidv4(),
                   description: `Tasty ${item}`,
                   unit_price: (Math.random() * 4 + 1).toFixed(2),
-                  image: foodImages[(l + index) % foodImages.length],
+                  image: foodImages[(l + m) % foodImages.length],
                   is_active: true,
                   seasonal: false,
                   created_at: now,
                   updated_at: now,
-                })
-              )
-            );
-
-            // Small delay between batches
+                },
+              });
+            }
             if (l + itemBatchSize < categoryData.items.length) {
               await new Promise((resolve) => setTimeout(resolve, 100));
             }
@@ -187,7 +158,6 @@ module.exports = async () => {
         }
       }
 
-      // Delay between restaurants
       if (i < restaurants.length - 1) {
         await new Promise((resolve) => setTimeout(resolve, 500));
       }

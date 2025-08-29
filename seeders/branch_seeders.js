@@ -16,12 +16,9 @@ module.exports = async () => {
     return;
   }
 
-  let branches = [];
-
-  restaurants.forEach((restaurant) => {
-    branches.push(
+  for (const restaurant of restaurants) {
+    const branchData = [
       {
-        id: uuidv4(),
         restaurant_id: restaurant.id,
         location_id: locations[0].id,
         name: "Bole Branch",
@@ -33,7 +30,6 @@ module.exports = async () => {
         updated_at: now,
       },
       {
-        id: uuidv4(),
         restaurant_id: restaurant.id,
         location_id: locations[1].id,
         name: "Megenagna Branch",
@@ -45,7 +41,6 @@ module.exports = async () => {
         updated_at: now,
       },
       {
-        id: uuidv4(),
         restaurant_id: restaurant.id,
         location_id: locations[2].id,
         name: "Kazanchis Branch",
@@ -55,13 +50,24 @@ module.exports = async () => {
         closing_time: "03:00:00",
         created_at: now,
         updated_at: now,
-      }
-    );
-  });
+      },
+    ];
 
-  await Branch.bulkCreate(branches);
+    for (const branch of branchData) {
+      await Branch.findOrCreate({
+        where: {
+          restaurant_id: branch.restaurant_id,
+          name: branch.name,
+        },
+        defaults: {
+          ...branch,
+          id: uuidv4(), // generate new UUID if creating
+        },
+      });
+    }
+  }
 
   console.log(
-    `✅ Seeded ${branches.length} branches across ${restaurants.length} restaurants`
+    `✅ Branch seeding completed across ${restaurants.length} restaurants`
   );
 };

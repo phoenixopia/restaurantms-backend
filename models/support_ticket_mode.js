@@ -20,7 +20,7 @@ module.exports = (sequelize, DataTypes) => {
       },
       branch_id: {
         type: DataTypes.UUID,
-        allowNull: false,
+
         references: {
           model: "branches",
           key: "id",
