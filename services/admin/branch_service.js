@@ -385,12 +385,11 @@ const BranchService = {
     }
   },
 
-  async updateBranch(user, branchId, data = {}) {
-    const transaction = await sequelize.transaction();
+  async updateBranch(user, branchId, data) {
+    const t = await sequelize.transaction();
     try {
-      const branch = await Branch.findByPk(branchId, { transaction });
+      const branch = await Branch.findByPk(branchId, { transaction: t });
       if (!branch) throwError("Branch not found", 404);
-
       // ===== User Authorization =====
       if (user.restaurant_id) {
         if (branch.restaurant_id !== user.restaurant_id)
@@ -400,7 +399,6 @@ const BranchService = {
       } else {
         throwError("User not associated with any restaurant or branch", 403);
       }
-
       // ===== Branch fields =====
       const branchUpdates = {};
       if (data.name !== undefined) branchUpdates.name = data.name;
@@ -413,9 +411,16 @@ const BranchService = {
           throwError("Invalid status value", 400);
         branchUpdates.status = data.status;
       }
-      if (data.main_branch !== undefined)
+      // if the main branch is being set to true, make all branches under that resturant false
+      if (data.main_branch !== undefined) {
+        if (data.main_branch === true) {
+          await Branch.update(
+            { main_branch: false },
+            { where: { restaurant_id: branch.restaurant_id }, transaction: t }
+          );
+        }
         branchUpdates.main_branch = data.main_branch;
-
+      }
       // ===== Manager check =====
       if (data.manager_id !== undefined && data.manager_id !== null) {
         // Check if user is already manager of another branch
@@ -424,7 +429,7 @@ const BranchService = {
             manager_id: data.manager_id,
             id: { [Op.ne]: branch.id }, // exclude current branch
           },
-          transaction,
+          transaction: t,
         });
         if (existingManager) {
           throwError("This user is already a manager for another branch", 400);
@@ -433,30 +438,26 @@ const BranchService = {
       } else if (data.manager_id === null) {
         branchUpdates.manager_id = null; // remove manager
       }
-
       // ===== Location fields =====
       const locationUpdates = {};
       if (data.address !== undefined) locationUpdates.address = data.address;
       if (data.latitude !== undefined) locationUpdates.latitude = data.latitude;
       if (data.longitude !== undefined)
         locationUpdates.longitude = data.longitude;
-
       // ===== 1. Update branch =====
       if (Object.keys(branchUpdates).length > 0) {
-        await branch.update(branchUpdates, { transaction });
+        await branch.update(branchUpdates, { transaction: t });
       }
-
       // ===== 2. Update location =====
       let updatedLocation = null;
       if (Object.keys(locationUpdates).length > 0) {
         const loc = await Location.findByPk(branch.location_id, {
-          transaction,
+          transaction: t,
         });
         if (!loc) throwError("Location not found", 404);
-        await loc.update(locationUpdates, { transaction });
+        await loc.update(locationUpdates, { transaction: t });
         updatedLocation = loc;
       }
-
       // ===== 3. Update staff assignment =====
       if (data.staff_ids !== undefined && Array.isArray(data.staff_ids)) {
         // Remove users no longer assigned
@@ -467,22 +468,19 @@ const BranchService = {
               branch_id: branch.id,
               id: { [Op.notIn]: data.staff_ids },
             },
-            transaction,
+            transaction: t,
           }
         );
-
         // Assign new users
         await User.update(
           { branch_id: branch.id },
-          { where: { id: data.staff_ids }, transaction }
+          { where: { id: data.staff_ids }, transaction: t }
         );
       }
-
-      await transaction.commit();
-
+      await t.commit();
       return { branch, location: updatedLocation };
     } catch (err) {
-      await transaction.rollback();
+      await t.rollback();
       throw err;
     }
   },
