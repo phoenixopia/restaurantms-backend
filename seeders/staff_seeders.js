@@ -21,8 +21,6 @@ module.exports = async () => {
   if (!adminRole) throw new Error("Role 'Restaurant Administrator' not found");
 
   const restaurants = await Restaurant.findAll({ include: [Branch] });
-  const now = new Date();
-
   const staffRolesList = ["Waiter", "Chef", "Cashier", "Bartender", "Host"];
   const staffPermissionsMap = {
     Waiter: ["view_menu", "view_order"],
@@ -31,6 +29,7 @@ module.exports = async () => {
     Bartender: ["view_menu", "view_order"],
     Host: ["view_branch", "view_reservations"],
   };
+  const now = new Date();
 
   for (const restaurant of restaurants) {
     const restaurantAdmin = await User.findOne({
@@ -44,65 +43,70 @@ module.exports = async () => {
       continue;
     }
 
-    const roles = [];
+    // Create roles
+    const createdRoles = [];
     for (const roleName of staffRolesList) {
-      const [staffRole] = await Role.findOrCreate({
-        where: { name: roleName, restaurant_id: restaurant.id },
-        defaults: {
-          id: uuidv4(),
-          role_tag_id: staffRoleTag.id,
-          created_by: restaurantAdmin.id,
-          description: `${roleName} role for ${restaurant.restaurant_name}`,
-        },
+      const staffRole = await Role.create({
+        id: uuidv4(),
+        name: roleName,
+        restaurant_id: restaurant.id,
+        role_tag_id: staffRoleTag.id,
+        created_by: restaurantAdmin.id,
+        description: `${roleName} role for ${restaurant.restaurant_name}`,
+        created_at: now,
+        updated_at: now,
       });
+      createdRoles.push(staffRole);
 
-      roles.push(staffRole);
-
+      // Assign permissions
       const permissionNames = staffPermissionsMap[roleName] || [];
       const permissions = await Permission.findAll({
         where: { name: permissionNames },
       });
 
-      // Assign permissions using findOrCreate
-      for (const perm of permissions) {
-        await RolePermission.findOrCreate({
-          where: { role_id: staffRole.id, permission_id: perm.id },
-          defaults: { id: uuidv4(), created_at: now, updated_at: now },
-        });
+      const rolePermissionsData = permissions.map((perm) => ({
+        id: uuidv4(),
+        role_id: staffRole.id,
+        permission_id: perm.id,
+        created_at: now,
+        updated_at: now,
+      }));
+
+      if (rolePermissionsData.length) {
+        await RolePermission.bulkCreate(rolePermissionsData);
       }
     }
 
     // Create 5 staff users per restaurant
+    const usersData = [];
     for (let i = 1; i <= 5; i++) {
       const branch = restaurant.Branches.length
         ? restaurant.Branches[(i - 1) % restaurant.Branches.length]
         : null;
-      const assignedRole = roles[(i - 1) % roles.length];
+      const assignedRole = createdRoles[(i - 1) % createdRoles.length];
 
-      await User.findOrCreate({
-        where: {
-          email: `staff${i}@${restaurant.restaurant_name
-            .toLowerCase()
-            .replace(/\s+/g, "")}.example.com`,
-        },
-        defaults: {
-          id: uuidv4(),
-          first_name: `Staff${i}`,
-          last_name: restaurant.restaurant_name,
-          password: "12345678",
-          branch_id: branch ? branch.id : null,
-          restaurant_id: null,
-          role_id: assignedRole.id,
-          role_tag_id: staffRoleTag.id,
-          created_by: restaurantAdmin.id,
-          is_active: true,
-          email_verified_at: now,
-          password_changed_at: now,
-          created_at: now,
-          updated_at: now,
-        },
+      usersData.push({
+        id: uuidv4(),
+        first_name: `Staff${i}`,
+        last_name: restaurant.restaurant_name,
+        email: `staff${i}@${restaurant.restaurant_name
+          .toLowerCase()
+          .replace(/\s+/g, "")}.example.com`,
+        password: "12345678",
+        branch_id: branch ? branch.id : null,
+        restaurant_id: restaurant.id,
+        role_id: assignedRole.id,
+        role_tag_id: staffRoleTag.id,
+        created_by: restaurantAdmin.id,
+        is_active: true,
+        email_verified_at: now,
+        password_changed_at: now,
+        created_at: now,
+        updated_at: now,
       });
     }
+
+    await User.bulkCreate(usersData);
   }
 
   console.log(

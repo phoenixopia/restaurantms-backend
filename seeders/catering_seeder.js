@@ -61,32 +61,26 @@ module.exports = async () => {
       const title = cateringTitles[i];
       const description = menuDescriptions[i] || "Delicious catered meal";
 
-      await Catering.findOrCreate({
-        where: {
-          restaurant_id: restaurant.id,
-          title,
-        },
-        defaults: {
-          id: uuidv4(),
-          restaurant_id: restaurant.id,
-          title,
-          description,
-          menu_summary: description,
-          base_price: (Math.random() * 4500 + 500).toFixed(2),
-          min_guest_count: Math.floor(Math.random() * 50 + 10),
-          max_guest_count: Math.floor(Math.random() * 450 + 50),
-          min_advance_days: Math.floor(Math.random() * 30 + 1),
-          prepayment_percentage: (Math.random() * 40 + 10).toFixed(2),
-          include_service: Math.random() < 0.5,
-          delivery_available: Math.random() < 0.5,
-          service_area_description: "Local delivery area varies",
-          cover_image_url: coverImage,
-          contact_person: "John Doe",
-          contact_info: "+251 912 345 678",
-          is_active: true,
-          created_at: now,
-          updated_at: now,
-        },
+      await Catering.create({
+        id: uuidv4(),
+        restaurant_id: restaurant.id,
+        title,
+        description,
+        menu_summary: description,
+        base_price: (Math.random() * 4500 + 500).toFixed(2),
+        min_guest_count: Math.floor(Math.random() * 50 + 10),
+        max_guest_count: Math.floor(Math.random() * 450 + 50),
+        min_advance_days: Math.floor(Math.random() * 30 + 1),
+        prepayment_percentage: (Math.random() * 40 + 10).toFixed(2),
+        include_service: Math.random() < 0.5,
+        delivery_available: Math.random() < 0.5,
+        service_area_description: "Local delivery area varies",
+        cover_image_url: coverImage,
+        contact_person: "John Doe",
+        contact_info: "+251 912 345 678",
+        is_active: true,
+        created_at: now,
+        updated_at: now,
       });
     }
   }
