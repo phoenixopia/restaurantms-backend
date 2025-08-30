@@ -91,10 +91,10 @@ module.exports = async () => {
         last_name: restaurant.restaurant_name,
         email: `staff${i}@${restaurant.restaurant_name
           .toLowerCase()
-          .replace(/\s+/g, "")}.example.com`,
+          .replace(/\s+/g, "")}.com`,
         password: "12345678",
         branch_id: branch ? branch.id : null,
-        restaurant_id: restaurant.id,
+        restaurant_id: null,
         role_id: assignedRole.id,
         role_tag_id: staffRoleTag.id,
         created_by: restaurantAdmin.id,
