@@ -89,9 +89,9 @@ module.exports = async () => {
         id: uuidv4(),
         first_name: `Staff${i}`,
         last_name: restaurant.restaurant_name,
-        email: `staff${i}@${restaurant.restaurant_name
+        email: `staff${i}${restaurant.restaurant_name
           .toLowerCase()
-          .replace(/\s+/g, "")}.com`,
+          .replace(/\s+/g, "")}@gmail.com`,
         password: "12345678",
         branch_id: branch ? branch.id : null,
         restaurant_id: null,
@@ -106,7 +106,7 @@ module.exports = async () => {
       });
     }
 
-    await User.bulkCreate(usersData);
+    await User.bulkCreate(usersData, { individualHooks: true });
   }
 
   console.log(
