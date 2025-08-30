@@ -1,3 +1,4 @@
+// seeders/seed_permission.js
 "use strict";
 
 const { Permission } = require("../models");
@@ -222,18 +223,7 @@ module.exports = async () => {
     { name: "delete_video", description: "Permission to delete videos" },
   ];
 
-  for (const perm of permissions) {
-    const [permission, created] = await Permission.findOrCreate({
-      where: { name: perm.name },
-      defaults: { id: uuidv4(), description: perm.description },
-    });
+  await Permission.bulkCreate(permissions.map((p) => ({ ...p, id: uuidv4() })));
 
-    if (created) {
-      console.log(`✅ Permission created: ${perm.name}`);
-    } else {
-      console.log(`ℹ️ Permission already exists: ${perm.name}`);
-    }
-  }
-
-  console.log("🎉 All permissions processed");
+  console.log("✅ Permissions seeded successfully");
 };

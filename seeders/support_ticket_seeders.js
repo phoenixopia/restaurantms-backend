@@ -23,6 +23,7 @@ module.exports = async () => {
     if (user.restaurant_id) {
       // Restaurant admin → restaurant only
       restaurantId = user.restaurant_id;
+      branchId = null;
     } else if (user.branch_id && user.Branch) {
       // Staff → branch + restaurant from branch
       branchId = user.branch_id;
@@ -31,28 +32,26 @@ module.exports = async () => {
       continue;
     }
 
+    // Seed 2 open tickets per user
+    const tickets = [];
     for (let i = 1; i <= 2; i++) {
-      const title = `Issue ${i} by ${user.username || "user"}`;
-      const [ticket] = await SupportTicket.findOrCreate({
-        where: {
-          user_id: user.id,
-          title,
-        },
-        defaults: {
-          id: uuidv4(),
-          restaurant_id: restaurantId,
-          branch_id: branchId,
-          user_id: user.id,
-          description: `This is a seeded description for issue ${i} created by ${
-            user.username || "user"
-          }.`,
-          status: "open",
-          priority: priorities[(i - 1) % priorities.length],
-          created_at: now,
-          updated_at: now,
-        },
+      tickets.push({
+        id: uuidv4(),
+        restaurant_id: restaurantId,
+        branch_id: branchId,
+        user_id: user.id,
+        title: `Issue ${i} by ${user.username || "user"}`,
+        description: `This is a seeded description for issue ${i} created by ${
+          user.username || "user"
+        }.`,
+        status: "open",
+        priority: priorities[(i - 1) % priorities.length],
+        created_at: now,
+        updated_at: now,
       });
     }
+
+    await SupportTicket.bulkCreate(tickets);
   }
 
   console.log(

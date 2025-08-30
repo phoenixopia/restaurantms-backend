@@ -15,6 +15,7 @@ module.exports = async () => {
   const now = new Date();
   try {
     console.log("🌱 Starting menu categories & items seeding...");
+
     const restaurants = await Restaurant.findAll({
       include: [{ model: Branch }, { model: Menu }],
     });
@@ -23,6 +24,7 @@ module.exports = async () => {
 
     // Fetch category tags once
     const categoryTags = await CategoryTag.findAll();
+
     const getRandomTags = () => {
       if (categoryTags.length === 0) return [];
       const shuffled = [...categoryTags].sort(() => 0.5 - Math.random());
@@ -90,13 +92,29 @@ module.exports = async () => {
 
     for (let i = 0; i < restaurants.length; i++) {
       const restaurant = restaurants[i];
+      console.log(
+        `Processing restaurant ${i + 1}/${restaurants.length}: ${
+          restaurant.restaurant_name
+        }`
+      );
+
       const menu = await Menu.findOne({
         where: { restaurant_id: restaurant.id },
       });
-      if (!menu) continue;
+      if (!menu) {
+        console.warn(
+          `⚠️ No menu found for ${restaurant.restaurant_name}, skipping...`
+        );
+        continue;
+      }
 
       for (let j = 0; j < restaurant.Branches.length; j++) {
         const branch = restaurant.Branches[j];
+        console.log(
+          `  Processing branch ${j + 1}/${restaurant.Branches.length}: ${
+            branch.name
+          }`
+        );
 
         for (let k = 0; k < menuData.length; k++) {
           const categoryData = menuData[k];
@@ -118,6 +136,7 @@ module.exports = async () => {
             },
           });
 
+          // Assign random tags
           const randomTags = getRandomTags();
           for (const tag of randomTags) {
             await MenuCategoryTags.findOrCreate({
@@ -125,41 +144,31 @@ module.exports = async () => {
                 menu_category_id: menuCategory.id,
                 category_tag_id: tag.id,
               },
-              defaults: { created_at: now, updated_at: now },
+              defaults: {
+                created_at: now,
+                updated_at: now,
+              },
             });
           }
 
-          const itemBatchSize = 5;
-          for (let l = 0; l < categoryData.items.length; l += itemBatchSize) {
-            const batch = categoryData.items.slice(l, l + itemBatchSize);
-            for (let m = 0; m < batch.length; m++) {
-              const item = batch[m];
-              await MenuItem.findOrCreate({
-                where: {
-                  menu_category_id: menuCategory.id,
-                  name: item,
-                },
-                defaults: {
-                  id: uuidv4(),
-                  description: `Tasty ${item}`,
-                  unit_price: (Math.random() * 4 + 1).toFixed(2),
-                  image: foodImages[(l + m) % foodImages.length],
-                  is_active: true,
-                  seasonal: false,
-                  created_at: now,
-                  updated_at: now,
-                },
-              });
-            }
-            if (l + itemBatchSize < categoryData.items.length) {
-              await new Promise((resolve) => setTimeout(resolve, 100));
-            }
+          // Create menu items
+          for (let l = 0; l < categoryData.items.length; l++) {
+            const item = categoryData.items[l];
+            await MenuItem.findOrCreate({
+              where: { menu_category_id: menuCategory.id, name: item },
+              defaults: {
+                id: uuidv4(),
+                description: `Tasty ${item}`,
+                unit_price: (Math.random() * 4 + 1).toFixed(2),
+                image: foodImages[l % foodImages.length],
+                is_active: true,
+                seasonal: false,
+                created_at: now,
+                updated_at: now,
+              },
+            });
           }
         }
-      }
-
-      if (i < restaurants.length - 1) {
-        await new Promise((resolve) => setTimeout(resolve, 500));
       }
     }
 

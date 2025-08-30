@@ -42,33 +42,33 @@ const { sequelize } = require("../models/index");
     // await require("./branch_seeders")();
     // console.log("✅ Branches seeded");
 
-    console.log("Seeding staff...");
-    await require("./staff_seeders")();
-    console.log("✅ Staff seeded");
+    // console.log("Seeding staff...");
+    // await require("./staff_seeders")();
+    // console.log("✅ Staff seeded");
 
-    console.log("Seeding analytics snapshots...");
-    await require("./snapshot_seeders")();
-    console.log("✅ Analytics snapshots seeded");
+    // console.log("Seeding analytics snapshots...");
+    // await require("./snapshot_seeders")();
+    // console.log("✅ Analytics snapshots seeded");
 
-    console.log("Seeding tables...");
-    await require("./tables_seeders")();
-    console.log("✅ Tables seeded");
+    // console.log("Seeding tables...");
+    // await require("./tables_seeders")();
+    // console.log("✅ Tables seeded");
 
-    console.log("Seeding reservations...");
-    await require("./reservation_seeders")();
-    console.log("✅ Reservations seeded");
+    // console.log("Seeding customers...");
+    // await require("./customers_seeders")();
+    // console.log("✅ Customers seeded");
 
-    console.log("Seeding menus...");
-    await require("./menu_seeders")();
-    console.log("✅ Menus seeded");
+    // console.log("Seeding reservations...");
+    // await require("./reservation_seeders")();
+    // console.log("✅ Reservations seeded");
+
+    // console.log("Seeding menus...");
+    // await require("./menu_seeders")();
+    // console.log("✅ Menus seeded");
 
     console.log("Seeding menu categories & items...");
     await require("./menu_category_items_seeders")();
     console.log("✅ Menu categories & items seeded");
-
-    console.log("Seeding customers...");
-    await require("./customers_seeders")();
-    console.log("✅ Customers seeded");
 
     console.log("Seeding catering...");
     await require("./catering_seeder")();
