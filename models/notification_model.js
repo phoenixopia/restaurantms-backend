@@ -9,7 +9,8 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
       },
-      user_id: {
+
+      target_user_id: {
         type: DataTypes.UUID,
         allowNull: true,
         references: {
@@ -17,7 +18,8 @@ module.exports = (sequelize, DataTypes) => {
           key: "id",
         },
       },
-      customer_id: {
+
+      target_customer_id: {
         type: DataTypes.UUID,
         allowNull: true,
         references: {
@@ -25,42 +27,41 @@ module.exports = (sequelize, DataTypes) => {
           key: "id",
         },
       },
-      channel: {
-        type: DataTypes.ENUM("Email", "SMS", "In-App"),
+
+      type: {
+        type: DataTypes.ENUM(
+          "ORDER",
+          "TICKET",
+          "INVENTORY",
+          "PAYMENT",
+          "SYSTEM"
+        ),
         allowNull: false,
+        defaultValue: "SYSTEM",
       },
 
-      title: {
-        type: DataTypes.TEXT,
+      // channel: {
+      //   type: DataTypes.ENUM("Email", "SMS", "In-App"),
+      //   allowNull: false,
+      // },
+
+      title: { type: DataTypes.STRING, allowNull: false },
+
+      message: { type: DataTypes.TEXT, allowNull: false },
+
+      state: {
+        type: DataTypes.ENUM("info", "success", "warning", "error"),
         allowNull: false,
+        defaultValue: "info",
       },
-      body: {
-        type: DataTypes.TEXT,
-        allowNull: false,
-      },
-      status: {
-        type: DataTypes.ENUM("Pending", "Sent", "Failed"),
-        allowNull: false,
-        defaultValue: "Pending",
-      },
-      retry_count: {
-        type: DataTypes.INTEGER,
-        allowNull: false,
-        defaultValue: 0,
-      },
-      sent_at: {
-        type: DataTypes.DATE,
-        allowNull: true,
-      },
-      failed_at: {
-        type: DataTypes.DATE,
-        allowNull: true,
-      },
-      created_at: {
-        type: DataTypes.DATE,
-        allowNull: false,
-        defaultValue: DataTypes.NOW,
-      },
+
+      data: { type: DataTypes.JSON, allowNull: true },
+      is_read: { type: DataTypes.BOOLEAN, defaultValue: false },
+      read_at: { type: DataTypes.DATE, allowNull: true },
+      created_by: { type: DataTypes.UUID, allowNull: true },
+
+      restaurant_id: { type: DataTypes.UUID, allowNull: false },
+      branch_id: { type: DataTypes.UUID, allowNull: true },
     },
     {
       tableName: "notifications",
@@ -70,8 +71,23 @@ module.exports = (sequelize, DataTypes) => {
   );
 
   Notification.associate = (models) => {
-    Notification.belongsTo(models.User, { foreignKey: "user_id" });
-    Notification.belongsTo(models.Customer, { foreignKey: "customer_id" });
+    Notification.belongsTo(models.User, {
+      foreignKey: "target_user_id",
+      as: "user",
+    });
+
+    Notification.belongsTo(models.Customer, {
+      foreignKey: "target_customer_id",
+      as: "customer",
+    });
+
+    Notification.belongsTo(models.Restaurant, {
+      foreignKey: "restaurant_id",
+    });
+
+    Notification.belongsTo(models.Branch, {
+      foreignKey: "branch_id",
+    });
   };
 
   return Notification;

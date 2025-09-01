@@ -14,12 +14,12 @@ router.get(
   NotificationController.getAllNotifications
 );
 router.get(
-  "/:id/get",
+  "/mark-as-read/id",
   protect("user"),
   NotificationController.getNotificationById
 );
-router.post(
-  "/:id/retry",
+router.get(
+  "/unread-count",
   protect("user"),
   NotificationController.retryNotification
 );

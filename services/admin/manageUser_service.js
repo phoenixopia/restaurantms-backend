@@ -285,6 +285,8 @@ const UserService = {
       const user = await User.findByPk(id, { transaction: t });
       if (!user) throwError("User not found", 404);
 
+      console.log(user.created_by, deleterId);
+
       if (user.created_by !== deleterId) {
         throwError("You are not authorized to delete this user", 403);
       }

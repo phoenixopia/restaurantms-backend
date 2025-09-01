@@ -18,14 +18,15 @@ module.exports = (sequelize, DataTypes) => {
           key: "id",
         },
       },
+
       branch_id: {
         type: DataTypes.UUID,
-
         references: {
           model: "branches",
           key: "id",
         },
       },
+
       user_id: {
         type: DataTypes.UUID,
         allowNull: false,
