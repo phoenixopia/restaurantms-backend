@@ -3,17 +3,16 @@
 const { Table, Branch, Restaurant, sequelize } = require("../../models");
 const { Op } = require("sequelize");
 const throwError = require("../../utils/throwError");
+const logActivity = require("../../utils/logActivity");
 
 const TableService = {
   // ------------------ Create Table ------------------
   async createTable(data, user) {
     const t = await sequelize.transaction();
     try {
-      // Determine branch ID
       const branchId = user.branch_id || data.branch_id;
       if (!branchId) throwError("Branch ID is required", 400);
 
-      // Determine restaurant ID
       let restaurantId = user.restaurant_id;
       if (user.branch_id) {
         const branch = await Branch.findByPk(user.branch_id, {
@@ -23,7 +22,6 @@ const TableService = {
         restaurantId = branch.restaurant_id;
       }
 
-      // Check if table_number already exists in the branch
       const existingTable = await Table.findOne({
         where: { branch_id: branchId, table_number: data.table_number },
         transaction: t,
@@ -31,7 +29,6 @@ const TableService = {
       if (existingTable)
         throwError("Table number already exists in this branch", 400);
 
-      // Create the table
       const table = await Table.create(
         {
           table_number: data.table_number,
@@ -43,16 +40,23 @@ const TableService = {
         { transaction: t }
       );
 
+      // Log activity
+      await logActivity({
+        user_id: user.id,
+        module: "Table",
+        action: "Create",
+        details: table.toJSON(),
+        transaction: t,
+      });
+
       await t.commit();
-      return {
-        message: "Table created successfully",
-        data: table,
-      };
+      return { message: "Table created successfully", data: table };
     } catch (err) {
       await t.rollback();
       throw err;
     }
   },
+
   // ------------------ Get Tables ------------------
   async getTables(user, query) {
     let { page = 1, limit = 10, search = "", is_active, branch_id } = query;
@@ -61,12 +65,9 @@ const TableService = {
     const offset = (page - 1) * limit;
 
     const where = {};
-
     if (user.branch_id) {
-      // Branch user: can only see their branch
       where.branch_id = user.branch_id;
     } else if (user.restaurant_id) {
-      // Restaurant user: can filter by branch_id if provided
       if (branch_id) where.branch_id = branch_id;
       else where.restaurant_id = user.restaurant_id;
     }
@@ -97,7 +98,6 @@ const TableService = {
     });
     if (!table) throwError("Table not found", 404);
 
-    // Permission check
     if (user.branch_id && table.branch_id !== user.branch_id)
       throwError("Access denied", 403);
     if (user.restaurant_id && table.restaurant_id !== user.restaurant_id)
@@ -120,9 +120,19 @@ const TableService = {
 
       if (user.branch_id) delete data.branch_id; // branch users cannot change branch
 
+      const oldData = table.toJSON();
       await table.update(data, { transaction: t });
-      await t.commit();
 
+      // Log activity
+      await logActivity({
+        user_id: user.id,
+        module: "Table",
+        action: "Update",
+        details: { before: oldData, after: table.toJSON() },
+        transaction: t,
+      });
+
+      await t.commit();
       return { message: "Table updated successfully", data: table };
     } catch (err) {
       await t.rollback();
@@ -142,9 +152,19 @@ const TableService = {
       if (user.restaurant_id && table.restaurant_id !== user.restaurant_id)
         throwError("Access denied", 403);
 
+      const oldData = table.toJSON();
       await table.destroy({ transaction: t });
-      await t.commit();
 
+      // Log activity
+      await logActivity({
+        user_id: user.id,
+        module: "Table",
+        action: "Delete",
+        details: oldData,
+        transaction: t,
+      });
+
+      await t.commit();
       return { message: "Table deleted successfully", data: null };
     } catch (err) {
       await t.rollback();
@@ -153,10 +173,23 @@ const TableService = {
   },
 
   // ------------------ Table KPI ------------------
-  async getTableKPI(user) {
+  async getTableKPI(user, query = {}) {
     const where = {};
-    if (user.branch_id) where.branch_id = user.branch_id;
-    else if (user.restaurant_id) where.restaurant_id = user.restaurant_id;
+    if (user.branch_id) {
+      where.branch_id = user.branch_id;
+    } else if (user.restaurant_id) {
+      if (query.branch_id) {
+        const branch = await Branch.findOne({
+          where: { id: query.branch_id, restaurant_id: user.restaurant_id },
+        });
+        if (!branch) throwError("Invalid branch for this restaurant", 403);
+        where.branch_id = branch.id;
+      } else {
+        where.restaurant_id = user.restaurant_id;
+      }
+    } else {
+      throwError("Access denied", 403);
+    }
 
     const totalTables = await Table.count({ where });
     const activeTables = await Table.count({
@@ -164,11 +197,7 @@ const TableService = {
     });
     const inactiveTables = totalTables - activeTables;
 
-    return {
-      totalTables,
-      activeTables,
-      inactiveTables,
-    };
+    return { totalTables, activeTables, inactiveTables };
   },
 };
 

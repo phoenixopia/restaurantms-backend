@@ -3,10 +3,11 @@
 const { SupportTicket, User, Branch, sequelize } = require("../../models");
 const { Op } = require("sequelize");
 const throwError = require("../../utils/throwError");
-const sendTicketingNotification = require("../../utils/sendTicketingNotification");
-const sendAdminNotification = require("../../utils/sendAdminNotification");
+const SendNotification = require("../../utils/send_notification");
+const logActivity = require("../../utils/logActivity");
 
 const TicketService = {
+  // ------------------ Create Ticket ------------------
   async createTicket(data, user) {
     const t = await sequelize.transaction();
     try {
@@ -19,7 +20,9 @@ const TicketService = {
       if (user.restaurant_id) {
         restaurantId = user.restaurant_id;
       } else if (user.branch_id) {
-        const branch = Branch.findByPk(user.branch_id);
+        const branch = await Branch.findByPk(user.branch_id, {
+          transaction: t,
+        });
         if (!branch) throwError("Branch not found", 404);
         restaurantId = branch.restaurant_id;
       } else {
@@ -38,6 +41,30 @@ const TicketService = {
         { transaction: t }
       );
 
+      // Send notifications
+      const titleNotif = `New Ticket Sent`;
+      const messageNotif = `You have sent ticket successfully.`;
+      await SendNotification.sendTicketingNotification(
+        restaurantId,
+        titleNotif,
+        messageNotif,
+        user.id,
+        user.branch_id
+      );
+
+      const titleAdmin = `New Ticket Received`;
+      const messageAdmin = `"${restaurantId} sent a new ticket"`;
+      await SendNotification.sendAdminNotification(titleAdmin, messageAdmin);
+
+      // Log activity
+      await logActivity({
+        user_id: user.id,
+        module: "SupportTicket",
+        action: "Create",
+        details: ticket.toJSON(),
+        transaction: t,
+      });
+
       await t.commit();
       return ticket;
     } catch (err) {
@@ -46,6 +73,7 @@ const TicketService = {
     }
   },
 
+  // ------------------ Get All Tickets ------------------
   async getAllTickets(query, user) {
     let {
       page = 1,
@@ -83,7 +111,7 @@ const TicketService = {
             "last_name",
             "email",
             "phone_number",
-          ], // include only required fields
+          ],
         },
       ],
     });
@@ -96,32 +124,53 @@ const TicketService = {
     };
   },
 
+  // ------------------ Get Ticket By ID ------------------
   async getTicketById(id) {
     const ticket = await SupportTicket.findByPk(id);
     if (!ticket) throwError("Ticket not found", 404);
     return ticket;
   },
 
-  async updateTicket(id, data) {
+  // ------------------ Update Ticket ------------------
+  async updateTicket(id, data, user) {
     const t = await sequelize.transaction();
     try {
       const ticket = await SupportTicket.findByPk(id, { transaction: t });
       if (!ticket) throwError("Ticket not found", 404);
 
-      // Only allow update if status is "open"
-      if (ticket.status !== "open") {
+      if (ticket.status !== "open")
         throwError("Only tickets with status 'open' can be updated", 400);
-      }
+
+      const oldData = ticket.toJSON();
 
       // Update allowed fields
-      const { title, description, priority } = data;
-      if (title !== undefined) ticket.title = title;
-      if (description !== undefined) ticket.description = description;
-      if (priority !== undefined) ticket.priority = priority;
+      ["title", "description", "priority"].forEach((field) => {
+        if (data[field] !== undefined) ticket[field] = data[field];
+      });
+
+      // Send notification
+      const t1 = `Ticket Updated`;
+      const message = `Your ticket "${ticket.title}" has been updated successfully.`;
+      await SendNotification.sendTicketingNotification(
+        ticket.restaurant_id,
+        t1,
+        message,
+        user.id,
+        user.branch_id
+      );
 
       await ticket.save({ transaction: t });
-      await t.commit();
 
+      // Log activity
+      await logActivity({
+        user_id: user.id,
+        module: "SupportTicket",
+        action: "Update",
+        details: { before: oldData, after: ticket.toJSON() },
+        transaction: t,
+      });
+
+      await t.commit();
       return ticket;
     } catch (err) {
       await t.rollback();
@@ -129,15 +178,42 @@ const TicketService = {
     }
   },
 
-  async updateTicketStatus(id, data) {
+  // ------------------ Update Ticket Status ------------------
+  async updateTicketStatus(id, data, user) {
     const t = await sequelize.transaction();
     try {
       const { status } = data;
       const ticket = await SupportTicket.findByPk(id, { transaction: t });
       if (!ticket) throwError("Ticket not found", 404);
 
+      const oldData = ticket.toJSON();
       ticket.status = status;
+
+      // Send notifications
+      const t1 = `Ticket Status Updated`;
+      const message = `Your ticket status has been updated to "${status}".`;
+      await SendNotification.sendTicketingNotification(
+        ticket.restaurant_id,
+        t1,
+        message,
+        ticket.user_id,
+        ticket.branch_id
+      );
+
+      const titleAdmin = `Ticket Status Updated`;
+      const messageAdmin = `The ticket "${ticket.title}" status has been updated to "${status}".`;
+      await SendNotification.sendAdminNotification(titleAdmin, messageAdmin);
+
       await ticket.save({ transaction: t });
+
+      // Log activity
+      await logActivity({
+        user_id: user.id,
+        module: "SupportTicket",
+        action: "Update Status",
+        details: { before: oldData, after: ticket.toJSON() },
+        transaction: t,
+      });
 
       await t.commit();
       return ticket;
@@ -147,13 +223,37 @@ const TicketService = {
     }
   },
 
-  async deleteTicket(id) {
+  // ------------------ Delete Ticket ------------------
+  async deleteTicket(id, user) {
     const t = await sequelize.transaction();
     try {
       const ticket = await SupportTicket.findByPk(id, { transaction: t });
       if (!ticket) throwError("Ticket not found", 404);
 
+      const oldData = ticket.toJSON();
+
+      // Send notification
+      const title = `Ticket Deleted`;
+      const message = `Your ticket "${ticket.title}" has been deleted successfully.`;
+      await SendNotification.sendTicketingNotification(
+        ticket.restaurant_id,
+        title,
+        message,
+        user.id,
+        ticket.branch_id
+      );
+
       await ticket.destroy({ transaction: t });
+
+      // Log activity
+      await logActivity({
+        user_id: user.id,
+        module: "SupportTicket",
+        action: "Delete",
+        details: oldData,
+        transaction: t,
+      });
+
       await t.commit();
       return true;
     } catch (err) {

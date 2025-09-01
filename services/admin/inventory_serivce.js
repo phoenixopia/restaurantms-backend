@@ -1,14 +1,19 @@
+"use strict";
+
 const {
   Inventory,
   InventoryTransaction,
   Branch,
+  Restaurant,
   sequelize,
 } = require("../../models");
-const { Op, fn, col } = require("sequelize");
+const { Op, col } = require("sequelize");
 const throwError = require("../../utils/throwError");
-const sendInventoryNotification = require("../../utils/sendInventoryNotification");
+const SendNotification = require("../../utils/send_notification");
+const logActivity = require("../../utils/logActivity");
 
 const InventoryService = {
+  // ------------------ List Inventory ------------------
   async listAllInventory(
     user,
     {
@@ -63,20 +68,23 @@ const InventoryService = {
     };
   },
 
+  // ------------------ Get Single Inventory ------------------
   async getInventory(user, id) {
     const item = await Inventory.findByPk(id, {
       include: [{ model: InventoryTransaction, as: "transactions" }],
     });
-
     if (!item) throwError("Inventory item not found", 404);
 
-    if (user.restaurant_id && item.restaurant_id !== user.restaurant_id)
+    if (
+      (user.restaurant_id && item.restaurant_id !== user.restaurant_id) ||
+      (user.branch_id && item.branch_id !== user.branch_id)
+    )
       throwError("You are not authorized to view this inventory item", 403);
-    if (user.branch_id && item.branch_id !== user.branch_id)
-      throwError("You are not authorized to view this inventory item", 403);
+
     return item;
   },
 
+  // ------------------ Create Inventory ------------------
   async createInventory(
     user,
     { branch_id, name, unit, quantity = 0, threshold = 0 }
@@ -87,7 +95,7 @@ const InventoryService = {
 
       if (user.restaurant_id) {
         if (!branch_id)
-          throwError("branch id is required for restaurant-level users", 400);
+          throwError("Branch ID is required for restaurant-level users", 400);
         const branch = await Branch.findOne({
           where: { id: branch_id, restaurant_id: user.restaurant_id },
           transaction: t,
@@ -130,7 +138,21 @@ const InventoryService = {
 
       const title = `New Inventory Added`;
       const message = `Item "${item.name}" has been added to your branch.`;
-      await sendInventoryNotification(finalBranchId, title, message);
+      await SendNotification.sendInventoryNotification(
+        finalBranchId,
+        title,
+        message,
+        user?.id
+      );
+
+      // Log activity
+      await logActivity({
+        user_id: user.id,
+        module: "Inventory",
+        action: "Create",
+        details: item.toJSON(),
+        transaction: t,
+      });
 
       await t.commit();
       return item;
@@ -140,17 +162,20 @@ const InventoryService = {
     }
   },
 
+  // ------------------ Update Inventory ------------------
   async updateInventory(user, id, { name, quantity, threshold }) {
     const t = await sequelize.transaction();
     try {
       const item = await Inventory.findByPk(id, { transaction: t });
       if (!item) throwError("Inventory item not found", 404);
 
-      if (user.restaurant_id && item.restaurant_id !== user.restaurant_id)
-        throwError("You are not authorized to update this inventory item", 403);
-      if (user.branch_id && item.branch_id !== user.branch_id)
+      if (
+        (user.restaurant_id && item.restaurant_id !== user.restaurant_id) ||
+        (user.branch_id && item.branch_id !== user.branch_id)
+      )
         throwError("You are not authorized to update this inventory item", 403);
 
+      const oldData = item.toJSON();
       item.name = name ?? item.name;
       item.quantity = quantity ?? item.quantity;
       item.threshold = threshold ?? item.threshold;
@@ -159,7 +184,21 @@ const InventoryService = {
 
       const title = `Inventory Updated`;
       const message = `Item "${item.name}" has been updated successfully`;
-      await sendInventoryNotification(item.branch_id, title, message);
+      await SendNotification.sendInventoryNotification(
+        item.branch_id,
+        title,
+        message,
+        user?.id
+      );
+
+      // Log activity
+      await logActivity({
+        user_id: user.id,
+        module: "Inventory",
+        action: "Update",
+        details: { before: oldData, after: item.toJSON() },
+        transaction: t,
+      });
 
       await t.commit();
       return item;
@@ -169,17 +208,20 @@ const InventoryService = {
     }
   },
 
+  // ------------------ Delete Inventory ------------------
   async deleteInventory(user, id) {
     const t = await sequelize.transaction();
     try {
       const item = await Inventory.findByPk(id, { transaction: t });
       if (!item) throwError("Inventory item not found", 404);
 
-      if (user.restaurant_id && item.restaurant_id !== user.restaurant_id)
-        throwError("You are not authorized to delete this inventory item", 403);
-      if (user.branch_id && item.branch_id !== user.branch_id)
+      if (
+        (user.restaurant_id && item.restaurant_id !== user.restaurant_id) ||
+        (user.branch_id && item.branch_id !== user.branch_id)
+      )
         throwError("You are not authorized to delete this inventory item", 403);
 
+      const oldData = item.toJSON();
       await InventoryTransaction.destroy({
         where: { inventory_id: item.id },
         transaction: t,
@@ -187,8 +229,22 @@ const InventoryService = {
       await item.destroy({ transaction: t });
 
       const title = `Inventory Deleted`;
-      const message = `Item "${item.name}" has been Deleted successfully`;
-      await sendInventoryNotification(item.branch_id, title, message, user.id);
+      const message = `Item "${item.name}" has been deleted successfully`;
+      await SendNotification.sendInventoryNotification(
+        item.branch_id,
+        title,
+        message,
+        user?.id
+      );
+
+      // Log activity
+      await logActivity({
+        user_id: user.id,
+        module: "Inventory",
+        action: "Delete",
+        details: oldData,
+        transaction: t,
+      });
 
       await t.commit();
       return {
@@ -200,26 +256,32 @@ const InventoryService = {
     }
   },
 
+  // ------------------ Adjust Inventory ------------------
   async adjustInventory(user, id, { type, quantity, reason }) {
     const t = await sequelize.transaction();
     try {
       const item = await Inventory.findByPk(id, { transaction: t });
       if (!item) throwError("Inventory item not found", 404);
 
-      if (user.restaurant_id && item.restaurant_id !== user.restaurant_id)
-        throwError("You are not authorized to adjust this inventory item", 403);
-      if (user.branch_id && item.branch_id !== user.branch_id)
+      if (
+        (user.restaurant_id && item.restaurant_id !== user.restaurant_id) ||
+        (user.branch_id && item.branch_id !== user.branch_id)
+      )
         throwError("You are not authorized to adjust this inventory item", 403);
 
+      const oldData = item.toJSON();
       let newQty = Number(item.quantity);
       if (type === "in") newQty += Number(quantity);
       if (type === "out" || type === "wastage") newQty -= Number(quantity);
       if (newQty < 0) throwError("Insufficient stock", 400);
 
       if (newQty < item.threshold) {
-        const title = `Low Stock`;
-        const message = `Item "${item.name}" has low stock`;
-        await sendInventoryNotification(item.branch_id, title, message);
+        await SendNotification.sendInventoryNotification(
+          item.branch_id,
+          `Low Stock`,
+          `Item "${item.name}" has low stock`,
+          user?.id
+        );
       }
 
       await item.update({ quantity: newQty }, { transaction: t });
@@ -228,11 +290,23 @@ const InventoryService = {
         { transaction: t }
       );
 
-      const title = `Inventory Adjusted`;
-      const message = `Item "${
-        item.name
-      }" has been ${type} by ${quantity} units. Reason: ${reason || "N/A"}`;
-      await sendInventoryNotification(item.branch_id, title, message);
+      await SendNotification.sendInventoryNotification(
+        item.branch_id,
+        `Inventory Adjusted`,
+        `Item "${item.name}" has been ${type} by ${quantity} units. Reason: ${
+          reason || "N/A"
+        }`,
+        user?.id
+      );
+
+      // Log activity
+      await logActivity({
+        user_id: user.id,
+        module: "Inventory",
+        action: "Adjust",
+        details: { before: oldData, after: item.toJSON() },
+        transaction: t,
+      });
 
       await t.commit();
       return item;
@@ -242,6 +316,7 @@ const InventoryService = {
     }
   },
 
+  // ------------------ Inventory KPIs ------------------
   async getKpis(user, branchId = null) {
     let where = {};
 
@@ -257,9 +332,7 @@ const InventoryService = {
       }
     } else if (user.branch_id) {
       where.branch_id = user.branch_id;
-    } else {
-      throwError("Access denied", 403);
-    }
+    } else throwError("Access denied", 403);
 
     const totalStockItems = await Inventory.count({ where });
     const availableItems = await Inventory.count({
@@ -278,58 +351,73 @@ const InventoryService = {
       where: { ...where, quantity: 0 },
     });
 
-    return {
-      totalStockItems,
-      availableItems,
-      lowStockItems,
-      outOfStockItems,
-    };
+    return { totalStockItems, availableItems, lowStockItems, outOfStockItems };
   },
 
+  // ------------------ Inventory Transaction KPIs ------------------
   async getInventoryTransactionKpis(user, branchId = null) {
-    let where = {};
-
+    const inventoryWhere = {};
     if (user.restaurant_id) {
       if (branchId) {
         const branch = await Branch.findOne({
           where: { id: branchId, restaurant_id: user.restaurant_id },
         });
         if (!branch) throwError("Invalid branch for this restaurant", 403);
-        where.branch_id = branch.id;
+        inventoryWhere.branch_id = branch.id;
+        inventoryWhere.restaurant_id = user.restaurant_id;
       } else {
-        where.restaurant_id = user.restaurant_id;
+        inventoryWhere.restaurant_id = user.restaurant_id;
       }
     } else if (user.branch_id) {
-      where.branch_id = user.branch_id;
-    } else {
-      throwError("Access denied", 403);
-    }
+      const branch = await Branch.findByPk(user.branch_id);
+      if (!branch) throwError("Branch not found", 404);
+      inventoryWhere.branch_id = branch.id;
+      inventoryWhere.restaurant_id = branch.restaurant_id;
+    } else throwError("Access denied", 403);
 
-    const allStockTransaction = await InventoryTransaction.count();
+    const include = [
+      {
+        model: Inventory,
+        as: "inventory",
+        where: inventoryWhere,
+        attributes: [],
+      },
+    ];
+    const allStockTransaction = await InventoryTransaction.count({ include });
     const stockIn = await InventoryTransaction.count({
-      where: { ...where, type: "in" },
+      where: { type: "in" },
+      include,
     });
     const stockOut = await InventoryTransaction.count({
-      where: { ...where, type: "out" },
+      where: { type: "out" },
+      include,
     });
-    const stockAdjust = await InventoryTransaction.count({
-      where: { ...where, type: "adjust" },
+    const stockWastage = await InventoryTransaction.count({
+      where: { type: "wastage" },
+      include,
     });
 
-    return {
-      allStockTransaction,
-      stockIn,
-      stockOut,
-      stockAdjust,
-    };
+    return { allStockTransaction, stockIn, stockOut, stockWastage };
   },
 
+  // ------------------ List Inventory Transactions ------------------
   async listInventoryTransactions(
     user,
-    { page, limit, search, sortBy, order, branchId }
+    {
+      page = 1,
+      limit = 10,
+      search = "",
+      sortBy = "created_at",
+      order = "DESC",
+      branchId = null,
+    }
   ) {
+    page = parseInt(page);
+    limit = parseInt(limit);
     const offset = (page - 1) * limit;
-    let where = {};
+
+    const where = {};
+    const inventoryWhere = {};
 
     if (user.restaurant_id) {
       if (branchId) {
@@ -338,11 +426,17 @@ const InventoryService = {
         });
         if (!branch) throwError("Invalid branch for this restaurant", 403);
         where.branch_id = branch.id;
+        inventoryWhere.branch_id = branch.id;
+        inventoryWhere.restaurant_id = user.restaurant_id;
       } else {
-        where.restaurant_id = user.restaurant_id;
+        inventoryWhere.restaurant_id = user.restaurant_id;
       }
     } else if (user.branch_id) {
-      where.branch_id = user.branch_id;
+      const branch = await Branch.findByPk(user.branch_id);
+      if (!branch) throwError("Branch not found", 404);
+      where.branch_id = branch.id;
+      inventoryWhere.branch_id = branch.id;
+      inventoryWhere.restaurant_id = branch.restaurant_id;
     } else throwError("Access denied", 403);
 
     const includeCondition = {
@@ -352,6 +446,7 @@ const InventoryService = {
       where: search ? { name: { [Op.iLike]: `%${search}%` } } : {},
       required: !!search,
     };
+
     const orderCondition = [[sortBy, order.toUpperCase()]];
 
     const { count, rows } = await InventoryTransaction.findAndCountAll({

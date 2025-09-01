@@ -49,7 +49,7 @@ router.delete(
 
 // Table KPIs
 router.get(
-  "/kpi/all",
+  "/kpi-all",
   protect("user"),
   // permissionCheck("view_tables"),
   TableController.getTableKPI
