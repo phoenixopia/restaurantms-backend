@@ -211,7 +211,9 @@ module.exports = (sequelize, DataTypes) => {
     Customer.hasMany(models.Order, { foreignKey: "customer_id" });
     Customer.hasMany(models.Reservation, { foreignKey: "customer_id" });
     Customer.hasMany(models.Review, { foreignKey: "customer_id" });
-    Customer.hasMany(models.Notification, { foreignKey: "customer_id" });
+
+    Customer.hasMany(models.Notification, { foreignKey: "target_customer_id" });
+
     Customer.hasMany(models.Payment, { foreignKey: "customer_id" });
     Customer.hasMany(models.CateringRequest, { foreignKey: "customer_id" });
     Customer.hasMany(models.VideoView, { foreignKey: "customer_id" });

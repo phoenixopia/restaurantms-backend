@@ -216,6 +216,17 @@ const InventoryService = {
       if (type === "out" || type === "wastage") newQty -= Number(quantity);
       if (newQty < 0) throwError("Insufficient stock", 400);
 
+      if (newQty < item.threshold) {
+        const title = `Low Stock`;
+        const message = `Item "${item.name}" has low stock`;
+        await sendInventoryNotification(
+          item.branch_id,
+          title,
+          message,
+          user.id
+        );
+      }
+
       await item.update({ quantity: newQty }, { transaction: t });
       await InventoryTransaction.create(
         { inventory_id: item.id, type, quantity, reason },

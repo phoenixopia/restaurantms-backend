@@ -487,6 +487,8 @@ const MenuItemService = {
       item.seasonal = data.seasonal ?? item.seasonal;
       item.is_active = data.is_active ?? item.is_active;
 
+      // update also menu category id
+
       await item.save({ transaction: t });
       await t.commit();
 

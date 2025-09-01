@@ -67,7 +67,7 @@ exports.getInventoryById = asyncHandler(async (req, res) => {
   return success(res, "Inventory item fetched successfully", item, 200);
 });
 
-// ===================== KPI
+// ===================== KPI ================
 
 exports.getKpis = asyncHandler(async (req, res) => {
   const branchId = req.query.branchId || null;
