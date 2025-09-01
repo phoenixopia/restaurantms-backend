@@ -130,7 +130,7 @@ const InventoryService = {
 
       const title = `New Inventory Added`;
       const message = `Item "${item.name}" has been added to your branch.`;
-      await sendInventoryNotification(finalBranchId, title, message, user.id);
+      await sendInventoryNotification(finalBranchId, title, message);
 
       await t.commit();
       return item;
@@ -159,7 +159,7 @@ const InventoryService = {
 
       const title = `Inventory Updated`;
       const message = `Item "${item.name}" has been updated successfully`;
-      await sendInventoryNotification(item.branch_id, title, message, user.id);
+      await sendInventoryNotification(item.branch_id, title, message);
 
       await t.commit();
       return item;
@@ -219,12 +219,7 @@ const InventoryService = {
       if (newQty < item.threshold) {
         const title = `Low Stock`;
         const message = `Item "${item.name}" has low stock`;
-        await sendInventoryNotification(
-          item.branch_id,
-          title,
-          message,
-          user.id
-        );
+        await sendInventoryNotification(item.branch_id, title, message);
       }
 
       await item.update({ quantity: newQty }, { transaction: t });
@@ -237,7 +232,7 @@ const InventoryService = {
       const message = `Item "${
         item.name
       }" has been ${type} by ${quantity} units. Reason: ${reason || "N/A"}`;
-      await sendInventoryNotification(item.branch_id, title, message, user.id);
+      await sendInventoryNotification(item.branch_id, title, message);
 
       await t.commit();
       return item;

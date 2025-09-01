@@ -10,6 +10,7 @@ const {
   MenuItem,
   CategoryTag,
   Location,
+  MenuCategoryTags,
   sequelize,
 } = require("../../models");
 const throwError = require("../../utils/throwError");
@@ -90,7 +91,19 @@ const MenuCategoryService = {
         }
 
         finalRestaurantId = user.restaurant_id;
-        finalBranchId = category.branch_id;
+
+        if (data.branchId) {
+          const branch = await Branch.findByPk(data.branchId, {
+            transaction: t,
+          });
+          if (!branch || branch.restaurant_id !== user.restaurant_id) {
+            throwError("Branch not found under your restaurant", 403);
+          }
+          finalBranchId = branch.id;
+        } else {
+          // Keep existing branch if none provided
+          finalBranchId = category.branch_id;
+        }
       } else if (user.branch_id) {
         if (category.branch_id !== user.branch_id) {
           throwError("Not authorized to update this category", 403);
@@ -105,6 +118,25 @@ const MenuCategoryService = {
         finalBranchId = branch.id;
       } else {
         throwError("User must belong to a restaurant or branch", 400);
+      }
+
+      if (data.name) {
+        const duplicate = await MenuCategory.findOne({
+          where: {
+            name: data.name,
+            restaurant_id: finalRestaurantId,
+            branch_id: finalBranchId,
+            id: { [Op.ne]: categoryId }, // exclude current category
+          },
+          transaction: t,
+        });
+
+        if (duplicate) {
+          throwError(
+            "A menu category with this name already exists in the selected branch",
+            409
+          );
+        }
       }
 
       await category.update(
@@ -134,7 +166,6 @@ const MenuCategoryService = {
       throw error;
     }
   },
-
   async deleteMenuCategory(categoryId, user) {
     const t = await sequelize.transaction();
     try {
@@ -155,7 +186,18 @@ const MenuCategoryService = {
         throwError("User must belong to a restaurant or branch", 400);
       }
 
+      await MenuItem.destroy({
+        where: { menu_category_id: categoryId },
+        transaction: t,
+      });
+
+      await MenuCategoryTags.destroy({
+        where: { menu_category_id: categoryId },
+        transaction: t,
+      });
+
       await category.destroy({ transaction: t });
+
       await t.commit();
       return true;
     } catch (error) {

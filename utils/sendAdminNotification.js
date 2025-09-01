@@ -1,14 +1,15 @@
 const { Notification, User } = require("../models");
 const { getIo } = require("../socket");
+const { Op } = require("sequelize");
 
-async function sendTicketingNotification(
-  restaurant_id,
-  title,
-  message,
-  created_by = null,
-  branch_id = null
-) {
-  const users = await User.findAll({ where: { restaurant_id } });
+async function sendAdminNotification(title, message, created_by = null) {
+  const users = await User.findAll({
+    where: {
+      restaurant_id: { [Op.is]: null },
+      branch_id: { [Op.is]: null },
+    },
+  });
+
   const notifications = [];
   const io = getIo();
 
@@ -21,14 +22,16 @@ async function sendTicketingNotification(
       data: null,
       created_by,
       target_user_id: u.id,
-      restaurant_id,
+      restaurant_id: null,
       branch_id: null,
     });
+
     notifications.push(notification);
+
     io.to(`user_${u.id}`).emit("notification", notification);
   }
 
   return notifications;
 }
 
-module.exports = sendTicketingNotification;
+module.exports = sendAdminNotification;

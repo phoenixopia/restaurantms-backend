@@ -61,12 +61,15 @@ exports.toggleMenuCategoryActivation = asyncHandler(async (req, res) => {
 });
 
 exports.listMenuCategories = asyncHandler(async (req, res) => {
-  const { page = 1, limit = 10 } = req.query;
+  const { page = 1, limit = 10, ...filters } = req.query;
+
   const result = await MenuCategoryService.listMenuCategoriesUnderRestaurant(
     req.user,
     parseInt(page),
-    parseInt(limit)
+    parseInt(limit),
+    filters
   );
+
   return success(res, "Menu categories fetched", result);
 });
 
