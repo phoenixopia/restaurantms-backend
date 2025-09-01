@@ -40,14 +40,25 @@ module.exports = (sequelize, DataTypes) => {
   MenuItem.associate = (models) => {
     MenuItem.belongsTo(models.MenuCategory, { foreignKey: "menu_category_id" });
 
-    MenuItem.hasMany(models.OrderItem, { foreignKey: "menu_item_id" });
-
-    MenuItem.hasMany(models.AnalyticsSnapshot, { foreignKey: "top_item_id" });
+    MenuItem.hasMany(models.OrderItem, {
+      foreignKey: "menu_item_id",
+      onDelete: "CASCADE",
+      hooks: true,
+    });
+    MenuItem.hasMany(models.AnalyticsSnapshot, {
+      foreignKey: "top_item_id",
+      onDelete: "CASCADE",
+      hooks: true,
+    });
     MenuItem.hasMany(models.Promotion, {
       foreignKey: "menu_item_id",
+      onDelete: "CASCADE",
+      hooks: true,
     });
     MenuItem.hasMany(models.Video, {
       foreignKey: "menu_item_id",
+      onDelete: "CASCADE",
+      hooks: true,
     });
   };
 

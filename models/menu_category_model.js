@@ -50,11 +50,17 @@ module.exports = (sequelize, DataTypes) => {
     MenuCategory.belongsTo(models.Menu, { foreignKey: "menu_id" });
     MenuCategory.belongsTo(models.Branch, { foreignKey: "branch_id" });
     MenuCategory.belongsTo(models.Restaurant, { foreignKey: "restaurant_id" });
-    MenuCategory.hasMany(models.MenuItem, { foreignKey: "menu_category_id" });
+    MenuCategory.hasMany(models.MenuItem, {
+      foreignKey: "menu_category_id",
+      onDelete: "CASCADE",
+      hooks: true,
+    });
     MenuCategory.belongsToMany(models.CategoryTag, {
       through: "MenuCategoryTags",
       foreignKey: "menu_category_id",
       otherKey: "category_tag_id",
+      onDelete: "CASCADE",
+      hooks: true,
     });
     MenuCategory.hasMany(models.Promotion, {
       foreignKey: "category_id",

@@ -62,8 +62,8 @@ const MenuCategoryService = {
         { transaction: t }
       );
 
-      if (data.categoryTagIds?.length) {
-        await category.setCategoryTags(data.categoryTagIds, { transaction: t });
+      if (data.tags_ids?.length) {
+        await category.setCategoryTags(data.tags_ids, { transaction: t });
       }
 
       await t.commit();
@@ -155,8 +155,8 @@ const MenuCategoryService = {
         { transaction: t }
       );
 
-      if (Array.isArray(data.categoryTagIds)) {
-        await category.setCategoryTags(data.categoryTagIds, { transaction: t });
+      if (Array.isArray(data.tags_ids)) {
+        await category.setCategoryTags(data.tags_ids, { transaction: t });
       }
 
       await t.commit();
@@ -166,6 +166,7 @@ const MenuCategoryService = {
       throw error;
     }
   },
+
   async deleteMenuCategory(categoryId, user) {
     const t = await sequelize.transaction();
     try {
@@ -283,6 +284,11 @@ const MenuCategoryService = {
         { model: Restaurant, attributes: ["id", "restaurant_name"] },
         {
           model: MenuItem,
+        },
+        {
+          model: CategoryTag,
+          attributes: ["id", "name"],
+          through: { attributes: [] },
         },
       ],
       attributes: {
