@@ -305,7 +305,7 @@ const InventoryService = {
       throwError("Access denied", 403);
     }
 
-    const allStockTransaction = await InventoryTransaction.count({ where });
+    const allStockTransaction = await InventoryTransaction.count();
     const stockIn = await InventoryTransaction.count({
       where: { ...where, type: "in" },
     });
