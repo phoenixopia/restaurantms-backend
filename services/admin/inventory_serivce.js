@@ -6,6 +6,7 @@ const {
 } = require("../../models");
 const { Op, fn, col } = require("sequelize");
 const throwError = require("../../utils/throwError");
+const sendInventoryNotification = require("../../utils/sendInventoryNotification");
 
 const InventoryService = {
   async listAllInventory(
@@ -64,7 +65,7 @@ const InventoryService = {
 
   async getInventory(user, id) {
     const item = await Inventory.findByPk(id, {
-      include: [{ model: InventoryTransaction }],
+      include: [{ model: InventoryTransaction, as: "transactions" }],
     });
 
     if (!item) throwError("Inventory item not found", 404);
@@ -127,6 +128,10 @@ const InventoryService = {
         );
       }
 
+      const title = `New Inventory Added`;
+      const message = `Item "${item.name}" has been added to your branch.`;
+      await sendInventoryNotification(finalBranchId, title, message, user.id);
+
       await t.commit();
       return item;
     } catch (error) {
@@ -151,6 +156,11 @@ const InventoryService = {
       item.threshold = threshold ?? item.threshold;
 
       await item.save({ transaction: t });
+
+      const title = `Inventory Updated`;
+      const message = `Item "${item.name}" has been updated successfully`;
+      await sendInventoryNotification(item.branch_id, title, message, user.id);
+
       await t.commit();
       return item;
     } catch (error) {
@@ -175,6 +185,10 @@ const InventoryService = {
         transaction: t,
       });
       await item.destroy({ transaction: t });
+
+      const title = `Inventory Deleted`;
+      const message = `Item "${item.name}" has been Deleted successfully`;
+      await sendInventoryNotification(item.branch_id, title, message, user.id);
 
       await t.commit();
       return {
