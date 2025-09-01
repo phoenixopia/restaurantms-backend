@@ -9,7 +9,7 @@ router.use("/order", require("./order_routes"));
 router.use("/payment", require("./payment_routes"));
 router.use("/video", require("./video_routes"));
 router.use("/catering", require("./catering_routes"));
-router.use("/notification", require("./notification_routes"));
+// router.use("/notification", require("./notification_routes"));
 router.use("./review", require("./review_routes"));
 
 module.exports = router;

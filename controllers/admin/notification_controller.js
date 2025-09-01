@@ -34,10 +34,15 @@ exports.listNotifications = asyncHandler(async (req, res) => {
 
 exports.markAsRead = asyncHandler(async (req, res) => {
   const notification = await NotificationService.markAsRead(req.params.id);
-  return success(res, "Notification marked as read", notification);
+  return success(res, "Notification marked as read", notification, 200);
 });
 
 exports.unreadCount = asyncHandler(async (req, res) => {
   const count = await NotificationService.unreadCount(req.user);
-  return success(res, "Unread notifications count retrieved");
+  return success(
+    res,
+    "Unread notifications count retrieved",
+    { unread: count },
+    200
+  );
 });
