@@ -14,6 +14,13 @@ router.get(
   InventoryController.getAllInventory
 );
 
+router.get(
+  "/get-inventory/:id",
+  protect("user"),
+  // permissionCheck("view_inventory"),
+  InventoryController.getInventoryById
+);
+
 router.put(
   "/update-inventory/:id",
   protect("user"),
