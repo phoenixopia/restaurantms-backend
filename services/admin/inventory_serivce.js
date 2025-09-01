@@ -222,6 +222,12 @@ const InventoryService = {
         { transaction: t }
       );
 
+      const title = `Inventory Adjusted`;
+      const message = `Item "${
+        item.name
+      }" has been ${type} by ${quantity} units. Reason: ${reason || "N/A"}`;
+      await sendInventoryNotification(item.branch_id, title, message, user.id);
+
       await t.commit();
       return item;
     } catch (error) {
