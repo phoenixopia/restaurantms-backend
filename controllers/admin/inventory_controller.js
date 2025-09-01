@@ -61,6 +61,12 @@ exports.getAllInventory = asyncHandler(async (req, res) => {
   return success(res, "Inventory fetched successfully", result);
 });
 
+exports.getInventoryById = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const item = await InventoryService.getInventory(req.user, id);
+  return success(res, "Inventory item fetched successfully", item, 200);
+});
+
 // ===================== KPI
 
 exports.getKpis = asyncHandler(async (req, res) => {

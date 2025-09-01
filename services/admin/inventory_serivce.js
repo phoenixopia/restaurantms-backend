@@ -62,6 +62,20 @@ const InventoryService = {
     };
   },
 
+  async getInventory(user, id) {
+    const item = await Inventory.findByPk(id, {
+      include: [{ model: InventoryTransaction }],
+    });
+
+    if (!item) throwError("Inventory item not found", 404);
+
+    if (user.restaurant_id && item.restaurant_id !== user.restaurant_id)
+      throwError("You are not authorized to view this inventory item", 403);
+    if (user.branch_id && item.branch_id !== user.branch_id)
+      throwError("You are not authorized to view this inventory item", 403);
+    return item;
+  },
+
   async createInventory(
     user,
     { branch_id, name, unit, quantity = 0, threshold = 0 }
