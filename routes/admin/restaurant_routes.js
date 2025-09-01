@@ -179,7 +179,7 @@ router.delete(
 );
 
 // ====================== Bank ========================
-router.put(
+router.post(
   "/create-bank-account",
   protect("user"),
   // permissionCheck("add_bank_account"),

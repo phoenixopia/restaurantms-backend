@@ -5,51 +5,39 @@ const NotificationService = require("../../services/admin/notification_service")
 const { success } = require("../../utils/apiResponse");
 
 exports.createNotification = asyncHandler(async (req, res) => {
-  const { user_id, customer_id, channel, title, body } = req.body;
-  const io = req.app.get("io");
+  const created_by = req.user?.id || null;
 
-  const notification = await NotificationService.createAndSendNotification({
-    user_id,
-    customer_id,
-    channel,
-    title,
-    body,
-    io,
+  const notifications = await NotificationService.createAndSendNotification({
+    ...req.body,
+    created_by,
   });
 
-  return success(res, "Notification sent successfully", notification, 201);
+  return success(res, "Notification created successfully", notifications, 201);
 });
 
-exports.getAllNotifications = asyncHandler(async (req, res) => {
-  const { page = 1, limit = 10 } = req.query;
-  const requester = req.user || req.customer;
+exports.listNotifications = asyncHandler(async (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 20;
 
-  const notifications = await NotificationService.getAllNotifications({
-    page: parseInt(page),
-    limit: parseInt(limit),
-    requester,
-  });
-
-  return success(res, "Notifications fetched successfully", notifications);
-});
-
-exports.getNotificationById = asyncHandler(async (req, res) => {
-  const requester = req.user || req.customer;
-
-  const notification = await NotificationService.getNotificationById(
-    req.params.id,
-    requester
+  const { rows, count } = await NotificationService.listNotifications(
+    req.user,
+    page,
+    limit
   );
 
-  return success(res, "Notification fetched successfully", notification);
+  if (count === 0) {
+    return success(res, "No notifications found", [], 200);
+  }
+
+  return success(res, "Notifications retrieved", rows, 200);
 });
 
-exports.retryNotification = asyncHandler(async (req, res) => {
-  const io = req.app.get("io");
-  const notification = await NotificationService.retryNotification(
-    req.params.id,
-    io
-  );
+exports.markAsRead = asyncHandler(async (req, res) => {
+  const notification = await NotificationService.markAsRead(req.params.id);
+  return success(res, "Notification marked as read", notification);
+});
 
-  return success(res, "Notification retried successfully", notification);
+exports.unreadCount = asyncHandler(async (req, res) => {
+  const count = await NotificationService.unreadCount(req.user);
+  return success(res, "Unread notifications count retrieved");
 });
