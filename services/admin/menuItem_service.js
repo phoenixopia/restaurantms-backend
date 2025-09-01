@@ -488,6 +488,26 @@ const MenuItemService = {
       item.is_active = data.is_active ?? item.is_active;
 
       // update also menu category id
+      if (data.menu_category_id) {
+        const newCategory = await MenuCategory.findByPk(data.menu_category_id, {
+          transaction: t,
+        });
+        if (!newCategory) throwError("New menu category not found", 404);
+
+        if (user.restaurant_id) {
+          if (newCategory.restaurant_id !== user.restaurant_id) {
+            throwError("Not authorized to move item to this category", 403);
+          }
+        } else if (user.branch_id) {
+          if (newCategory.branch_id !== user.branch_id) {
+            throwError("Not authorized to move item to this category", 403);
+          }
+        } else {
+          throwError("User must belong to a restaurant or branch", 400);
+        }
+
+        item.menu_category_id = newCategory.id;
+      }
 
       await item.save({ transaction: t });
       await t.commit();

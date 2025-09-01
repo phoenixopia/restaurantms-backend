@@ -1,22 +1,35 @@
 "use strict";
 
-const { SupportTicket, User, sequelize } = require("../../models");
+const { SupportTicket, User, Branch, sequelize } = require("../../models");
 const { Op } = require("sequelize");
 const throwError = require("../../utils/throwError");
+const sendTicketingNotification = require("../../utils/sendTicketingNotification");
+const sendAdminNotification = require("../../utils/sendAdminNotification");
 
 const TicketService = {
   async createTicket(data, user) {
     const t = await sequelize.transaction();
     try {
-      const { title, description, priority } = data;
+      const { title, description, priority, branch_id = null } = data;
 
       if (!title) throwError("Title is required", 400);
       if (!description) throwError("Description is required", 400);
 
+      let restaurantId = null;
+      if (user.restaurant_id) {
+        restaurantId = user.restaurant_id;
+      } else if (user.branch_id) {
+        const branch = Branch.findByPk(user.branch_id);
+        if (!branch) throwError("Branch not found", 404);
+        restaurantId = branch.restaurant_id;
+      } else {
+        throwError("User is not associated with any restaurant or branch", 400);
+      }
+
       const ticket = await SupportTicket.create(
         {
           user_id: user.id,
-          restaurant_id: user.restaurant_id || null,
+          restaurant_id: restaurantId,
           branch_id: user.branch_id || null,
           title,
           description,
