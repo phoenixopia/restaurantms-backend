@@ -2,6 +2,8 @@ const { Plan, PlanLimit, sequelize } = require("../../models");
 const { Op } = require("sequelize");
 const { capitalizeFirstLetter } = require("../../utils/capitalizeFirstLetter");
 const throwError = require("../../utils/throwError");
+const logActivity = require("../../utils/logActivity");
+const SendNotification = require("../../utils/send_notification");
 
 const PlanService = {
   async listPlans({ page = 1, limit = 10 }) {
@@ -257,7 +259,7 @@ const PlanService = {
     };
   },
 
-  async create(data) {
+  async create(data, user) {
     const t = await sequelize.transaction();
     try {
       const formattedName = capitalizeFirstLetter(data.name);
@@ -297,7 +299,22 @@ const PlanService = {
         }
       }
 
+      await logActivity({
+        user_id: user.id,
+        module: "Plan",
+        action: "Create",
+        details: plan.toJSON(),
+        transaction: t,
+      });
+
       await t.commit();
+
+      await SendNotification.sendPlanNotification(
+        "New Plan Created",
+        `A new plan "${plan.name}" has been created.`,
+        user.id
+      );
+
       const newPlan = await Plan.findByPk(plan.id, {
         attributes: {
           exclude: ["created_at", "updated_at", "createdAt", "updatedAt"],
@@ -347,7 +364,7 @@ const PlanService = {
     }
   },
 
-  async update(id, updates) {
+  async update(id, updates, user) {
     const t = await sequelize.transaction();
     try {
       const plan = await Plan.findByPk(id, { transaction: t });
@@ -420,7 +437,22 @@ const PlanService = {
         }
       }
 
+      await logActivity({
+        user_id: user.id,
+        module: "Plan",
+        action: "Update",
+        details: { before: oldData, after: plan.toJSON() },
+        transaction: t,
+      });
+
       await t.commit();
+
+      await SendNotification.sendPlanNotification(
+        "Plan Updated",
+        `The plan "${plan.name}" has been updated
+        `,
+        user.id
+      );
 
       const updatedPlan = await Plan.findByPk(id, {
         attributes: {
@@ -471,16 +503,27 @@ const PlanService = {
     }
   },
 
-  async delete(id) {
+  async delete(id, user) {
     const t = await sequelize.transaction();
     try {
       const plan = await Plan.findByPk(id, { transaction: t });
       if (!plan) throwError("Plan not found", 404);
 
+      const oldData = plan.toJSON();
+
       await PlanLimit.destroy({ where: { plan_id: id }, transaction: t });
       await plan.destroy({ transaction: t });
 
+      await logActivity({
+        user_id: user.id,
+        module: "Plan",
+        action: "Delete",
+        details: oldData,
+        transaction: t,
+      });
+
       await t.commit();
+      return { message: "Plan deleted successfully" };
     } catch (err) {
       await t.rollback();
       throw err;
@@ -586,18 +629,12 @@ const PlanService = {
     };
   },
 
-  async createAndAssign(data) {
+  async createAndAssign(data, user) {
     const { key, value, data_type, description, plan_ids } = data;
-
     const t = await sequelize.transaction();
-
     try {
       const plans = await Plan.findAll({
-        where: {
-          id: {
-            [Op.in]: plan_ids,
-          },
-        },
+        where: { id: { [Op.in]: plan_ids } },
         include: [{ model: PlanLimit }],
         transaction: t,
       });
@@ -616,7 +653,6 @@ const PlanService = {
       }
 
       const createdLimits = [];
-
       for (const plan of plans) {
         const newLimit = await PlanLimit.create(
           {
@@ -630,6 +666,20 @@ const PlanService = {
         );
         createdLimits.push(newLimit);
       }
+
+      await logActivity({
+        user_id: user.id,
+        module: "PlanLimit",
+        action: "Create",
+        details: {
+          key,
+          value,
+          data_type,
+          description,
+          plan_ids,
+        },
+        transaction: t,
+      });
 
       await t.commit();
       return createdLimits;

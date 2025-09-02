@@ -65,29 +65,53 @@ const TableService = {
     const offset = (page - 1) * limit;
 
     const where = {};
+
     if (user.branch_id) {
       where.branch_id = user.branch_id;
     } else if (user.restaurant_id) {
-      if (branch_id) where.branch_id = branch_id;
-      else where.restaurant_id = user.restaurant_id;
+      where.restaurant_id = user.restaurant_id;
+
+      if (branch_id) {
+        where.branch_id = branch_id;
+      }
     }
 
-    if (search) where.table_number = { [Op.iLike]: `%${search}%` };
-    if (is_active !== undefined) where.is_active = is_active === "true";
+    if (search) {
+      where.table_number = { [Op.iLike]: `%${search}%` };
+    }
+
+    if (is_active !== undefined) {
+      where.is_active = is_active === "true";
+    }
 
     const { count, rows } = await Table.findAndCountAll({
       where,
+      include: [
+        {
+          model: Branch,
+          attributes: ["id", "name"],
+        },
+        {
+          model: Restaurant,
+          attributes: ["id", "restaurant_name"],
+        },
+      ],
+      order: [["created_at", "DESC"]],
       limit,
       offset,
-      order: [["created_at", "DESC"]],
-      include: [{ model: Branch }, { model: Restaurant }],
+      distinct: true, // ensures correct count when using include
     });
 
+    const totalPages = Math.ceil(count / limit);
+
     return {
-      total: count,
       tables: rows,
-      page,
-      totalPages: Math.ceil(count / limit),
+      pagination: {
+        total: count,
+        page,
+        limit,
+        totalPages,
+      },
     };
   },
 

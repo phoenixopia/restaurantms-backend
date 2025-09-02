@@ -667,30 +667,47 @@ const OrderService = {
               model: Location,
               attributes: ["id", "address", "latitude", "longitude"],
             },
+            {
+              model: OrderItem,
+              include: [
+                {
+                  model: MenuItem,
+                  attributes: ["id", "name", "description", "price"],
+                },
+              ],
+            },
           ],
         },
       ],
     });
 
-    if (!kdsOrder) {
-      throwError("Order not found.", 404);
-    }
+    if (!kdsOrder) throwError("Order not found.", 404);
 
     const order = kdsOrder.Order;
 
-    if (user.restaurant_id && order.restaurant_id !== user.restaurant_id) {
+    // Authorization
+    if (user.restaurant_id && order.restaurant_id !== user.restaurant_id)
       throwError("Not authorized to view this order.", 403);
-    } else if (user.branch_id && order.branch_id !== user.branch_id) {
+    if (user.branch_id && order.branch_id !== user.branch_id)
       throwError("Not authorized to view this order.", 403);
-    } else if (!user.restaurant_id && !user.branch_id) {
+    if (!user.restaurant_id && !user.branch_id)
       throwError("Invalid user context.", 403);
-    }
 
     const personName = order.Customer
       ? `${order.Customer.first_name} ${order.Customer.last_name}`
       : order.User
       ? `${order.User.first_name} ${order.User.last_name}`
       : null;
+
+    // Map menu items
+    const orderedItems = order.OrderItems.map((item) => ({
+      id: item.id,
+      menu_item_id: item.menu_item_id,
+      name: item.MenuItem?.name,
+      description: item.MenuItem?.description,
+      quantity: item.quantity,
+      unit_price: item.unit_price,
+    }));
 
     return {
       id: order.id,
@@ -702,8 +719,14 @@ const OrderService = {
       order_date: order.order_date,
       created_at: order.created_at,
 
-      restaurant_name: order.Restaurant?.restaurant_name || null,
-      branch_name: order.Branch?.name || null,
+      restaurant: {
+        id: order.Restaurant?.id || null,
+        name: order.Restaurant?.restaurant_name || null,
+      },
+      branch: {
+        id: order.Branch?.id || null,
+        name: order.Branch?.name || null,
+      },
       customer_name: personName,
 
       table_number:
@@ -717,6 +740,8 @@ const OrderService = {
               longitude: order.Location?.longitude || null,
             }
           : null,
+
+      items: orderedItems,
     };
   },
 

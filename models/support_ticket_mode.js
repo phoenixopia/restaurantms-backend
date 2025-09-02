@@ -36,6 +36,7 @@ module.exports = (sequelize, DataTypes) => {
         },
       },
 
+     
       title: {
         type: DataTypes.STRING,
         allowNull: false,
@@ -68,6 +69,7 @@ module.exports = (sequelize, DataTypes) => {
       foreignKey: "branch_id",
     });
     SupportTicket.belongsTo(models.User, { foreignKey: "user_id" });
+ 
   };
 
   return SupportTicket;

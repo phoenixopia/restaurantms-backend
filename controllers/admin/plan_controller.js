@@ -32,19 +32,19 @@ exports.getPlanByName = asyncHandler(async (req, res) => {
 
 // Create new plan with optional limits
 exports.createPlan = asyncHandler(async (req, res) => {
-  const newPlan = await PlanService.create(req.body);
+  const newPlan = await PlanService.create(req.body, req.user);
   return success(res, "Plan created successfully", newPlan, 201);
 });
 
 // Update plan and its limits
 exports.updatePlan = asyncHandler(async (req, res) => {
-  const updated = await PlanService.update(req.params.id, req.body);
+  const updated = await PlanService.update(req.params.id, req.body, req.user);
   return success(res, "Plan updated successfully", updated);
 });
 
 // Delete plan and its limits
 exports.deletePlan = asyncHandler(async (req, res) => {
-  await PlanService.delete(req.params.id);
+  await PlanService.delete(req.params.id, req.user);
   return success(res, "Plan deleted successfully");
 });
 
@@ -65,6 +65,6 @@ exports.listPlanLimitsWithPlans = asyncHandler(async (req, res) => {
 });
 
 exports.createAndAssign = asyncHandler(async (req, res) => {
-  const result = await PlanService.createAndAssign(req.body);
+  const result = await PlanService.createAndAssign(req.body, req.user);
   return success(res, "Plan limit created and assigned successfully", result);
 });

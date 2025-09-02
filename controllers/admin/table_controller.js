@@ -11,7 +11,7 @@ exports.createTable = asyncHandler(async (req, res) => {
 exports.getTables = asyncHandler(async (req, res) => {
   const result = await TableService.getTables(req.user, req.query);
 
-  return success(res, result.message, result.data, 200);
+  return success(res, "Tables fetched successfully", result, 200);
 });
 
 exports.getTableById = asyncHandler(async (req, res) => {

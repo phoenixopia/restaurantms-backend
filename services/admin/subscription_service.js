@@ -172,7 +172,7 @@ const SubscriptionService = {
       where.status = status;
     }
 
-    if (user.role_name === "restaurant_admin") {
+    if (user.restaurant_id) {
       where.restaurant_id = user.restaurant_id;
     }
 
