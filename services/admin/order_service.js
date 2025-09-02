@@ -672,7 +672,7 @@ const OrderService = {
               include: [
                 {
                   model: MenuItem,
-                  attributes: ["id", "name", "description", "price"],
+                  attributes: ["id", "name", "description", "unit_price"],
                 },
               ],
             },
