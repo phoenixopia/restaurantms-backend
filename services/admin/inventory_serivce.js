@@ -465,8 +465,8 @@ const InventoryService = {
       type: item.type,
       quantity: item.quantity,
       reason: item.reason,
-      created_at: item.created_at,
-      updated_at: item.updated_at,
+      created_at: item.createdAt,
+      updated_at: item.updatedAt,
     }));
 
     return {
