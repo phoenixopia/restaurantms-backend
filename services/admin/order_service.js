@@ -279,16 +279,25 @@ const OrderService = {
     try {
       const kdsOrder = await KdsOrder.findByPk(kdsId, { transaction: t });
       if (!kdsOrder) throwError("KDS order not found", 404);
-      if (user.restaurant_id) {
-        if (kdsOrder.restaurant_id !== user.restaurant_id)
-          throwError("Not authorized to update this order", 403);
+
+      // Auth check
+      if (user.restaurant_id && kdsOrder.restaurant_id !== user.restaurant_id) {
+        throwError("Not authorized to update this order", 403);
       }
-      if (user.branch_id) {
-        if (kdsOrder.branch_id !== user.branch_id)
-          throwError("Not authorized to update this order", 403);
+      if (user.branch_id && kdsOrder.branch_id !== user.branch_id) {
+        throwError("Not authorized to update this order", 403);
       }
-      kdsOrder.status = "Paid";
-      await kdsOrder.save({ transaction: t });
+
+      // Find linked order
+      const order = await Order.findByPk(kdsOrder.order_id, { transaction: t });
+      if (!order) throwError("Order not found", 404);
+
+      // Update payment status (Paid / Unpaid)
+      order.payment_status = paymentStatus;
+      await order.save({ transaction: t });
+
+      await t.commit();
+      return order;
     } catch (error) {
       await t.rollback();
       throw error;
