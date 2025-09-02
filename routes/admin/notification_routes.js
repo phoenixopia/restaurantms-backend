@@ -11,17 +11,17 @@ router.post(
 router.get(
   "/get-all",
   protect("user"),
-  NotificationController.getAllNotifications
+  NotificationController.listNotifications
 );
 router.get(
-  "/mark-as-read/id",
+  "/mark-as-read/:id",
   protect("user"),
-  NotificationController.getNotificationById
+  NotificationController.markAsRead
 );
 router.get(
   "/unread-count",
   protect("user"),
-  NotificationController.retryNotification
+  NotificationController.unreadCount
 );
 
 module.exports = router;
