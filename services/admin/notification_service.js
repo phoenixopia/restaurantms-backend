@@ -1,7 +1,7 @@
 "use strict";
 
 const { Notification, User, sequelize } = require("../../models");
-const { Op } = sequelize;
+const { Op } = require("sequelize");
 const { getIo } = require("../../socket");
 const throwError = require("../../utils/throwError");
 
@@ -97,7 +97,7 @@ const NotificationService = {
 
     const { count, rows } = await Notification.findAndCountAll({
       where,
-      order: [["createdAt", "DESC"]],
+      order: [["created_at", "DESC"]],
       limit,
       offset,
     });
