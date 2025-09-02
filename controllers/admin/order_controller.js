@@ -55,3 +55,17 @@ exports.updateOrderStatus = asyncHandler(async (req, res) => {
 
   return success(res, "Order status updated successfully.", updated);
 });
+
+exports.updateOrderPaymentStatus = asyncHandler(async (req, res) => {
+  const { payment_status } = req.body;
+  const allowedStatuses = ["Paid", "Unpaid"];
+  if (!allowedStatuses.includes(payment_status)) {
+    throwError("Invalid payment status.", 400);
+  }
+  const updated = await OrderService.updateOrderPaymentStatus(
+    req.params.id,
+    payment_status,
+    req.user
+  );
+  return success(res, "Order payment status updated successfully.", updated);
+});

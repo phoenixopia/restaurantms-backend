@@ -11,11 +11,18 @@ router.get(
   OrderController.listOrders
 );
 
-router.put(
+router.patch(
   "/update-order-status/:id",
   protect("user"),
   // permissionCheck("change_order_status"),
   OrderController.updateOrderStatus
+);
+
+router.patch(
+  "/update-payment-status/:id",
+  protect("user"),
+  // permissionCheck("change_order_payment_status"),
+  OrderController.updateOrderPaymentStatus
 );
 
 router.get(

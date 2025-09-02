@@ -274,6 +274,27 @@ const OrderService = {
     }
   },
 
+  async updateOrderPaymentStatus(kdsId, paymentStatus, user) {
+    const t = await sequelize.transaction();
+    try {
+      const kdsOrder = await KdsOrder.findByPk(kdsId, { transaction: t });
+      if (!kdsOrder) throwError("KDS order not found", 404);
+      if (user.restaurant_id) {
+        if (kdsOrder.restaurant_id !== user.restaurant_id)
+          throwError("Not authorized to update this order", 403);
+      }
+      if (user.branch_id) {
+        if (kdsOrder.branch_id !== user.branch_id)
+          throwError("Not authorized to update this order", 403);
+      }
+      kdsOrder.status = "Paid";
+      await kdsOrder.save({ transaction: t });
+    } catch (error) {
+      await t.rollback();
+      throw error;
+    }
+  },
+
   async cancelOrder(orderId, user) {
     const t = await sequelize.transaction();
     try {
