@@ -416,7 +416,6 @@ const InventoryService = {
     limit = parseInt(limit);
     const offset = (page - 1) * limit;
 
-    const where = {};
     const inventoryWhere = {};
 
     if (user.restaurant_id) {
@@ -425,7 +424,6 @@ const InventoryService = {
           where: { id: branchId, restaurant_id: user.restaurant_id },
         });
         if (!branch) throwError("Invalid branch for this restaurant", 403);
-        where.branch_id = branch.id;
         inventoryWhere.branch_id = branch.id;
         inventoryWhere.restaurant_id = user.restaurant_id;
       } else {
@@ -434,24 +432,27 @@ const InventoryService = {
     } else if (user.branch_id) {
       const branch = await Branch.findByPk(user.branch_id);
       if (!branch) throwError("Branch not found", 404);
-      where.branch_id = branch.id;
       inventoryWhere.branch_id = branch.id;
       inventoryWhere.restaurant_id = branch.restaurant_id;
-    } else throwError("Access denied", 403);
+    } else {
+      throwError("Access denied", 403);
+    }
 
     const includeCondition = {
       model: Inventory,
       as: "inventory",
-      attributes: ["id", "name"],
-      where: search ? { name: { [Op.iLike]: `%${search}%` } } : {},
-      required: !!search,
+      attributes: ["id", "name", "restaurant_id", "branch_id"],
+      where: {
+        ...inventoryWhere,
+        ...(search ? { name: { [Op.iLike]: `%${search}%` } } : {}),
+      },
+      required: true,
     };
 
     const orderCondition = [[sortBy, order.toUpperCase()]];
 
     const { count, rows } = await InventoryTransaction.findAndCountAll({
       include: [includeCondition],
-      where,
       order: orderCondition,
       limit,
       offset,
