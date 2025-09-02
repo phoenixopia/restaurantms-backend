@@ -62,7 +62,7 @@ router.patch(
 );
 
 router.delete(
-  "delete-catering/:id",
+  "/delete-catering/:id",
   protect("user"),
   // permissionCheck("delete_catering"),
   CateringController.deleteCatering
