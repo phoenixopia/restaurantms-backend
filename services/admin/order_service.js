@@ -535,10 +535,13 @@ const OrderService = {
     if (status) where.status = status;
 
     let orderWhere = {};
-    if (from && to)
+    if (from && to) {
       orderWhere.created_at = { [Op.between]: [new Date(from), new Date(to)] };
-    else if (from) orderWhere.created_at = { [Op.gte]: new Date(from) };
-    else if (to) orderWhere.created_at = { [Op.lte]: new Date(to) };
+    } else if (from) {
+      orderWhere.created_at = { [Op.gte]: new Date(from) };
+    } else if (to) {
+      orderWhere.created_at = { [Op.lte]: new Date(to) };
+    }
 
     const { rows: kdsOrders, count } = await KdsOrder.findAndCountAll({
       where,
@@ -562,6 +565,7 @@ const OrderService = {
       order: [["created_at", "DESC"]],
       limit: parseInt(limit),
       offset: parseInt(offset),
+      distinct: true, // important when using include
     });
 
     const formattedOrders = kdsOrders.map((kds) => {
@@ -601,14 +605,18 @@ const OrderService = {
       };
     });
 
+    const totalPages = Math.ceil(count / limit);
+
     return {
-      total: count,
-      page: parseInt(page),
-      limit: parseInt(limit),
       orders: formattedOrders,
+      pagination: {
+        total: count,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        totalPages,
+      },
     };
   },
-
   async updateOrderStatus(id, status, user) {
     const t = await sequelize.transaction();
     try {
