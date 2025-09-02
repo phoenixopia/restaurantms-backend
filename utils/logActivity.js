@@ -2,6 +2,7 @@ const { ActivityLog } = require("../models");
 
 const logActivity = async ({
   user_id = null,
+  customer_id = null,
   module,
   action,
   details = null,
@@ -15,6 +16,7 @@ const logActivity = async ({
     await ActivityLog.create(
       {
         user_id,
+        customer_id,
         module,
         action,
         details,

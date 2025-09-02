@@ -60,7 +60,7 @@ module.exports = (sequelize, DataTypes) => {
       read_at: { type: DataTypes.DATE, allowNull: true },
       created_by: { type: DataTypes.UUID, allowNull: true },
 
-      restaurant_id: { type: DataTypes.UUID, allowNull: false },
+      restaurant_id: { type: DataTypes.UUID, allowNull: true },
       branch_id: { type: DataTypes.UUID, allowNull: true },
     },
     {

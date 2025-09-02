@@ -124,6 +124,7 @@ const CateringService = {
         service_area_description: data.service_area_description,
         contact_person: data.contact_person,
         contact_info: data.contact_info,
+        is_active: data.is_active,
       };
 
       await catering.update(updatableFields, { transaction: t });

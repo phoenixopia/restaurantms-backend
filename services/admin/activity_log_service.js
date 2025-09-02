@@ -145,6 +145,144 @@ const ActivityLogService = {
       },
     };
   },
+
+  async getWholeActivityLog({ page = 1, limit = 10 }) {
+    const offset = (page - 1) * limit;
+
+    const { count, rows } = await ActivityLog.findAndCountAll({
+      include: [
+        {
+          model: User,
+          attributes: [
+            "id",
+            "first_name",
+            "last_name",
+            "email",
+            "phone_number",
+            "profile_picture",
+          ],
+        },
+        {
+          model: Customer,
+          attributes: [
+            "id",
+            "first_name",
+            "last_name",
+            "email",
+            "phone_number",
+            "profile_picture",
+          ],
+        },
+      ],
+      order: [["created_at", "DESC"]],
+      limit: parseInt(limit),
+      offset: parseInt(offset),
+    });
+
+    const result = rows.map((log) => {
+      const u = log.User;
+      const c = log.Customer;
+
+      return {
+        id: log.id,
+        module: log.module,
+        action: log.action,
+        details: log.details,
+        created_at: log.created_at,
+        user: u
+          ? {
+              id: u.id,
+              first_name: u.first_name,
+              last_name: u.last_name,
+              email: u.email,
+              phone_number: u.phone_number,
+              profile_picture: u.profile_picture,
+            }
+          : null,
+        customer: c
+          ? {
+              id: c.id,
+              first_name: c.first_name,
+              last_name: c.last_name,
+              email: c.email,
+              phone_number: c.phone_number,
+              profile_picture: c.profile_picture,
+            }
+          : null,
+      };
+    });
+
+    return {
+      total: count,
+      page: parseInt(page),
+      limit: parseInt(limit),
+      pages: Math.ceil(count / limit),
+      data: result,
+    };
+  },
+
+  async getWholeActivityLogById(id) {
+    const log = await ActivityLog.findOne({
+      where: { id },
+      include: [
+        {
+          model: User,
+          attributes: [
+            "id",
+            "first_name",
+            "last_name",
+            "email",
+            "phone_number",
+            "profile_picture",
+          ],
+        },
+        {
+          model: Customer,
+          attributes: [
+            "id",
+            "first_name",
+            "last_name",
+            "email",
+            "phone_number",
+            "profile_picture",
+          ],
+        },
+      ],
+    });
+
+    if (!log) return null;
+
+    const u = log.User;
+    const c = log.Customer;
+
+    return {
+      id: log.id,
+      module: log.module,
+      action: log.action,
+      details: log.details,
+      created_at: log.created_at,
+      user: u
+        ? {
+            id: u.id,
+            first_name: u.first_name,
+            last_name: u.last_name,
+            email: u.email,
+            phone_number: u.phone_number,
+            profile_picture: u.profile_picture,
+          }
+        : null,
+      customer: c
+        ? {
+            id: c.id,
+            first_name: c.first_name,
+            last_name: c.last_name,
+            email: c.email,
+            phone_number: c.phone_number,
+            profile_picture: c.profile_picture,
+          }
+        : null,
+    };
+  },
 };
 
 module.exports = ActivityLogService;

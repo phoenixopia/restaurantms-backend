@@ -9,7 +9,7 @@ const router = express.Router();
 
 // Create table (restaurant or branch users)
 router.post(
-  "/",
+  "/create-table",
   protect("user"),
   // permissionCheck("create_table"),
   TableController.createTable
@@ -17,7 +17,7 @@ router.post(
 
 // Get all tables (with filters, pagination, search)
 router.get(
-  "/",
+  "/get-all-tables",
   protect("user"),
   // permissionCheck("view_tables"),
   TableController.getTables

@@ -116,6 +116,36 @@ const SendNotification = {
 
     return notifications;
   },
+
+  // ========= Plan Notification ==========
+  async sendPlanNotification(title, message, created_by = null) {
+    const users = await User.findAll({
+      where: {
+        restaurant_id: { [Op.is]: null },
+        branch_id: { [Op.is]: null },
+      },
+    });
+
+    const notifications = [];
+    const io = getIo();
+
+    for (const u of users) {
+      const notification = await Notification.create({
+        title,
+        message,
+        type: "SYSTEM",
+        state: "info",
+        data: null,
+        created_by,
+        target_user_id: u.id,
+      });
+
+      notifications.push(notification);
+      io.to(`user_${u.id}`).emit("notification", notification);
+    }
+
+    return notifications;
+  },
 };
 
 module.exports = SendNotification;
