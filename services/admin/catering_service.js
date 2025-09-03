@@ -4,6 +4,8 @@ const {
   Customer,
   Catering,
   CateringRequest,
+  CateringQuote,
+  CateringPayment,
   Restaurant,
   Branch,
   Location,
