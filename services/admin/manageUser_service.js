@@ -32,7 +32,7 @@ const UserService = {
         role_id,
       } = data;
 
-      if (!first_name || !last_name || !password || role_id)
+      if (!first_name || !last_name || !password || !role_id)
         throwError("Missing required fields", 400);
 
       if (creatorMode === "email" && !email)
