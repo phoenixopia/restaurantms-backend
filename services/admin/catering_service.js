@@ -496,7 +496,7 @@ const CateringService = {
     };
   },
 
-  async giveResponseCateringRequest(cateringRequestId, user, data) {
+  async giveResponseCateringRequest(cateringRequestId, user) {
     let restaurantId;
 
     if (user.restaurant_id) {
@@ -527,14 +527,7 @@ const CateringService = {
       throwError("Not authorized to respond to this catering request", 403);
     }
 
-    if (!["approved", "rejected"].includes(data.status)) {
-      throwError(
-        "Invalid status. Only 'approved' or 'rejected' are allowed.",
-        400
-      );
-    }
-
-    request.status = data.status;
+    request.status = "rejected";
     await request.save();
 
     return {
@@ -560,10 +553,16 @@ const CateringService = {
         throwError("User does not belong to a restaurant or branch", 404);
       }
 
-      // Fetch request
+      // Fetch request with Catering (INNER JOIN so lock works)
       const request = await CateringRequest.findOne({
         where: { id: cateringRequestId },
-        include: [{ model: Catering, attributes: ["id", "restaurant_id"] }],
+        include: [
+          {
+            model: Catering,
+            attributes: ["id", "restaurant_id"],
+            required: true,
+          },
+        ],
         transaction: t,
         lock: t.LOCK.UPDATE,
       });
@@ -628,7 +627,6 @@ const CateringService = {
       throw err;
     }
   },
-
   // ================ Catering Quote ===============
 
   async prepareCateringQuote(cateringRequestId, user, data) {

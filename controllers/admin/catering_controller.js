@@ -99,12 +99,10 @@ exports.viewCateringRequestById = asyncHandler(async (req, res) => {
 
 exports.giveResponseCateringRequest = asyncHandler(async (req, res) => {
   const cateringRequestId = req.params.id;
-  const { status } = req.body;
 
   const result = await CateringService.giveResponseCateringRequest(
     cateringRequestId,
-    req.user,
-    { status }
+    req.user
   );
 
   return success(
