@@ -544,6 +544,91 @@ const CateringService = {
     };
   },
 
+  async acceptCateringRequestWithQuote(cateringRequestId, user, data) {
+    const t = await sequelize.transaction();
+    try {
+      let restaurantId;
+      if (user.restaurant_id) {
+        restaurantId = user.restaurant_id;
+      } else if (user.branch_id) {
+        const branch = await Branch.findByPk(user.branch_id, {
+          transaction: t,
+        });
+        if (!branch) throwError("Branch not found", 404);
+        restaurantId = branch.restaurant_id;
+      } else {
+        throwError("User does not belong to a restaurant or branch", 404);
+      }
+
+      // Fetch request
+      const request = await CateringRequest.findOne({
+        where: { id: cateringRequestId },
+        include: [{ model: Catering, attributes: ["id", "restaurant_id"] }],
+        transaction: t,
+        lock: t.LOCK.UPDATE,
+      });
+
+      if (!request) throwError("Catering request not found", 404);
+      if (request.Catering.restaurant_id !== restaurantId) {
+        throwError("Not authorized for this request", 403);
+      }
+      if (request.status !== "pending") {
+        throwError("Only pending requests can be accepted", 400);
+      }
+
+      // Update request status to approved
+      request.status = "approved";
+      await request.save({ transaction: t });
+
+      // Check if a quote already exists
+      const existingQuote = await CateringQuote.findOne({
+        where: { catering_request_id: cateringRequestId },
+        transaction: t,
+        lock: t.LOCK.UPDATE,
+      });
+
+      if (existingQuote) {
+        throwError("A quote has already been prepared for this request", 400);
+      }
+
+      // Create quote
+      const quote = await CateringQuote.create(
+        {
+          catering_request_id: request.id,
+          catering_id: request.catering_id,
+          estimated_price: data.estimated_price,
+          description: data.description || null,
+          status: "pending",
+          payment_status: "Unpaid",
+        },
+        { transaction: t }
+      );
+
+      await t.commit();
+
+      return {
+        catering_request: {
+          id: request.id,
+          status: request.status,
+          updated_at: request.updatedAt,
+        },
+        catering_quote: {
+          id: quote.id,
+          catering_request_id: quote.catering_request_id,
+          catering_id: quote.catering_id,
+          estimated_price: quote.estimated_price,
+          description: quote.description,
+          status: quote.status,
+          payment_status: quote.payment_status,
+          created_at: quote.createdAt,
+        },
+      };
+    } catch (err) {
+      await t.rollback();
+      throw err;
+    }
+  },
+
   // ================ Catering Quote ===============
 
   async prepareCateringQuote(cateringRequestId, user, data) {

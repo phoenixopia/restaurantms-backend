@@ -91,6 +91,13 @@ router.put(
   CateringController.giveResponseCateringRequest
 );
 
+router.put(
+  "/accept-with-quote/:id",
+  protect("user"),
+  // permissionCheck("manage_catering"),
+  CateringController.acceptCateringRequestWithQuote
+);
+
 // ================== Catering Quote ====================
 
 router.post(

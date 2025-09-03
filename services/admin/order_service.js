@@ -334,6 +334,7 @@ const OrderService = {
       }
 
       await order.save({ transaction: t });
+      await kdsOrder.save({ transaction: t });
 
       await t.commit();
       return order;

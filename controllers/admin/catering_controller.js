@@ -114,6 +114,23 @@ exports.giveResponseCateringRequest = asyncHandler(async (req, res) => {
   );
 });
 
+exports.acceptCateringRequestWithQuote = asyncHandler(async (req, res) => {
+  const cateringRequestId = req.params.id;
+  const { estimated_price, description } = req.body;
+
+  const result = await CateringService.acceptCateringRequestWithQuote(
+    cateringRequestId,
+    req.user,
+    { estimated_price, description }
+  );
+
+  return success(
+    res,
+    "Catering request accepted and quote prepared successfully",
+    result
+  );
+});
+
 // ==================== Catering Quote ==============
 
 exports.prepareCateringQuote = asyncHandler(async (req, res) => {
