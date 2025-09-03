@@ -3,6 +3,7 @@ const {
   ActivityLog,
   Restaurant,
   Branch,
+  Customer,
   sequelize,
 } = require("../../models");
 const { Op } = require("sequelize");
