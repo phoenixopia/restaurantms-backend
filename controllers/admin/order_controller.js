@@ -23,7 +23,6 @@ exports.updateOrderStatus = asyncHandler(async (req, res) => {
   const allowedStatuses = [
     "Pending",
     "InProgress",
-    "Preparing",
     "Ready",
     "Served",
     "Cancelled",
@@ -38,20 +37,6 @@ exports.updateOrderStatus = asyncHandler(async (req, res) => {
     status,
     req.user
   );
-
-  // const io = req.app.get("io");
-
-  // io.to(`branch:${updated.branch_id}`).emit("orderStatusUpdated", {
-  //   order_id: updated.id,
-  //   status: updated.status,
-  //   branch_id: updated.branch_id,
-  //   restaurant_id: updated.restaurant_id,
-  // });
-
-  // io.to(`customer:${updated.customer_id}`).emit("customerOrderStatusUpdated", {
-  //   order_id: updated.id,
-  //   status: updated.status,
-  // });
 
   return success(res, "Order status updated successfully.", updated);
 });

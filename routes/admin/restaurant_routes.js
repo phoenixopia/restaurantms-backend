@@ -229,7 +229,7 @@ router.get(
   RestaurantController.getChargeSetting
 );
 
-router.get(
+router.put(
   "/create-update-charge-setting",
   protect("user"),
   // permissionCheck("manage_charge_setting"),

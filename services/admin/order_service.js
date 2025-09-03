@@ -13,6 +13,7 @@ const {
   SystemSetting,
   Customer,
   MenuItem,
+  Payment,
   sequelize,
 } = require("../../models");
 const { Op, fn, col, literal, QueryTypes, where } = require("sequelize");
@@ -266,6 +267,18 @@ const OrderService = {
         { transaction: t }
       );
 
+      await Payment.create(
+        {
+          restaurant_id,
+          order_id: order.id,
+          user_id: user.id,
+          amount: total_price,
+          payment_method: "cash",
+          status: "pending",
+        },
+        { transaction: t }
+      );
+
       await t.commit();
       return order;
     } catch (error) {
@@ -280,7 +293,6 @@ const OrderService = {
       const kdsOrder = await KdsOrder.findByPk(kdsId, { transaction: t });
       if (!kdsOrder) throwError("KDS order not found", 404);
 
-      // Auth check
       if (user.restaurant_id && kdsOrder.restaurant_id !== user.restaurant_id) {
         throwError("Not authorized to update this order", 403);
       }
@@ -292,8 +304,34 @@ const OrderService = {
       const order = await Order.findByPk(kdsOrder.order_id, { transaction: t });
       if (!order) throwError("Order not found", 404);
 
-      // Update payment status (Paid / Unpaid)
+      if (
+        paymentStatus === "Unpaid" &&
+        ["InProgress", "Preparing", "Ready", "Served"].includes(order.status)
+      ) {
+        throwError(
+          "Cannot revert payment to Unpaid for orders already in progress",
+          400
+        );
+      }
+
       order.payment_status = paymentStatus;
+
+      if (paymentStatus === "Paid") {
+        order.status = "InProgress";
+
+        await Payment.update(
+          { status: "completed", payment_date: new Date() },
+          { where: { order_id: order.id }, transaction: t }
+        );
+      } else if (paymentStatus === "Unpaid") {
+        order.status = "Pending";
+
+        await Payment.update(
+          { status: "pending", payment_date: null },
+          { where: { order_id: order.id }, transaction: t }
+        );
+      }
+
       await order.save({ transaction: t });
 
       await t.commit();
@@ -303,7 +341,6 @@ const OrderService = {
       throw error;
     }
   },
-
   async cancelOrder(orderId, user) {
     const t = await sequelize.transaction();
     try {
@@ -641,6 +678,13 @@ const OrderService = {
       if (order) {
         order.status = status;
         await order.save({ transaction: t });
+      }
+      if (status === "Served" && order.type === "dine-in" && order.table_id) {
+        const table = await Table.findByPk(order.table_id, { transaction: t });
+        if (table) {
+          table.is_active = true;
+          await table.save({ transaction: t });
+        }
       }
 
       await t.commit();
