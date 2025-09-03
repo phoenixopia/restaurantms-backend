@@ -31,25 +31,17 @@ module.exports = (sequelize, DataTypes) => {
           key: "id",
         },
       },
+      user_id: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        references: {
+          model: "users",
+          key: "id",
+        },
+      },
       amount: {
         type: DataTypes.DECIMAL(10, 2),
         allowNull: false,
-      },
-      subtotal: {
-        type: DataTypes.DECIMAL(10, 2),
-        allowNull: true,
-      },
-      discount_amount: {
-        type: DataTypes.DECIMAL(10, 2),
-        allowNull: true,
-      },
-      tax_amount: {
-        type: DataTypes.DECIMAL(10, 2),
-        allowNull: true,
-      },
-      tip_amount: {
-        type: DataTypes.DECIMAL(10, 2),
-        allowNull: true,
       },
       payment_method: {
         type: DataTypes.STRING(20),
@@ -59,29 +51,12 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.STRING,
       },
 
-      // promotion_id: {
-      //   type: DataTypes.UUID,
-      //   allowNull: true,
-      //   references: {
-      //     model: "promotions",
-      //     key: "id",
-      //   },
-      // },
       status: {
-        type: DataTypes.ENUM(
-          "pending",
-          "completed",
-          "failed",
-          "cancelled",
-          "refunded"
-        ),
+        type: DataTypes.ENUM("pending", "completed", "failed", "cancelled"),
         defaultValue: "pending",
       },
       payment_date: {
         type: DataTypes.DATE,
-      },
-      refund_reason: {
-        type: DataTypes.TEXT,
       },
     },
     {
@@ -101,10 +76,9 @@ module.exports = (sequelize, DataTypes) => {
     Payment.belongsTo(models.Customer, {
       foreignKey: "customer_id",
     });
-
-    // Payment.belongsTo(models.Promotion, {
-    //   foreignKey: "promotion_id",
-    // });
+    Payment.belongsTo(models.User, {
+      foreignKey: "user_id",
+    });
   };
 
   return Payment;
