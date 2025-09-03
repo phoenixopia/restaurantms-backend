@@ -33,7 +33,7 @@ router.get(
 
 // Update table
 router.put(
-  "/update/:id",
+  "/update-table/:id",
   protect("user"),
   // permissionCheck("update_table"),
   TableController.updateTable
@@ -41,7 +41,7 @@ router.put(
 
 // Delete table
 router.delete(
-  "/delete/:id",
+  "/delete-table/:id",
   protect("user"),
   // permissionCheck("delete_table"),
   TableController.deleteTable
