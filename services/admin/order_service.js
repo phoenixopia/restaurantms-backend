@@ -318,6 +318,7 @@ const OrderService = {
 
       if (paymentStatus === "Paid") {
         order.status = "InProgress";
+        kdsOrder.status = "InProgress";
 
         await Payment.update(
           { status: "completed", payment_date: new Date() },
