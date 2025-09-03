@@ -31,7 +31,6 @@ exports.updateTable = asyncHandler(async (req, res) => {
 });
 
 exports.deleteTable = asyncHandler(async (req, res) => {
-  const { tableId } = req.params;
   const result = await TableService.deleteTable(req.params.id, req.user);
 
   return success(res, result.message, result.data, 200);

@@ -1,6 +1,13 @@
 "use strict";
 
-const { Table, Branch, Restaurant, sequelize } = require("../../models");
+const {
+  Table,
+  Branch,
+  Restaurant,
+  Reservation,
+  Order,
+  sequelize,
+} = require("../../models");
 const { Op } = require("sequelize");
 const throwError = require("../../utils/throwError");
 const logActivity = require("../../utils/logActivity");
@@ -8,6 +15,9 @@ const logActivity = require("../../utils/logActivity");
 const TableService = {
   // ------------------ Create Table ------------------
   async createTable(data, user) {
+    if (!data.table_number || !data.capacity) {
+      throwError("Missing required fields", 400);
+    }
     const t = await sequelize.transaction();
     try {
       const branchId = user.branch_id || data.branch_id;
@@ -142,7 +152,25 @@ const TableService = {
       if (user.restaurant_id && table.restaurant_id !== user.restaurant_id)
         throwError("Access denied", 403);
 
-      if (user.branch_id) delete data.branch_id; // branch users cannot change branch
+      if (user.branch_id) delete data.branch_id;
+
+      if (data.table_number && data.table_number !== table.table_number) {
+        const exists = await Table.findOne({
+          where: {
+            branch_id: table.branch_id,
+            table_number: data.table_number,
+            id: { [Op.ne]: table.id },
+          },
+          transaction: t,
+        });
+
+        if (exists) {
+          throwError(
+            `Table number ${data.table_number} already exists in this branch`,
+            400
+          );
+        }
+      }
 
       const oldData = table.toJSON();
       await table.update(data, { transaction: t });
@@ -163,7 +191,6 @@ const TableService = {
       throw err;
     }
   },
-
   // ------------------ Delete Table ------------------
   async deleteTable(tableId, user) {
     const t = await sequelize.transaction();
@@ -177,6 +204,20 @@ const TableService = {
         throwError("Access denied", 403);
 
       const oldData = table.toJSON();
+
+      await Reservation.destroy({
+        where: { table_id: table.id },
+        transaction: t,
+      });
+
+      // await Order.destroy({
+      //   where: {
+      //     table_id: table.id,
+      //     type: "dine-in",
+      //   },
+      //   transaction: t,
+      // });
+
       await table.destroy({ transaction: t });
 
       // Log activity
@@ -195,7 +236,6 @@ const TableService = {
       throw err;
     }
   },
-
   // ------------------ Table KPI ------------------
   async getTableKPI(user, query = {}) {
     const where = {};
@@ -221,7 +261,10 @@ const TableService = {
     });
     const inactiveTables = totalTables - activeTables;
 
-    return { totalTables, activeTables, inactiveTables };
+    return {
+      message: "Table KPI fetched successfully",
+      data: { totalTables, activeTables, inactiveTables },
+    };
   },
 };
 
