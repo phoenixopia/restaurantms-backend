@@ -84,8 +84,8 @@ router.get(
   CateringController.viewCateringRequestById
 );
 
-router.put(
-  "/give-response/:id",
+router.patch(
+  "/reject-request/:id",
   protect("user"),
   // permissionCheck("manage_catering"),
   CateringController.giveResponseCateringRequest
