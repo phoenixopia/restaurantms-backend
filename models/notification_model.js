@@ -34,6 +34,7 @@ module.exports = (sequelize, DataTypes) => {
           "TICKET",
           "INVENTORY",
           "PAYMENT",
+          "VIDEO",
           "SYSTEM"
         ),
         allowNull: false,

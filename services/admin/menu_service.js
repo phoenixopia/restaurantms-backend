@@ -10,6 +10,7 @@ const {
   sequelize,
 } = require("../../models");
 const throwError = require("../../utils/throwError");
+const logActivity = require("../../utils/logActivity");
 
 async function getRestaurantIdFromUser(user, transaction = null) {
   if (user.restaurant_id) {
@@ -24,7 +25,11 @@ async function getRestaurantIdFromUser(user, transaction = null) {
 }
 
 const MenuService = {
-  async createMenu({ name, description, is_active = true }, restaurantId) {
+  async createMenu(
+    { name, description, is_active = true },
+    restaurantId,
+    user
+  ) {
     const t = await sequelize.transaction();
     try {
       if (!name) throwError("Menu name is required", 400);
@@ -45,6 +50,14 @@ const MenuService = {
         },
         { transaction: t }
       );
+
+      await logActivity({
+        user_id: user.id,
+        module: "Menu",
+        action: "Create",
+        details: menu.toJSON(),
+        transaction: t,
+      });
 
       await t.commit();
       return menu;
@@ -108,8 +121,18 @@ const MenuService = {
       });
       if (!menu) throwError("Menu not found", 404);
 
+      const oldMenu = menu;
+
       menu.name = data.name ?? menu.name;
       menu.description = data.description ?? menu.description;
+
+      await logActivity({
+        user_id: user.id,
+        module: "Menu",
+        action: "Update",
+        details: { before: oldMenu.toJSON(), after: menu.toJSON() },
+        transaction: t,
+      });
 
       await menu.save({ transaction: t });
 
@@ -131,6 +154,15 @@ const MenuService = {
         transaction: t,
       });
       if (!menu) throwError("Menu not found", 404);
+
+      const deletedMenu = menu;
+      await logActivity({
+        user_id: user.id,
+        module: "Menu",
+        action: "Delete",
+        details: deletedMenu.toJSON(),
+        transaction: t,
+      });
 
       await menu.destroy({ transaction: t });
     });

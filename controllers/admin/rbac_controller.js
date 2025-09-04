@@ -6,14 +6,15 @@ const throwError = require("../../utils/throwError");
 // ==================== Role Tag
 
 exports.createRoleTag = asyncHandler(async (req, res) => {
-  const roleTag = await RbacService.createRoleTag(req.body);
+  const roleTag = await RbacService.createRoleTag(req.body, req.user);
   return success(res, "Role tag created successfully", roleTag, 201);
 });
 
 exports.updateRoleTag = asyncHandler(async (req, res) => {
   const updatedRoleTag = await RbacService.updateRoleTag(
     req.params.id,
-    req.body
+    req.body,
+    req.user
   );
   return success(res, "Role tag updated successfully", updatedRoleTag);
 });
@@ -35,7 +36,7 @@ exports.getAllRoleTag = asyncHandler(async (req, res) => {
 });
 
 exports.deleteRoleTag = asyncHandler(async (req, res) => {
-  await RbacService.deleteRoleTag(req.params.id);
+  await RbacService.deleteRoleTag(req.params.id, req.user);
   return success(res, "Role tag deleted successfully");
 });
 

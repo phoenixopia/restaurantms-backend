@@ -15,6 +15,7 @@ const throwError = require("../../utils/throwError");
 const cleanupUploadedFiles = require("../../utils/cleanUploadedFiles");
 const { getFileUrl, getFilePath } = require("../../utils/file");
 const UPLOAD_FOLDER = "menu-items";
+const logActivity = require("../../utils/logActivity");
 
 const MenuItemService = {
   async createMenuItem(data, user) {
@@ -48,6 +49,14 @@ const MenuItemService = {
         },
         { transaction: t }
       );
+
+      await logActivity({
+        user_id: user.id,
+        module: "MenuItem",
+        action: "Create",
+        details: item.toJSON(),
+        transaction: t,
+      });
 
       await t.commit();
       return item;
@@ -165,6 +174,14 @@ const MenuItemService = {
         }
         await uploadedFile.destroy({ transaction: t }); // delete the DB record
       }
+
+      await logActivity({
+        user_id: user.id,
+        module: "MenuItem",
+        action: "Delete",
+        details: item.toJSON(),
+        transaction: t,
+      });
 
       await item.destroy({ transaction: t });
       await t.commit();
@@ -450,6 +467,8 @@ const MenuItemService = {
 
       if (!item) throwError("Menu item not found", 404);
 
+      const oldData = item.toJSON();
+
       const category = item.MenuCategory;
       if (!category) throwError("Menu category not found for this item", 400);
 
@@ -508,6 +527,14 @@ const MenuItemService = {
 
         item.menu_category_id = newCategory.id;
       }
+
+      await logActivity({
+        user_id: user.id,
+        module: "MenuItem",
+        action: "Update",
+        details: { before: oldData, after: item.toJSON() },
+        transaction: t,
+      });
 
       await item.save({ transaction: t });
       await t.commit();

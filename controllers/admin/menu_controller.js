@@ -9,7 +9,7 @@ const { success } = require("../../utils/apiResponse");
 // ====================== Menu
 exports.createMenu = asyncHandler(async (req, res) => {
   const restaurantId = req.user.restaurant_id;
-  const menu = await MenuService.createMenu(req.body, restaurantId);
+  const menu = await MenuService.createMenu(req.body, restaurantId, req.user);
   return success(res, "Menu created successfully", menu, 201);
 });
 
