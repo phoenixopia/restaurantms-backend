@@ -30,7 +30,7 @@ exports.uploadRestaurantFiles = multer({
   { name: "images", maxCount: 1 },
 ]);
 
-const MENUITEM_DIR = path.join(__dirname, "..", "uploads", "menu-items");
+const MENUITEM_DIR = path.resolve(__dirname, "../uploads/menu-items");
 
 const menuItemStorage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, MENUITEM_DIR),

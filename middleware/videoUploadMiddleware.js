@@ -1,7 +1,7 @@
 const multer = require("multer");
 const path = require("path");
-const fs = require("fs");
-const cleanUploadedFiles = require("../utils/cleanUploadedFiles");
+const cleanupUploadedFiles = require("../utils/cleanUploadedFiles");
+const { error } = require("../utils/apiResponse");
 
 const VIDEO_DIR = path.resolve(__dirname, "../uploads/videos");
 
@@ -17,8 +17,12 @@ const videoFileFilter = (req, file, cb) => {
   const videoTypes = ["video/mp4", "video/webm"];
   const imageTypes = ["image/jpeg", "image/png", "image/jpg"];
 
-  if (videoTypes.includes(file.mimetype)) return cb(null, true);
-  if (imageTypes.includes(file.mimetype)) return cb(null, true);
+  if (
+    videoTypes.includes(file.mimetype) ||
+    imageTypes.includes(file.mimetype)
+  ) {
+    return cb(null, true);
+  }
 
   return cb(
     new Error(
@@ -36,41 +40,38 @@ const uploadVideoFile = multer({
   { name: "thumbnail", maxCount: 1 },
 ]);
 
-const validateVideoThumbnailSizes = async (req, res, next) => {
-  const MAX_VIDEO_SIZE = 200 * 1024 * 1024; // 200MB
-  const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_VIDEO_SIZE = 200 * 1024 * 1024; // 200MB
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
 
+const validateVideoThumbnailSizes = async (req, res, next) => {
   try {
     const { video, thumbnail } = req.files || {};
 
-    let shouldCleanup = false;
-
-    if (video && video[0].size > MAX_VIDEO_SIZE) {
-      shouldCleanup = true;
-      return res.status(400).json({
-        success: false,
-        message: "Video file size exceeds 200MB limit.",
-      });
-    } else if (thumbnail && thumbnail[0].size > MAX_IMAGE_SIZE) {
-      shouldCleanup = true;
-      return res.status(400).json({
-        success: false,
-        message: "Thumbnail image size exceeds 5MB limit.",
-      });
+    if (!video?.[0] || !thumbnail?.[0]) {
+      await cleanupUploadedFiles(req.files);
+      return error(res, "Both video and thumbnail are required", null, 400);
     }
 
-    if (shouldCleanup) {
-      await cleanUploadedFiles(req.files);
-      return;
+    if (video[0].size > MAX_VIDEO_SIZE) {
+      await cleanupUploadedFiles(req.files);
+      return error(res, "Video file size exceeds 200MB limit", null, 400);
+    }
+
+    if (thumbnail[0].size > MAX_IMAGE_SIZE) {
+      await cleanupUploadedFiles(req.files);
+      return error(res, "Thumbnail image size exceeds 5MB limit", null, 400);
     }
 
     next();
   } catch (err) {
-    console.error("Error validating uploaded video/thumbnail size:", err);
-    return res.status(500).json({
-      success: false,
-      message: "Internal server error during file validation.",
-    });
+    console.error("Video/thumbnail validation error:", err);
+    await cleanupUploadedFiles(req.files);
+    return error(
+      res,
+      "Internal server error during file validation",
+      null,
+      500
+    );
   }
 };
 

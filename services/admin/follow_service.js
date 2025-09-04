@@ -1,4 +1,16 @@
-const { RestaurantFollower, Restaurant, Customer } = require("../../models");
+const {
+  RestaurantFollower,
+  Restaurant,
+  Customer,
+  Video,
+  VideoLike,
+  VideoComment,
+  VideoView,
+  VideoFavorite,
+  MenuItem,
+  MenuCategory,
+  sequelize,
+} = require("../../models");
 const throwError = require("../../utils/throwError");
 
 const FollowService = {
@@ -45,7 +57,7 @@ const FollowService = {
       include: [
         {
           model: Video,
-          as: "video",
+
           where: {
             restaurant_id: restaurantId,
             status: "approved",
