@@ -1,44 +1,29 @@
 const fs = require("fs").promises;
 
-module.exports = async function cleanupUploadedFiles(files) {
+async function cleanupUploadedFiles(files) {
   if (!files) return;
 
-  try {
-    const deletions = [];
+  const flattenFiles = (input) => {
+    if (!input) return [];
+    if (Array.isArray(input)) return input.flatMap(flattenFiles);
+    if (typeof input === "object" && input.path) return [input]; // single file
+    if (typeof input === "object")
+      return Object.values(input).flatMap(flattenFiles);
+    return [];
+  };
 
-    if (Array.isArray(files)) {
-      for (const file of files) {
-        if (file?.path) {
-          deletions.push(
-            fs.unlink(file.path).catch((err) => {
-              if (err.code !== "ENOENT") {
-                console.error("Error deleting file:", err);
-              }
-            })
-          );
-        }
+  const allFiles = flattenFiles(files);
+
+  const deletions = allFiles.map((file) =>
+    fs.unlink(file.path).catch((err) => {
+      if (err.code !== "ENOENT") {
+        console.error("Error deleting file:", err);
       }
-    }
+    })
+  );
 
-    if (typeof files === "object" && !Array.isArray(files)) {
-      for (const field of Object.values(files)) {
-        for (const file of Array.isArray(field) ? field : [field]) {
-          if (file?.path) {
-            deletions.push(
-              fs.unlink(file.path).catch((err) => {
-                if (err.code !== "ENOENT") {
-                  console.error("Error deleting file:", err);
-                }
-              })
-            );
-          }
-        }
-      }
-    }
+  await Promise.all(deletions);
+  console.log(`Cleanup completed: ${allFiles.length} file(s) processed`);
+}
 
-    await Promise.all(deletions);
-    console.log("File cleanup completed successfully");
-  } catch (err) {
-    console.error("Cleanup failed:", err);
-  }
-};
+module.exports = cleanupUploadedFiles;

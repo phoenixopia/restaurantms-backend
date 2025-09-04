@@ -2,6 +2,7 @@
 
 /* ----------------------------- Core Imports ----------------------------- */
 const fs = require("fs/promises");
+const fsSync = require("fs"); // classic fs
 const path = require("path");
 
 /* ---------------------------- Third-Party Libs -------------------------- */
@@ -28,7 +29,14 @@ const {
 /* ------------------------------- Utils --------------------------------- */
 const throwError = require("../../utils/throwError");
 const cleanupUploadedFiles = require("../../utils/cleanUploadedFiles");
-const { getFileUrl, getFilePath } = require("../../utils/file");
+const {
+  getFileUrl,
+  getFilePath,
+  ensureFolder,
+  fileExists,
+  getFFprobePath,
+} = require("../../utils/file");
+
 const getVideoDuration = require("../../utils/getVideoDuration");
 
 /* ------------------------------ Services ------------------------------- */
@@ -38,6 +46,7 @@ const FollowService = require("./follow_service");
 const VIDEO_UPLOAD_FOLDER = "videos";
 
 /* --------------------------- Video Service ----------------------------- */
+
 const VideoService = {
   async getAllVideos(user, filters) {
     const {
@@ -56,6 +65,7 @@ const VideoService = {
 
     const where = {};
 
+    // scope by restaurant/branch
     if (user.restaurant_id && !user.branch_id) {
       where.restaurant_id = user.restaurant_id;
       if (branch_id) where.branch_id = branch_id;
@@ -63,21 +73,29 @@ const VideoService = {
       where.branch_id = user.branch_id;
     }
 
+    // filters
     if (title) where.title = { [Op.iLike]: `%${title}%` };
     if (status) where.status = status;
     if (menu_item_id) where.menu_item_id = menu_item_id;
 
-    if (date === "daily")
-      where.created_at = { [Op.gte]: sequelize.literal(`CURRENT_DATE`) };
-    if (date === "weekly")
-      where.created_at = {
+    // date filter (use Video.created_at to avoid ambiguity)
+    if (date === "daily") {
+      where["$Video.created_at$"] = {
+        [Op.gte]: sequelize.literal(`CURRENT_DATE`),
+      };
+    }
+    if (date === "weekly") {
+      where["$Video.created_at$"] = {
         [Op.gte]: sequelize.literal(`CURRENT_DATE - interval '7 days'`),
       };
-    if (date === "monthly")
-      where.created_at = {
+    }
+    if (date === "monthly") {
+      where["$Video.created_at$"] = {
         [Op.gte]: sequelize.literal(`CURRENT_DATE - interval '1 month'`),
       };
+    }
 
+    // relations
     const include = [
       { model: VideoLike, attributes: [] },
       { model: VideoFavorite, attributes: [] },
@@ -91,6 +109,7 @@ const VideoService = {
       { model: Branch, attributes: ["id", "name"] },
     ];
 
+    // counts
     const attributes = {
       include: [
         [fn("COUNT", col("VideoLikes.id")), "like_count"],
@@ -100,16 +119,18 @@ const VideoService = {
       ],
     };
 
-    let order = [["created_at", "DESC"]];
+    // ordering
+    let order = [["Video", "created_at", "DESC"]];
     const sortMap = {
       views: literal('"view_count"'),
       likes: literal('"like_count"'),
       favorites: literal('"favorite_count"'),
       comments: literal('"comment_count"'),
-      created_at: col("created_at"),
+      created_at: col("Video.created_at"),
     };
     if (sortMap[sortBy]) order = [[sortMap[sortBy], sortOrder]];
 
+    // fetch videos
     const videos = await Video.findAll({
       where,
       attributes,
@@ -126,68 +147,17 @@ const VideoService = {
       subQuery: false,
     });
 
+    // total count
     const total = await Video.count({ where });
 
     return {
       total,
       page: Number(page),
       limit: Number(limit),
-      has_next_page: offset + videos.length < total,
+      total_pages: Math.ceil(total / limit),
       rows: videos,
     };
   },
-
-  async getAllVideosForAdmin(filters) {
-    const { page = 1, limit = 10, status, title, restaurant_name } = filters;
-
-    const offset = (page - 1) * limit;
-
-    const where = {};
-
-    if (status) {
-      where.status = status;
-    }
-
-    if (title) {
-      where.title = { [Op.iLike]: `%${title}%` }; // Postgres only
-    }
-
-    const restaurantWhere = {};
-    if (restaurant_name) {
-      restaurantWhere.restaurant_name = { [Op.iLike]: `%${restaurant_name}%` };
-    }
-
-    const videos = await Video.findAndCountAll({
-      where,
-      include: [
-        {
-          model: Restaurant,
-          attributes: ["id", "restaurant_name"],
-          where: Object.keys(restaurantWhere).length
-            ? restaurantWhere
-            : undefined,
-          include: [
-            {
-              model: SystemSetting,
-              attributes: ["logo_url"],
-            },
-          ],
-        },
-      ],
-      order: [["created_at", "DESC"]],
-      limit: Number(limit),
-      offset,
-    });
-
-    return {
-      total: videos.count,
-      page: Number(page),
-      limit: Number(limit),
-      total_pages: Math.ceil(videos.count / limit),
-      rows: videos.rows,
-    };
-  },
-
   async getVideoStatsOverview() {
     const totalVideos = await Video.count();
     const totalComments = await VideoComment.count();
@@ -227,31 +197,53 @@ const VideoService = {
   },
 
   async uploadVideo(user, body, files = {}) {
-    const { title, description, menu_item_id } = body;
+    const { title, description, menu_item_id, branch_id } = body;
     const videoFile = files.video?.[0];
     const thumbnailFile = files.thumbnail?.[0];
 
     if (!videoFile || !thumbnailFile) {
       await cleanupUploadedFiles([videoFile, thumbnailFile].filter(Boolean));
-      throwError("Both video and thumbnail are required", 400);
+      throwError("Missing required fildes", 400);
     }
 
+    if (!body.title) {
+      await cleanupUploadedFiles([videoFile, thumbnailFile]);
+      throwError("Title is required", 400);
+    }
+
+    await ensureFolder(VIDEO_UPLOAD_FOLDER);
+
     const videoPath = getFilePath(VIDEO_UPLOAD_FOLDER, videoFile.filename);
+    const thumbPath = getFilePath(VIDEO_UPLOAD_FOLDER, thumbnailFile.filename);
+    console.log("Video path:", videoPath);
+    console.log("Thumbnail path:", thumbPath);
+
+    if (
+      !(await fileExists(VIDEO_UPLOAD_FOLDER, videoFile.filename)) ||
+      !(await fileExists(VIDEO_UPLOAD_FOLDER, thumbnailFile.filename))
+    ) {
+      await cleanupUploadedFiles([videoFile, thumbnailFile].filter(Boolean));
+      throwError("Video or thumbnail file does not exist", 400);
+    }
 
     let duration;
     try {
+      console.log("Video path:", videoPath);
+      console.log("Thumbnail path:", thumbPath);
+
       duration = await getVideoDuration(videoPath);
       if (duration > 180) {
         await cleanupUploadedFiles([videoFile, thumbnailFile]);
         throwError("Video must be 3 minutes or less", 400);
       }
     } catch (err) {
+      console.error("Error reading video duration:", err);
       await cleanupUploadedFiles([videoFile, thumbnailFile]);
       throwError("Unable to read video duration", 500);
     }
 
     if (!user.restaurant_id && !user.branch_id) {
-      await cleanupUploadedFiles([videoFile, thumbnailFile].filter(Boolean));
+      await cleanupUploadedFiles([videoFile, thumbnailFile]);
       throwError("Invalid user access", 403);
     }
 
@@ -280,43 +272,39 @@ const VideoService = {
           throwError("Menu category is missing", 400);
         }
 
-        if (user.restaurant_id) {
-          if (category.restaurant_id !== user.restaurant_id) {
-            await cleanupUploadedFiles([videoFile, thumbnailFile]);
-            throwError("Unauthorized: menu item not in your restaurant", 403);
-          }
-          restaurantId = user.restaurant_id;
-          branchId = category.branch_id;
-        } else if (user.branch_id) {
-          const branch = await Branch.findByPk(user.branch_id, {
-            transaction: t,
-          });
-          if (!branch) {
-            await cleanupUploadedFiles([videoFile, thumbnailFile]);
-            throwError("Branch not found", 404);
-          }
-          if (category.restaurant_id !== branch.restaurant_id) {
-            await cleanupUploadedFiles([videoFile, thumbnailFile]);
-            throwError("Unauthorized: menu item not in your restaurant", 403);
-          }
-          restaurantId = branch.restaurant_id;
-          branchId = category.branch_id;
+        // Authorization check
+        if (
+          user.restaurant_id &&
+          category.restaurant_id !== user.restaurant_id
+        ) {
+          await cleanupUploadedFiles([videoFile, thumbnailFile]);
+          throwError("Unauthorized: menu item not in your restaurant", 403);
         }
-      } else {
         if (user.branch_id) {
           const branch = await Branch.findByPk(user.branch_id, {
             transaction: t,
           });
-          if (!branch) {
+          if (!branch || category.restaurant_id !== branch.restaurant_id) {
             await cleanupUploadedFiles([videoFile, thumbnailFile]);
-            throwError("Branch not found", 404);
+            throwError("Unauthorized: menu item not in your branch", 403);
           }
-          restaurantId = branch.restaurant_id;
-          branchId = branch.id;
-        } else if (user.restaurant_id) {
-          restaurantId = user.restaurant_id;
-          branchId = null;
         }
+
+        restaurantId = category.restaurant_id;
+        branchId = category.branch_id;
+      } else if (branch_id || user.branch_id) {
+        const branch = await Branch.findByPk(branch_id || user.branch_id, {
+          transaction: t,
+        });
+        if (!branch) {
+          await cleanupUploadedFiles([videoFile, thumbnailFile]);
+          throwError("Branch not found", 404);
+        }
+        restaurantId = branch.restaurant_id;
+        branchId = branch.id;
+      } else {
+        restaurantId = user.restaurant_id;
+        branchId = null;
       }
 
       const newVideo = await Video.create(
@@ -338,43 +326,40 @@ const VideoService = {
         { transaction: t }
       );
 
-      await UploadedFile.create(
-        {
-          restaurant_id: restaurantId,
-          path: getFileUrl(VIDEO_UPLOAD_FOLDER, videoFile.filename),
-          size_mb: videoFile.size / (1024 * 1024),
-          uploaded_by: user.id,
-          type: "video",
-          reference_id: newVideo.id,
-        },
-        { transaction: t }
-      );
-
-      await UploadedFile.create(
-        {
-          restaurant_id: restaurantId,
-          path: getFileUrl(VIDEO_UPLOAD_FOLDER, thumbnailFile.filename),
-          size_mb: thumbnailFile.size / (1024 * 1024),
-          uploaded_by: user.id,
-          type: "video-thumbnail",
-          reference_id: newVideo.id,
-        },
+      await UploadedFile.bulkCreate(
+        [
+          {
+            restaurant_id: restaurantId,
+            path: `videos/${videoFile.filename}`,
+            size_mb: parseFloat((videoFile.size / (1024 * 1024)).toFixed(2)),
+            uploaded_by: user.id,
+            type: "video",
+            reference_id: newVideo.id,
+          },
+          {
+            restaurant_id: restaurantId,
+            path: `videos/${thumbnailFile.filename}`,
+            size_mb: parseFloat(
+              (thumbnailFile.size / (1024 * 1024)).toFixed(2)
+            ),
+            uploaded_by: user.id,
+            type: "video-thumbnail",
+            reference_id: newVideo.id,
+          },
+        ],
         { transaction: t }
       );
 
       await t.commit();
 
       return {
-        message: "Video uploaded successfully",
-        data: {
-          id: newVideo.id,
-          title: newVideo.title,
-          description: newVideo.description,
-          video_url: newVideo.video_url,
-          thumbnail_url: newVideo.thumbnail_url,
-          duration: newVideo.duration,
-          status: newVideo.status,
-        },
+        id: newVideo.id,
+        title: newVideo.title,
+        description: newVideo.description,
+        video_url: newVideo.video_url,
+        thumbnail_url: newVideo.thumbnail_url,
+        duration: newVideo.duration,
+        status: newVideo.status,
       };
     } catch (err) {
       await t.rollback();
@@ -434,6 +419,23 @@ const VideoService = {
     return video;
   },
 
+  async deleteOldFile(fileUrl) {
+    if (!fileUrl) return;
+    const filename = path.basename(fileUrl);
+    const filePath = getFilePath(VIDEO_UPLOAD_FOLDER, filename);
+
+    try {
+      if (await fileExists(VIDEO_UPLOAD_FOLDER, filename)) {
+        await fsSync.promises.unlink(filePath);
+        console.log("Deleted old file:", filename);
+      } else {
+        console.log("Old file not found:", filename);
+      }
+    } catch (err) {
+      console.error("Error deleting old file:", filename, err);
+    }
+  },
+
   async updateVideo(user, videoId, body, files = {}) {
     const { title, description, menu_item_id, branch_id } = body;
     const videoFile = files.video?.[0];
@@ -447,6 +449,7 @@ const VideoService = {
       let restaurantId = null;
       let branchId = null;
 
+      // Resolve restaurant & branch IDs
       if (menu_item_id) {
         const menuItem = await MenuItem.findByPk(menu_item_id, {
           include: {
@@ -455,87 +458,55 @@ const VideoService = {
           },
           transaction: t,
         });
-
         if (!menuItem) throwError("Menu item not found", 404);
-
         const category = menuItem.MenuCategory;
         if (!category) throwError("Menu category missing", 400);
 
-        if (user.restaurant_id) {
-          if (category.restaurant_id !== user.restaurant_id) {
-            throwError("Unauthorized: menu item not in your restaurant", 403);
-          }
-          restaurantId = user.restaurant_id;
-          branchId = category.branch_id;
-        } else if (user.branch_id) {
+        if (user.restaurant_id && category.restaurant_id !== user.restaurant_id)
+          throwError("Unauthorized: menu item not in your restaurant", 403);
+        if (user.branch_id) {
           const branch = await Branch.findByPk(user.branch_id, {
             transaction: t,
           });
-          if (!branch) throwError("Branch not found", 404);
-
-          if (category.restaurant_id !== branch.restaurant_id) {
-            throwError("Unauthorized: menu item not in your restaurant", 403);
-          }
-          restaurantId = branch.restaurant_id;
-          branchId = category.branch_id;
+          if (!branch || category.restaurant_id !== branch.restaurant_id)
+            throwError("Unauthorized: menu item not in your branch", 403);
         }
+
+        restaurantId = category.restaurant_id;
+        branchId = category.branch_id;
+      } else if (branch_id || user.branch_id) {
+        const branch = await Branch.findByPk(branch_id || user.branch_id, {
+          transaction: t,
+        });
+        if (!branch) throwError("Branch not found", 404);
+        restaurantId = branch.restaurant_id;
+        branchId = branch.id;
       } else {
-        if (user.restaurant_id && !user.branch_id) {
-          if (branch_id) {
-            const branch = await Branch.findByPk(branch_id, { transaction: t });
-            if (!branch) throwError("Branch not found", 404);
-
-            if (branch.restaurant_id !== user.restaurant_id) {
-              throwError("Unauthorized: branch not in your restaurant", 403);
-            }
-            branchId = branch.id;
-            restaurantId = branch.restaurant_id;
-          } else {
-            branchId = null;
-            restaurantId = user.restaurant_id;
-          }
-        } else if (user.branch_id) {
-          const branch = await Branch.findByPk(user.branch_id, {
-            transaction: t,
-          });
-          if (!branch) throwError("Branch not found", 404);
-          branchId = branch.id;
-          restaurantId = branch.restaurant_id;
-        } else {
-          throwError("Invalid user access", 403);
-        }
+        restaurantId = user.restaurant_id;
+        branchId = null;
       }
 
+      // Handle video file replacement
       if (videoFile) {
         const newVideoPath = getFilePath(
           VIDEO_UPLOAD_FOLDER,
           videoFile.filename
         );
         const newDuration = await getVideoDuration(newVideoPath);
-        if (newDuration > 180) {
-          await cleanupUploadedFiles(
-            [videoFile, thumbnailFile].filter(Boolean)
-          );
+        if (newDuration > 180)
           throwError("Video must be 3 minutes or less", 400);
-        }
 
-        if (video.video_url) {
-          const oldVideoFilename = path.basename(video.video_url);
-          await fs
-            .unlink(getFilePath(VIDEO_UPLOAD_FOLDER, oldVideoFilename))
-            .catch(() => {});
-        }
+        await this.deleteOldFile(video.video_url);
 
         await UploadedFile.destroy({
           where: { reference_id: video.id, type: "video" },
           transaction: t,
         });
-
         await UploadedFile.create(
           {
             restaurant_id: restaurantId,
-            path: getFileUrl(VIDEO_UPLOAD_FOLDER, videoFile.filename),
-            size_mb: videoFile.size / (1024 * 1024),
+            path: `videos/${videoFile.filename}`,
+            size_mb: parseFloat((videoFile.size / (1024 * 1024)).toFixed(2)),
             uploaded_by: user.id,
             type: "video",
             reference_id: video.id,
@@ -547,24 +518,21 @@ const VideoService = {
         video.duration = newDuration;
       }
 
+      // Handle thumbnail replacement
       if (thumbnailFile) {
-        if (video.thumbnail_url) {
-          const oldThumbFilename = path.basename(video.thumbnail_url);
-          await fs
-            .unlink(getFilePath(VIDEO_UPLOAD_FOLDER, oldThumbFilename))
-            .catch(() => {});
-        }
+        await this.deleteOldFile(video.thumbnail_url);
 
         await UploadedFile.destroy({
           where: { reference_id: video.id, type: "video-thumbnail" },
           transaction: t,
         });
-
         await UploadedFile.create(
           {
             restaurant_id: restaurantId,
-            path: getFileUrl(VIDEO_UPLOAD_FOLDER, thumbnailFile.filename),
-            size_mb: thumbnailFile.size / (1024 * 1024),
+            path: `videos/${thumbnailFile.filename}`,
+            size_mb: parseFloat(
+              (thumbnailFile.size / (1024 * 1024)).toFixed(2)
+            ),
             uploaded_by: user.id,
             type: "video-thumbnail",
             reference_id: video.id,
@@ -578,6 +546,7 @@ const VideoService = {
         );
       }
 
+      // Update video record
       await video.update(
         {
           title: title ?? video.title,
@@ -614,6 +583,7 @@ const VideoService = {
     const video = await Video.findByPk(videoId);
     if (!video) throwError("Video not found", 404);
 
+    // Authorization check
     if (user.restaurant_id && !user.branch_id) {
       if (video.restaurant_id !== user.restaurant_id) {
         throwError("Unauthorized: video not in your restaurant", 403);
@@ -645,15 +615,26 @@ const VideoService = {
           ),
         });
       }
-      await cleanupUploadedFiles(filesToDelete);
+      if (filesToDelete.length) {
+        await cleanupUploadedFiles(filesToDelete);
+      }
 
-      await UploadedFile.destroy({
-        where: {
-          reference_id: video.id,
-          type: { [Op.in]: ["video", "video-thumbnail"] },
-        },
-        transaction: t,
-      });
+      await Promise.all([
+        VideoLike.destroy({ where: { video_id: video.id }, transaction: t }),
+        VideoFavorite.destroy({
+          where: { video_id: video.id },
+          transaction: t,
+        }),
+        VideoComment.destroy({ where: { video_id: video.id }, transaction: t }),
+        VideoView.destroy({ where: { video_id: video.id }, transaction: t }),
+        UploadedFile.destroy({
+          where: {
+            reference_id: video.id,
+            type: { [Op.in]: ["video", "video-thumbnail"] },
+          },
+          transaction: t,
+        }),
+      ]);
 
       await video.destroy({ transaction: t });
 
@@ -671,7 +652,6 @@ const VideoService = {
       throw err;
     }
   },
-
   // customer side
 
   async listApprovedVideos(user, query = {}) {

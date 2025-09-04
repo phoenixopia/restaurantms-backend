@@ -53,10 +53,9 @@ exports.uploadVideo = asyncHandler(async (req, res) => {
 
 // Update an existing video
 exports.updateVideo = asyncHandler(async (req, res) => {
-  const { id } = req.params;
   const updated = await VideoService.updateVideo(
-    id,
     req.user,
+    req.params.id,
     req.body,
     req.files
   );
