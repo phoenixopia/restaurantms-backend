@@ -11,6 +11,7 @@ const {
 const { Op, where } = require("sequelize");
 const throwError = require("../../utils/throwError");
 const { buildPagination } = require("../../utils/pagination");
+const logActivity = require("../../utils/logActivity");
 
 const ALLOWED_ROLE_TAGS = [
   "super_admin",
@@ -22,7 +23,7 @@ const ALLOWED_ROLE_TAGS = [
 
 const RbacService = {
   // ================== RoleTag================
-  async createRoleTag(data) {
+  async createRoleTag(data, user) {
     const t = await sequelize.transaction();
     try {
       const { name, description } = data;
@@ -53,6 +54,14 @@ const RbacService = {
         { transaction: t }
       );
 
+      await logActivity({
+        user_id: user.id,
+        module: "RoleTag",
+        action: "Create",
+        details: roleTag.toJSON(),
+        transaction: t,
+      });
+
       await t.commit();
       return roleTag;
     } catch (error) {
@@ -61,18 +70,17 @@ const RbacService = {
     }
   },
 
-  async updateRoleTag(id, updates) {
+  async updateRoleTag(id, updates, user) {
     const t = await sequelize.transaction();
     try {
       const roleTag = await RoleTag.findByPk(id, { transaction: t });
       if (!roleTag) throwError("Role tag not found", 404);
 
+      const oldData = roleTag.toJSON();
+
       if (updates.name) {
         const exists = await RoleTag.findOne({
-          where: {
-            id: { [Op.ne]: id },
-            name: updates.name.toLowerCase(),
-          },
+          where: { id: { [Op.ne]: id }, name: updates.name.toLowerCase() },
           transaction: t,
         });
         if (exists)
@@ -87,8 +95,16 @@ const RbacService = {
         { transaction: t }
       );
 
+      await logActivity({
+        user_id: user.id,
+        module: "RoleTag",
+        action: "Update",
+        details: { before: oldData, after: roleTag.toJSON() },
+        transaction: t,
+      });
+
       await t.commit();
-      return roleTag;
+      return { message: "Role tag updated successfully", data: roleTag };
     } catch (err) {
       await t.rollback();
       throw err;
@@ -128,19 +144,26 @@ const RbacService = {
     });
   },
 
-  async deleteRoleTag(id) {
+  async deleteRoleTag(id, user) {
     const t = await sequelize.transaction();
-
     try {
       const roleTag = await RoleTag.findByPk(id, { transaction: t });
-      if (!roleTag) {
-        throwError("Role tag not found", 404);
-      }
+      if (!roleTag) throwError("Role tag not found", 404);
+
+      const oldData = roleTag.toJSON();
 
       await RoleTag.destroy({ where: { id }, transaction: t });
 
+      await logActivity({
+        user_id: user.id,
+        module: "RoleTag",
+        action: "Delete",
+        details: oldData,
+        transaction: t,
+      });
+
       await t.commit();
-      return true;
+      return { message: "Role tag deleted successfully", data: null };
     } catch (err) {
       await t.rollback();
       throw err;
@@ -233,6 +256,21 @@ const RbacService = {
         }));
         await RolePermission.bulkCreate(rolePermissions, { transaction: t });
       }
+      await logActivity({
+        user_id: user.id,
+        module: "Role",
+        action: "Create",
+        details: role.toJSON(),
+        transaction: t,
+      });
+
+      await logActivity({
+        user_id: user.id,
+        module: "Role",
+        action: "Create",
+        details: role.toJSON(),
+        transaction: t,
+      });
 
       await t.commit();
 
@@ -250,22 +288,19 @@ const RbacService = {
       throw err;
     }
   },
+
   async updateRole(roleId, user, updates) {
     const t = await sequelize.transaction();
-
     try {
       const role = await Role.findByPk(roleId, {
-        include: [{ model: Permission }],
+        include: [Permission],
         transaction: t,
       });
-
       if (!role) throwError("Role not found", 404);
 
       const isRestaurantAdmin = !!user.restaurant_id;
-
-      if (isRestaurantAdmin && role.created_by !== user.id) {
+      if (isRestaurantAdmin && role.created_by !== user.id)
         throwError("You can only update roles you created", 403);
-      }
 
       if (!isRestaurantAdmin && updates.name) {
         const exists = await Role.findOne({
@@ -278,11 +313,11 @@ const RbacService = {
           },
           transaction: t,
         });
-
-        if (exists) {
+        if (exists)
           throwError("Another role with this name already exists", 400);
-        }
       }
+
+      const oldData = role.toJSON();
 
       const updateData = {};
       if (updates.name) updateData.name = updates.name.toLowerCase();
@@ -291,54 +326,33 @@ const RbacService = {
       await role.update(updateData, { transaction: t });
 
       if (Array.isArray(updates.permissionIds)) {
-        const newPermissionIds = updates.permissionIds;
-
-        const foundPermissions = await Permission.findAll({
-          where: { id: { [Op.in]: newPermissionIds } },
-          transaction: t,
-        });
-
-        if (foundPermissions.length !== newPermissionIds.length) {
-          throwError("One or more permissions do not exist", 400);
-        }
-
-        if (isRestaurantAdmin) {
-          const adminPermissions = await this.getUserPermissionIds(user.id);
-          const unauthorized = newPermissionIds.filter(
-            (pid) => !adminPermissions.includes(pid)
-          );
-          if (unauthorized.length > 0) {
-            throwError("You cannot assign permissions you do not have", 403);
-          }
-        }
-
         await RolePermission.destroy({
           where: { role_id: roleId },
           transaction: t,
         });
 
-        if (newPermissionIds.length > 0) {
-          const rolePermissionsToAdd = newPermissionIds.map((pid) => ({
+        if (updates.permissionIds.length) {
+          const rolePermissions = updates.permissionIds.map((pid) => ({
             role_id: roleId,
             permission_id: pid,
           }));
-          await RolePermission.bulkCreate(rolePermissionsToAdd, {
-            transaction: t,
-          });
+          await RolePermission.bulkCreate(rolePermissions, { transaction: t });
         }
       }
 
-      await t.commit();
-
-      return await Role.findByPk(roleId, {
-        include: [
-          {
-            model: Permission,
-            attributes: ["id", "name", "description"],
-            through: { attributes: [] },
-          },
-        ],
+      await logActivity({
+        user_id: user.id,
+        module: "Role",
+        action: "Update",
+        details: { before: oldData, after: role.toJSON() },
+        transaction: t,
       });
+
+      await t.commit();
+      return {
+        message: "Role updated successfully",
+        data: await Role.findByPk(roleId, { include: [Permission] }),
+      };
     } catch (err) {
       await t.rollback();
       throw err;
@@ -407,24 +421,28 @@ const RbacService = {
     const t = await sequelize.transaction();
     try {
       const role = await Role.findByPk(roleId, { transaction: t });
-
       if (!role) throwError("Role not found", 404);
 
       const isRestaurantAdmin = !!user.restaurant_id;
-
-      if (isRestaurantAdmin && role.created_by !== user.id) {
+      if (isRestaurantAdmin && role.created_by !== user.id)
         throwError("You can only delete roles you created", 403);
-      }
 
       await RolePermission.destroy({
         where: { role_id: roleId },
         transaction: t,
       });
-
       await Role.destroy({ where: { id: roleId }, transaction: t });
 
+      await logActivity({
+        user_id: user.id,
+        module: "Role",
+        action: "Delete",
+        details: role.toJSON(),
+        transaction: t,
+      });
+
       await t.commit();
-      return true;
+      return { message: "Role deleted successfully", data: null };
     } catch (err) {
       await t.rollback();
       throw err;

@@ -41,6 +41,7 @@ const getVideoDuration = require("../../utils/getVideoDuration");
 
 /* ------------------------------ Services ------------------------------- */
 const FollowService = require("./follow_service");
+const SendNotification = require("../../utils/send_notification");
 
 /* ------------------------------ Constants ------------------------------ */
 const VIDEO_UPLOAD_FOLDER = "videos";
@@ -188,7 +189,7 @@ const VideoService = {
       throwError("Invalid user access", 403);
     }
 
-    const stats = await FollowService.getRestaurantStats(restaurantId);
+    const stats = await FollowService.getRestaurantFullStats(restaurantId);
 
     return {
       restaurant_id: restaurantId,
@@ -350,7 +351,22 @@ const VideoService = {
         { transaction: t }
       );
 
+      await logActivity({
+        user_id: user.id,
+        module: "Video",
+        action: "Create",
+        details: {
+          id: newVideo.id,
+          title: newVideo.title,
+          restaurant_id: restaurantId,
+          branch_id: branchId,
+        },
+        transaction: t,
+      });
+
       await t.commit();
+
+      await SendNotification.sendVideoUploadedNotification(newVideo, user.id);
 
       return {
         id: newVideo.id,
@@ -369,54 +385,39 @@ const VideoService = {
   },
 
   async updateVideoStatus(videoId, newStatus, user) {
-    const video = await Video.findByPk(videoId);
-    if (!video) throwError("Video not found", 404);
+    const t = await sequelize.transaction();
+    try {
+      const video = await Video.findByPk(videoId, { transaction: t });
+      if (!video) throwError("Video not found", 404);
 
-    video.status = newStatus;
-    await video.save();
+      const oldStatus = video.status;
+      video.status = newStatus;
+      await video.save({ transaction: t });
 
-    if (newStatus === "rejected") {
-      const t = await sequelize.transaction();
-      try {
-        const filesToDelete = [];
-        if (video.video_url) {
-          filesToDelete.push({
-            path: getFilePath(
-              VIDEO_UPLOAD_FOLDER,
-              path.basename(video.video_url)
-            ),
-          });
-        }
-        if (video.thumbnail_url) {
-          filesToDelete.push({
-            path: getFilePath(
-              VIDEO_UPLOAD_FOLDER,
-              path.basename(video.thumbnail_url)
-            ),
-          });
-        }
-        if (filesToDelete.length > 0) {
-          await cleanupUploadedFiles(filesToDelete);
-        }
+      await logActivity({
+        user_id: user.id,
+        module: "Video",
+        action: "Update Status",
+        details: {
+          id: video.id,
+          title: video.title,
+          before: oldStatus,
+          after: newStatus,
+        },
+        transaction: t,
+      });
 
-        await UploadedFile.destroy({
-          where: {
-            reference_id: video.id,
-            type: { [Op.in]: ["video", "video-thumbnail"] },
-          },
-          transaction: t,
-        });
-
-        await video.destroy({ transaction: t });
-
-        await t.commit();
-      } catch (err) {
-        await t.rollback();
-        throw err;
-      }
+      await t.commit();
+      await SendNotification.sendVideoStatusUpdateNotification(
+        video,
+        newStatus,
+        user.id
+      );
+      return video;
+    } catch (err) {
+      await t.rollback();
+      throw err;
     }
-
-    return video;
   },
 
   async deleteOldFile(fileUrl) {
@@ -486,6 +487,9 @@ const VideoService = {
         branchId = null;
       }
 
+      // Track changes for logging
+      const changes = {};
+
       // Handle video file replacement
       if (videoFile) {
         const newVideoPath = getFilePath(
@@ -514,7 +518,13 @@ const VideoService = {
           { transaction: t }
         );
 
-        video.video_url = getFileUrl(VIDEO_UPLOAD_FOLDER, videoFile.filename);
+        changes.video_url = {
+          before: video.video_url,
+          after: getFileUrl(VIDEO_UPLOAD_FOLDER, videoFile.filename),
+        };
+        changes.duration = { before: video.duration, after: newDuration };
+
+        video.video_url = changes.video_url.after;
         video.duration = newDuration;
       }
 
@@ -540,23 +550,43 @@ const VideoService = {
           { transaction: t }
         );
 
-        video.thumbnail_url = getFileUrl(
-          VIDEO_UPLOAD_FOLDER,
-          thumbnailFile.filename
-        );
+        changes.thumbnail_url = {
+          before: video.thumbnail_url,
+          after: getFileUrl(VIDEO_UPLOAD_FOLDER, thumbnailFile.filename),
+        };
+        video.thumbnail_url = changes.thumbnail_url.after;
       }
 
       // Update video record
-      await video.update(
-        {
-          title: title ?? video.title,
-          description: description ?? video.description,
-          restaurant_id: restaurantId,
-          branch_id: branchId,
-          menu_item_id: menu_item_id || null,
-        },
-        { transaction: t }
-      );
+      const updatedFields = {
+        title: title ?? video.title,
+        description: description ?? video.description,
+        restaurant_id: restaurantId,
+        branch_id: branchId,
+        menu_item_id: menu_item_id || null,
+      };
+
+      // Track title/description changes
+      if (video.title !== updatedFields.title)
+        changes.title = { before: video.title, after: updatedFields.title };
+      if (video.description !== updatedFields.description)
+        changes.description = {
+          before: video.description,
+          after: updatedFields.description,
+        };
+
+      await video.update(updatedFields, { transaction: t });
+
+      // Log the update
+      if (Object.keys(changes).length > 0) {
+        await logActivity({
+          user_id: user.id,
+          module: "Video",
+          action: "Update",
+          details: { video_id: video.id, changes },
+          transaction: t,
+        });
+      }
 
       await t.commit();
 
@@ -635,8 +665,18 @@ const VideoService = {
           transaction: t,
         }),
       ]);
-
+      await SendNotification.sendVideoDeletedNotification(video, user.id);
       await video.destroy({ transaction: t });
+      await logActivity({
+        user_id: user.id,
+        module: "Video",
+        action: "Delete",
+        details: {
+          id: video.id,
+          title: video.title,
+        },
+        transaction: t,
+      });
 
       await t.commit();
 
@@ -652,6 +692,7 @@ const VideoService = {
       throw err;
     }
   },
+
   // customer side
 
   async listApprovedVideos(user, query = {}) {

@@ -1,6 +1,7 @@
 const VideoService = require("../../services/admin/video_service");
 const asyncHandler = require("../../utils/asyncHandler");
 const { success } = require("../../utils/apiResponse");
+const logActivity = require("../../utils/logActivity");
 
 // ==================== SUPER ADMIN CONTROLLERS ====================
 

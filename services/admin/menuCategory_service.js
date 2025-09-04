@@ -16,6 +16,7 @@ const {
 const throwError = require("../../utils/throwError");
 const { buildPagination } = require("../../utils/pagination");
 const ReviewService = require("./review_service");
+const logActivity = require("../../utils/logActivity");
 
 const MenuCategoryService = {
   async createMenuCategory(user, data) {
@@ -66,6 +67,14 @@ const MenuCategoryService = {
         await category.setCategoryTags(data.tags_ids, { transaction: t });
       }
 
+      await logActivity({
+        user_id: user.id,
+        module: "MenuCategory",
+        action: "Create",
+        details: category.toJSON(),
+        transaction: t,
+      });
+
       await t.commit();
       return category;
     } catch (error) {
@@ -81,6 +90,8 @@ const MenuCategoryService = {
         transaction: t,
       });
       if (!category) throwError("Menu category not found", 404);
+
+      const oldData = category.toJSON();
 
       let finalRestaurantId;
       let finalBranchId;
@@ -159,6 +170,14 @@ const MenuCategoryService = {
         await category.setCategoryTags(data.tags_ids, { transaction: t });
       }
 
+      await logActivity({
+        user_id: user.id,
+        module: "MenuCategory",
+        action: "Update",
+        details: { before: oldData, after: category.toJSON() },
+        transaction: t,
+      });
+
       await t.commit();
       return category;
     } catch (error) {
@@ -194,6 +213,14 @@ const MenuCategoryService = {
 
       await MenuCategoryTags.destroy({
         where: { menu_category_id: categoryId },
+        transaction: t,
+      });
+
+      await logActivity({
+        user_id: user.id,
+        module: "MenuCategory",
+        action: "Delete",
+        details: category.toJSON(),
         transaction: t,
       });
 

@@ -11,6 +11,7 @@ const {
 const { Op } = require("sequelize");
 const throwError = require("../../utils/throwError");
 const logActivity = require("../../utils/logActivity");
+const SendNotification = require("../../utils/send_notification");
 
 const TableService = {
   // ------------------ Create Table ------------------
@@ -57,6 +58,12 @@ const TableService = {
         action: "Create",
         details: table.toJSON(),
         transaction: t,
+      });
+
+      await SendNotification.tableNotification({
+        table,
+        action: "create",
+        created_by: user.id,
       });
 
       await t.commit();
@@ -184,6 +191,12 @@ const TableService = {
         transaction: t,
       });
 
+      await SendNotification.tableNotification({
+        table,
+        action: "update",
+        created_by: user.id,
+      });
+
       await t.commit();
       return { message: "Table updated successfully", data: table };
     } catch (err) {
@@ -227,6 +240,12 @@ const TableService = {
         action: "Delete",
         details: oldData,
         transaction: t,
+      });
+
+      await SendNotification.tableNotification({
+        table,
+        action: "delete",
+        created_by: user.id,
       });
 
       await t.commit();
