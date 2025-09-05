@@ -13,7 +13,7 @@ router.get(
   protect("user"),
   NotificationController.listNotifications
 );
-router.get(
+router.put(
   "/mark-as-read/:id",
   protect("user"),
   NotificationController.markAsRead

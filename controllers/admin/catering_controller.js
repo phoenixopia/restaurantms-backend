@@ -25,7 +25,7 @@ exports.updateBasicInfo = asyncHandler(async (req, res) => {
 exports.uploadImage = asyncHandler(async (req, res) => {
   const updated = await CateringService.uploadImage(
     req.params.id,
-    req.files,
+    req.file,
     req.user
   );
 
