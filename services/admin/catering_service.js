@@ -164,11 +164,19 @@ const CateringService = {
         throwError("Not authorized to update this catering", 403);
       }
 
-      if (!files || !files.image || !files.image[0]) {
+      let uploadedFile = null;
+      if (files) {
+        if (Array.isArray(files.image) && files.image.length > 0) {
+          uploadedFile = files.image[0];
+        } else if (files.filename) {
+          uploadedFile = files;
+        }
+      }
+
+      if (!uploadedFile) {
         throwError("No image uploaded", 400);
       }
 
-      const uploadedFile = files.image[0];
       const fileUrl = getFileUrl(UPLOAD_FOLDER, uploadedFile.filename);
 
       let existingFile = await UploadedFile.findOne({
@@ -195,7 +203,7 @@ const CateringService = {
         await UploadedFile.create(
           {
             restaurant_id: restaurantId,
-            path: fileUrl,
+            path: `${UPLOAD_FOLDER}/${uploadedFile.filename}`,
             size_mb: uploadedFile.size / (1024 * 1024),
             uploaded_by: user.id,
             type: "catering-card",
@@ -212,9 +220,17 @@ const CateringService = {
       return catering;
     } catch (err) {
       await t.rollback();
+
+      // cleanup handles both single and multiple
       if (files) {
-        await cleanupUploadedFiles(files);
+        const toClean = Array.isArray(files.image)
+          ? files.image
+          : files.filename
+          ? [files]
+          : [];
+        await cleanupUploadedFiles(toClean);
       }
+
       throw err;
     }
   },
