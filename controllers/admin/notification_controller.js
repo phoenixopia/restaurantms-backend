@@ -32,6 +32,14 @@ exports.listNotifications = asyncHandler(async (req, res) => {
   return success(res, "Notifications retrieved", rows, 200);
 });
 
+exports.getNotificationById = asyncHandler(async (req, res) => {
+  const notification = await NotificationService.getNotificationById(
+    req.params.id,
+    req.user
+  );
+  return success(res, "Notification retrieved", notification, 200);
+});
+
 exports.markAsRead = asyncHandler(async (req, res) => {
   const notification = await NotificationService.markAsRead(req.params.id);
   return success(res, "Notification marked as read", notification, 200);
@@ -57,5 +65,10 @@ exports.deleteNotification = asyncHandler(async (req, res) => {
     req.user,
     req.params.id
   );
+  return success(res, "Notification deleted successfully", result, 200);
+});
+
+exports.deleteAllNotifications = asyncHandler(async (req, res) => {
+  const result = await NotificationService.deleteNotification(req.user);
   return success(res, "Notification deleted successfully", result, 200);
 });

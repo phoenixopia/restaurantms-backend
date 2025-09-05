@@ -397,7 +397,7 @@ const SendNotification = {
         message: `Table "${table_number}" ${actionMessage} in your ${
           u.branch_id === branch_id ? "branch" : "restaurant"
         }.`,
-        type: "TABLE",
+        type: "SYSTEM",
         state: "info",
         data: { table_id, action },
         created_by,

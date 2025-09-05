@@ -8,11 +8,19 @@ router.post(
   protect("user"),
   NotificationController.createNotification
 );
+
 router.get(
   "/get-all",
   protect("user"),
   NotificationController.listNotifications
 );
+
+router.get(
+  "/get-by-id/:id",
+  protect("user"),
+  NotificationController.getNotificationById
+);
+
 router.put(
   "/mark-as-read/:id",
   protect("user"),
@@ -34,6 +42,12 @@ router.delete(
   "/delete/:id",
   protect("user"),
   NotificationController.deleteNotification
+);
+
+router.delete(
+  "delete-all",
+  protect("user"),
+  NotificationController.deleteAllNotifications
 );
 
 module.exports = router;
