@@ -108,11 +108,9 @@ const NotificationService = {
   async getNotificationById(notificationId, user) {
     if (!user.id) throwError("User ID is required", 400);
 
-    const notification = await Notification.findByPk(notificationId, {
-      where: {
-        [Op.or]: [{ target_user_id: user.id }],
-      },
-    });
+    const notification = await Notification.findByPk(notificationId);
+
+    if (!notification) throwError("Notification not found", 404);
 
     return notification;
   },
