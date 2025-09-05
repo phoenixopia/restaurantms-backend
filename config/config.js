@@ -12,9 +12,9 @@ const commonConfig = {
   dialect: "postgres",
   logging: false,
   dialectModule: require("pg"),
-  dialectOptions: {
-    ssl: { require: true, rejectUnauthorized: false },
-  },
+  // dialectOptions: {
+  //   ssl: { require: true, rejectUnauthorized: false },
+  // },
 };
 
 module.exports = {
