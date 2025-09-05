@@ -129,6 +129,39 @@ const NotificationService = {
     const count = await Notification.count({ where });
     return count;
   },
+
+  async markAllAsRead(user) {
+    if (!user?.id) throwError("User ID is required", 400);
+
+    const where = {
+      target_user_id: user.id,
+      is_read: false,
+    };
+
+    const [updatedCount] = await Notification.update(
+      { is_read: true, read_at: new Date() },
+      { where }
+    );
+
+    return { updatedCount };
+  },
+
+  async deleteNotification(user, notificationId) {
+    if (!user.id) throwError("User ID is required", 400);
+
+    const notification = await Notification.findOne({
+      where: {
+        id: notificationId,
+        target_user_id: user.id,
+      },
+    });
+
+    if (!notification) throwError("Notification not found", 404);
+
+    await notification.destroy();
+
+    return { deleted: true, id: notificationId };
+  },
 };
 
 module.exports = NotificationService;
