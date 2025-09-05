@@ -34,8 +34,7 @@ exports.listNotifications = asyncHandler(async (req, res) => {
 
 exports.getNotificationById = asyncHandler(async (req, res) => {
   const notification = await NotificationService.getNotificationById(
-    req.params.id,
-    req.user
+    req.params.id
   );
   return success(res, "Notification retrieved", notification, 200);
 });
@@ -61,14 +60,11 @@ exports.markAllAsRead = asyncHandler(async (req, res) => {
 });
 
 exports.deleteNotification = asyncHandler(async (req, res) => {
-  const result = await NotificationService.deleteNotification(
-    req.user,
-    req.params.id
-  );
+  const result = await NotificationService.deleteNotification(req.params.id);
   return success(res, "Notification deleted successfully", result, 200);
 });
 
 exports.deleteAllNotifications = asyncHandler(async (req, res) => {
-  const result = await NotificationService.deleteNotification(req.user);
+  const result = await NotificationService.deleteAllNotifications(req.user);
   return success(res, "Notification deleted successfully", result, 200);
 });

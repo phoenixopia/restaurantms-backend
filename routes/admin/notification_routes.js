@@ -45,7 +45,7 @@ router.delete(
 );
 
 router.delete(
-  "delete-all",
+  "/delete-all",
   protect("user"),
   NotificationController.deleteAllNotifications
 );

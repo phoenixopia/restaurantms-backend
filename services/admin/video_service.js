@@ -36,6 +36,7 @@ const {
   fileExists,
   getFFprobePath,
 } = require("../../utils/file");
+const logActivity = require("../../utils/logActivity");
 
 const getVideoDuration = require("../../utils/getVideoDuration");
 

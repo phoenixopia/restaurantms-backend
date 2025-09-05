@@ -12,19 +12,25 @@ const SendNotification = {
     created_by = null,
     branch_id = null
   ) {
-    let where = {};
+    const notifications = [];
+    const io = getIo();
+    let users = [];
 
     if (branch_id) {
-      where.branch_id = branch_id;
+      const branchUsers = await User.findAll({ where: { branch_id } });
+
+      const restaurantUsers = await User.findAll({
+        where: { restaurant_id },
+      });
+
+      const userMap = new Map();
+      [...branchUsers, ...restaurantUsers].forEach((u) => userMap.set(u.id, u));
+      users = [...userMap.values()];
     } else if (restaurant_id) {
-      where.restaurant_id = restaurant_id;
+      users = await User.findAll({ where: { restaurant_id } });
     } else {
       throwError("Invalid sender info", 400);
     }
-
-    const users = await User.findAll({ where });
-    const notifications = [];
-    const io = getIo();
 
     for (const u of users) {
       const notification = await Notification.create({
@@ -45,7 +51,6 @@ const SendNotification = {
 
     return notifications;
   },
-
   // ========= Inventory Notification =========
   async sendInventoryNotification(
     branch_id,
@@ -58,11 +63,16 @@ const SendNotification = {
     });
     if (!branch) throwError("Branch not found", 404);
 
-    const users = await User.findAll({
-      where: {
-        [Op.or]: [{ branch_id }, { restaurant_id: branch.restaurant_id }],
-      },
+    const branchUsers = await User.findAll({ where: { branch_id } });
+
+    const restaurantUsers = await User.findAll({
+      where: { restaurant_id: branch.restaurant_id },
     });
+
+    const userMap = new Map();
+    [...branchUsers, ...restaurantUsers].forEach((u) => userMap.set(u.id, u));
+    const users = [...userMap.values()];
+
     const notifications = [];
     const io = getIo();
 
@@ -152,53 +162,14 @@ const SendNotification = {
     const io = getIo();
     const { restaurant_id, branch_id, title, id: video_id } = video;
 
-    // ========= Notify restaurant users =========
-    const restaurantUsers = await User.findAll({
-      where: { restaurant_id },
-    });
+    // Collect users from restaurant + branch + super admins
+    const restaurantUsers = await User.findAll({ where: { restaurant_id } });
 
-    for (const u of restaurantUsers) {
-      const notification = await Notification.create({
-        title: `New video uploaded: ${title}`,
-        message: `A new video has been uploaded in your restaurant.`,
-        type: "VIDEO",
-        state: "info",
-        data: { video_id },
-        created_by,
-        target_user_id: u.id,
-        restaurant_id: u.restaurant_id,
-        branch_id: u.branch_id,
-      });
-
-      notifications.push(notification);
-      io.to(`user_${u.id}`).emit("notification", notification);
-    }
-
-    // ========= Notify branch users (if branch_id exists) =========
+    let branchUsers = [];
     if (branch_id) {
-      const branchUsers = await User.findAll({
-        where: { branch_id },
-      });
-
-      for (const u of branchUsers) {
-        const notification = await Notification.create({
-          title: `New video uploaded: ${title}`,
-          message: `A new video has been uploaded in your branch.`,
-          type: "VIDEO",
-          state: "info",
-          data: { video_id },
-          created_by,
-          target_user_id: u.id,
-          restaurant_id: u.restaurant_id,
-          branch_id: u.branch_id,
-        });
-
-        notifications.push(notification);
-        io.to(`user_${u.id}`).emit("notification", notification);
-      }
+      branchUsers = await User.findAll({ where: { branch_id } });
     }
 
-    // ========= Notify super admins =========
     const superAdmins = await User.findAll({
       where: {
         restaurant_id: { [Op.is]: null },
@@ -206,19 +177,36 @@ const SendNotification = {
       },
     });
 
-    for (const u of superAdmins) {
+    // ✅ Deduplicate users by ID
+    const userMap = new Map();
+    [...restaurantUsers, ...branchUsers, ...superAdmins].forEach((u) =>
+      userMap.set(u.id, u)
+    );
+    const users = [...userMap.values()];
+
+    // Create notifications
+    for (const u of users) {
+      let message = `A new video has been uploaded.`;
+      if (u.branch_id && branch_id && u.branch_id === branch_id) {
+        message = `A new video has been uploaded in your branch.`;
+      } else if (u.restaurant_id === restaurant_id) {
+        message = `A new video has been uploaded in your restaurant.`;
+      } else if (!u.restaurant_id && !u.branch_id) {
+        message = `A new video has been uploaded${
+          branch_id ? " in branch " + branch_id : ""
+        }.`;
+      }
+
       const notification = await Notification.create({
         title: `New video uploaded: ${title}`,
-        message: `A new video has been uploaded${
-          branch_id ? " in branch " + branch_id : ""
-        }.`,
+        message,
         type: "VIDEO",
         state: "info",
         data: { video_id },
         created_by,
         target_user_id: u.id,
-        restaurant_id: null,
-        branch_id: null,
+        restaurant_id: u.restaurant_id || null,
+        branch_id: u.branch_id || null,
       });
 
       notifications.push(notification);
@@ -227,7 +215,6 @@ const SendNotification = {
 
     return notifications;
   },
-
   // ========== Send Video Status Update Notification ==========
   async sendVideoStatusUpdateNotification(video, newStatus, updatedBy) {
     const notifications = [];
