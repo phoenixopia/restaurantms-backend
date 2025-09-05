@@ -24,4 +24,10 @@ router.get(
   NotificationController.unreadCount
 );
 
+router.put(
+  "/mark-all-as-read",
+  protect("user")
+  // NotificationController.markAllAsRead
+);
+
 module.exports = router;

@@ -129,6 +129,22 @@ const NotificationService = {
     const count = await Notification.count({ where });
     return count;
   },
+
+  async markAllAsRead(user) {
+    if (!user?.id) throwError("User ID is required", 400);
+
+    const where = {
+      target_user_id: user.id,
+      is_read: false,
+    };
+
+    const [updatedCount] = await Notification.update(
+      { is_read: true, read_at: new Date() },
+      { where }
+    );
+
+    return { updatedCount };
+  },
 };
 
 module.exports = NotificationService;
