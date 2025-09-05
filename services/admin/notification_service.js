@@ -1,7 +1,7 @@
 "use strict";
 
 const { Notification, User, sequelize } = require("../../models");
-const { Op } = require("sequelize");
+const { Op, where } = require("sequelize");
 const { getIo } = require("../../socket");
 const throwError = require("../../utils/throwError");
 
@@ -105,6 +105,18 @@ const NotificationService = {
     return { rows, count };
   },
 
+  async getNotificationById(notificationId, user) {
+    if (!user.id) throwError("User ID is required", 400);
+
+    const notification = await Notification.findByPk(notificationId, {
+      where: {
+        [Op.or]: [{ target_user_id: user.id }],
+      },
+    });
+
+    return notification;
+  },
+
   async markAsRead(notificationId) {
     const notification = await Notification.findByPk(notificationId);
     if (!notification) throwError("Notification not found", 404);
@@ -161,6 +173,20 @@ const NotificationService = {
     await notification.destroy();
 
     return { deleted: true, id: notificationId };
+  },
+
+  async deleteAllNotifications(user) {
+    if (!user.id) throwError("User ID is required", 400);
+
+    const notification = await Notification.destroy({
+      where: {
+        target_user_id: user.id,
+      },
+    });
+
+    if (!notification) throwError("Notification not found", 404);
+
+    return { deleted: true };
   },
 };
 
