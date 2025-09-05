@@ -54,3 +54,30 @@ exports.refreshOrValidateToken = asyncHandler(async (req, res) => {
     data: result.user,
   });
 });
+
+exports.forgotPassword = asyncHandler(async (req, res) => {
+  const { emailOrPhone, signupMethod } = req.body;
+  const result = await AuthService.forgotPassword({
+    emailOrPhone,
+    signupMethod,
+  });
+
+  return success(res, result.message);
+});
+
+exports.resendCode = asyncHandler(async (req, res) => {
+  const result = await AuthService.resendCode(req.body);
+  return success(res, result.message);
+});
+
+exports.resetPassword = asyncHandler(async (req, res) => {
+  const result = await AuthService.resetPassword(req.body);
+  return success(res, result.message);
+});
+
+exports.verifyCode = asyncHandler(async (req, res) => {
+  const result = await AuthService.verifyCode(req.body);
+  if (result) {
+    return success(res, result.message, result.data || null);
+  }
+});
