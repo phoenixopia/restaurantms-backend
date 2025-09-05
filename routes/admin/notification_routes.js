@@ -26,8 +26,14 @@ router.get(
 
 router.put(
   "/mark-all-as-read",
-  protect("user")
-  // NotificationController.markAllAsRead
+  protect("user"),
+  NotificationController.markAllAsRead
+);
+
+router.delete(
+  "/delete/:id",
+  protect("user"),
+  NotificationController.deleteNotification
 );
 
 module.exports = router;

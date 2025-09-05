@@ -145,6 +145,23 @@ const NotificationService = {
 
     return { updatedCount };
   },
+
+  async deleteNotification(user, notificationId) {
+    if (!user.id) throwError("User ID is required", 400);
+
+    const notification = await Notification.findOne({
+      where: {
+        id: notificationId,
+        target_user_id: user.id,
+      },
+    });
+
+    if (!notification) throwError("Notification not found", 404);
+
+    await notification.destroy();
+
+    return { deleted: true, id: notificationId };
+  },
 };
 
 module.exports = NotificationService;
