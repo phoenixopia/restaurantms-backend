@@ -9,14 +9,14 @@ const { authorize } = require("../../middleware/authorize");
 router.get(
   "/view-activity-logs",
   protect("user"),
-  permissionCheck("view_activity_logs"),
+  // permissionCheck("view_activity_logs"),
   ActivityLogController.getActivityLogs
 );
 
 router.get(
   "/view-detail/:id",
   protect("user"),
-  permissionCheck("view_activity_logs"),
+  // permissionCheck("view_activity_logs"),
   ActivityLogController.getActivityLogById
 );
 
