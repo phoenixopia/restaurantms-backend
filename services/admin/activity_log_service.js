@@ -12,33 +12,13 @@ const ActivityLogService = {
   async getActivityLogs(user, { page = 1, limit = 10 }) {
     const offset = (page - 1) * limit;
 
+    // Build base where condition for ActivityLog
     let whereCondition = {};
-    let includeCondition = [
-      {
-        model: User,
-        attributes: ["id", "first_name", "last_name", "email", "phone_number"],
-        include: [
-          {
-            model: Restaurant,
-            attributes: ["id", "restaurant_name"],
-          },
-          {
-            model: Branch,
-            attributes: ["id", "name"],
-            include: [
-              {
-                model: Restaurant,
-                attributes: ["id", "restaurant_name"],
-              },
-            ],
-          },
-        ],
-      },
-    ];
 
     if (!user.restaurant_id && !user.branch_id) {
       whereCondition = {};
     } else if (user.restaurant_id && !user.branch_id) {
+      // Get all users created by this user recursively
       async function getAllCreatedUserIds(userId) {
         const directUsers = await User.findAll({
           where: { created_by: userId },
@@ -56,19 +36,47 @@ const ActivityLogService = {
       }
 
       const createdUsersIds = await getAllCreatedUserIds(user.id);
-
       const userIds = [user.id, ...createdUsersIds];
 
-      whereCondition = {
-        user_id: { [Op.in]: userIds },
-      };
+      whereCondition = { user_id: { [Op.in]: userIds } };
     } else if (user.branch_id) {
       whereCondition = { user_id: user.id };
     }
 
     const { count, rows } = await ActivityLog.findAndCountAll({
       where: whereCondition,
-      include: includeCondition,
+      include: [
+        {
+          model: User,
+          attributes: [
+            "id",
+            "first_name",
+            "last_name",
+            "email",
+            "phone_number",
+            "restaurant_id",
+            "branch_id",
+            "profile_picture",
+          ],
+          include: [
+            {
+              model: Branch,
+              attributes: ["id", "name", "restaurant_id"],
+            },
+          ],
+        },
+        {
+          model: Customer,
+          attributes: [
+            "id",
+            "first_name",
+            "last_name",
+            "email",
+            "phone_number",
+            "profile_picture",
+          ],
+        },
+      ],
       order: [["created_at", "DESC"]],
       limit: parseInt(limit),
       offset: parseInt(offset),
@@ -76,26 +84,45 @@ const ActivityLogService = {
 
     const result = rows.map((log) => {
       const u = log.User;
-      let restaurantName = null;
+      const c = log.Customer;
 
-      if (u?.Restaurant) {
-        restaurantName = u.Restaurant.restaurant_name;
-      } else if (u?.Branch?.Restaurant) {
-        restaurantName = u.Branch.Restaurant.restaurant_name;
+      // Define restaurantName inside map to avoid ReferenceError
+      let restaurantName = null;
+      if (u) {
+        if (u.restaurant_id) {
+          restaurantName = u.restaurant_id;
+        } else if (u.Branch && u.Branch.restaurant_id) {
+          restaurantName = u.Branch.restaurant_id;
+        }
       }
 
       return {
         id: log.id,
+        module: log.module,
         action: log.action,
+        details: log.details,
         created_at: log.created_at,
-        user: {
-          id: u?.id,
-          first_name: u?.first_name,
-          last_name: u?.last_name,
-          email: u?.email,
-          phone_number: u?.phone_number,
-          restaurant_name: restaurantName,
-        },
+        user: u
+          ? {
+              id: u.id,
+              first_name: u.first_name,
+              last_name: u.last_name,
+              email: u.email,
+              phone_number: u.phone_number,
+              profile_picture: u.profile_picture,
+              restaurant_name: restaurantName,
+            }
+          : null,
+        customer: c
+          ? {
+              id: c.id,
+              first_name: c.first_name,
+              last_name: c.last_name,
+              email: c.email,
+              phone_number: c.phone_number,
+              profile_picture: c.profile_picture,
+            }
+          : null,
       };
     });
 
@@ -107,7 +134,6 @@ const ActivityLogService = {
       data: result,
     };
   },
-
   async getActivityLogById(id) {
     const log = await ActivityLog.findOne({
       where: { id },
