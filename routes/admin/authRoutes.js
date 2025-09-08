@@ -22,7 +22,7 @@ router.post("/reset-password", authController.resetPassword);
 
 router.post("/verify-code", authController.verifyCode);
 
-// router.post("/verify-token", authController.refreshOrValidateToken);
+router.post("/verify-token", authController.refreshOrValidateToken);
 
 router.post("/logout", protect("user"), authController.logout);
 

@@ -688,6 +688,17 @@ const OrderService = {
           await table.save({ transaction: t });
         }
       }
+      if (
+        status === "Cancelled" &&
+        order.type === "dine-in" &&
+        order.table_id
+      ) {
+        const table = await Table.findByPk(order.table_id, { transaction: t });
+        if (table) {
+          table.is_active = true;
+          await table.save({ transaction: t });
+        }
+      }
 
       await t.commit();
       return order;

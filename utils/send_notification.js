@@ -1,4 +1,4 @@
-const { Notification, User, Branch } = require("../models");
+const { Notification, User, Branch, Restaurant, Plan } = require("../models");
 const { getIo } = require("../socket");
 const { Op } = require("sequelize");
 const throwError = require("./throwError");
@@ -393,6 +393,140 @@ const SendNotification = {
         branch_id: u.branch_id,
       });
 
+      notifications.push(notification);
+      io.to(`user_${u.id}`).emit("notification", notification);
+    }
+
+    return notifications;
+  },
+
+  // ========= Profile Update Notification =========
+  async sendProfileUpdateNotification(id, updatedBy = null) {
+    const io = getIo();
+
+    const notification = await Notification.create({
+      title: "Profile Updated",
+      message: "Your profile has been updated successfully.",
+      type: "SYSTEM",
+      state: "info",
+      created_by: updatedBy,
+      target_user_id: id,
+    });
+
+    io.to(`user_${id}`).emit("notification", notification);
+
+    return notification;
+  },
+
+  // ========= Subscription Notification =========
+  async sendSubscriptionNotification(subscription, createdBy = null) {
+    const io = getIo();
+    const { id: subscription_id, restaurant_id, plan_id } = subscription;
+
+    const restaurant = await Restaurant.findByPk(restaurant_id, {
+      attributes: ["id", "restaurant_name"],
+    });
+
+    if (!restaurant) throwError("Restaurant not found", 404);
+
+    const plan = await Plan.findByPk(plan_id, {
+      attributes: ["id", "name"],
+    });
+
+    if (!plan) throwError("Plan not found", 404);
+
+    const notifications = [];
+
+    const restaurantUsers = await User.findAll({ where: { restaurant_id } });
+
+    for (const u of restaurantUsers) {
+      const notification = await Notification.create({
+        title: "Subscription Submitted",
+        message: `Your subscription for plan "${plan.name}" has been submitted and is pending approval.`,
+        type: "SYSTEM",
+        state: "info",
+        created_by: createdBy,
+        target_user_id: u.id,
+        restaurant_id: u.restaurant_id,
+      });
+
+      notifications.push(notification);
+      io.to(`user_${u.id}`).emit("notification", notification);
+    }
+
+    const superAdmins = await User.findAll({
+      where: {
+        restaurant_id: { [Op.is]: null },
+        branch_id: { [Op.is]: null },
+      },
+    });
+
+    for (const u of superAdmins) {
+      const notification = await Notification.create({
+        title: "New Subscription Pending",
+        message: `Restaurant "${restaurant.restaurant_name}" submitted a subscription for plan "${plan.name}".`,
+        type: "SYSTEM",
+        state: "info",
+        created_by: createdBy,
+        target_user_id: u.id,
+      });
+
+      notifications.push(notification);
+      io.to(`user_${u.id}`).emit("notification", notification);
+    }
+
+    return notifications;
+  },
+
+  // ========= Subscription Activated Notification =========
+  async sendSubscriptionActivatedNotification(subscription, createdBy = null) {
+    const io = getIo();
+    const { id: subscription_id, restaurant_id, plan_id } = subscription;
+
+    const restaurant = await Restaurant.findByPk(restaurant_id, {
+      attributes: ["id", "restaurant_name"],
+    });
+    if (!restaurant) throwError("Restaurant not found", 404);
+
+    const plan = await Plan.findByPk(plan_id, {
+      attributes: ["id", "name"],
+    });
+    if (!plan) throwError("Plan not found", 404);
+
+    const notifications = [];
+
+    // Notify all restaurant users/admins
+    const restaurantUsers = await User.findAll({ where: { restaurant_id } });
+    for (const u of restaurantUsers) {
+      const notification = await Notification.create({
+        title: "Subscription Activated",
+        message: `The subscription for plan "${plan.name}" has been activated.`,
+        type: "SYSTEM",
+        state: "success",
+        created_by: createdBy,
+        target_user_id: u.id,
+        restaurant_id: u.restaurant_id,
+      });
+      notifications.push(notification);
+      io.to(`user_${u.id}`).emit("notification", notification);
+    }
+
+    // Notify super admins
+    const superAdmins = await User.findAll({
+      where: {
+        restaurant_id: { [Op.is]: null },
+        branch_id: { [Op.is]: null },
+      },
+    });
+    for (const u of superAdmins) {
+      const notification = await Notification.create({
+        title: "Subscription Activated",
+        message: `Subscription for restaurant "${restaurant.restaurant_name}" on plan "${plan.name}" has been activated.`,
+        type: "SYSTEM",
+        state: "success",
+        created_by: createdBy,
+        target_user_id: u.id,
+      });
       notifications.push(notification);
       io.to(`user_${u.id}`).emit("notification", notification);
     }

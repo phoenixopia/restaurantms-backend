@@ -1,154 +1,163 @@
 <!DOCTYPE html>
 <html>
-<head>
-  <title>Notification</title>
-  <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f5f6fa;
-      margin: 0;
-      padding: 20px;
-    }
-    h1 {
-      text-align: center;
-      margin-bottom: 20px;
-      color: #2d3436;
-    }
-    ul {
-      list-style: none;
-      padding: 0;
-      max-width: 600px;
-      margin: auto;
-    }
-    li {
-      background: #fff;
-      margin-bottom: 12px;
-      padding: 15px 20px;
-      border-radius: 10px;
-      box-shadow: 0 3px 6px rgba(0,0,0,0.1);
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      position: relative;
-    }
-    .title {
-      font-weight: bold;
-      font-size: 16px;
-      color: #2d3436;
-    }
-    .message {
-      font-size: 14px;
-      color: #636e72;
-    }
-    .timestamp, .read-at {
-      font-size: 12px;
-      color: #b2bec3;
-    }
-    .status {
-      font-size: 12px;
-      font-weight: bold;
-      padding: 3px 8px;
-      border-radius: 8px;
-      display: inline-block;
-      margin-top: 4px;
-      align-self: flex-start;
-    }
-    .unread {
-      background: #d63031;
-      color: #fff;
-    }
-    .read {
-      background: #00b894;
-      color: #fff;
-    }
-    button {
-      align-self: flex-end;
-      padding: 6px 12px;
-      border: none;
-      border-radius: 6px;
-      background: #0984e3;
-      color: white;
-      cursor: pointer;
-      font-size: 12px;
-      transition: 0.2s;
-    }
-    button:hover {
-      background: #74b9ff;
-    }
-  </style>
-</head>
-<body>
-  <h1>Notifications</h1>
-  <ul id="notifications"></ul>
-
-  <script>
-    const socket = io("http://localhost:8000", {
-      transports: ["websocket"],
-      query: {
-        user_id: "" //use  user_id to test 
+  <head>
+    <title>Notification</title>
+    <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background: #f5f6fa;
+        margin: 0;
+        padding: 20px;
       }
-    });
+      h1 {
+        text-align: center;
+        margin-bottom: 20px;
+        color: #2d3436;
+      }
+      ul {
+        list-style: none;
+        padding: 0;
+        max-width: 600px;
+        margin: auto;
+      }
+      li {
+        background: #fff;
+        margin-bottom: 12px;
+        padding: 15px 20px;
+        border-radius: 10px;
+        box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        position: relative;
+      }
+      .title {
+        font-weight: bold;
+        font-size: 16px;
+        color: #2d3436;
+      }
+      .message {
+        font-size: 14px;
+        color: #636e72;
+      }
+      .timestamp,
+      .read-at {
+        font-size: 12px;
+        color: #b2bec3;
+      }
+      .status {
+        font-size: 12px;
+        font-weight: bold;
+        padding: 3px 8px;
+        border-radius: 8px;
+        display: inline-block;
+        margin-top: 4px;
+        align-self: flex-start;
+      }
+      .unread {
+        background: #d63031;
+        color: #fff;
+      }
+      .read {
+        background: #00b894;
+        color: #fff;
+      }
+      button {
+        align-self: flex-end;
+        padding: 6px 12px;
+        border: none;
+        border-radius: 6px;
+        background: #0984e3;
+        color: white;
+        cursor: pointer;
+        font-size: 12px;
+        transition: 0.2s;
+      }
+      button:hover {
+        background: #74b9ff;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Notifications</h1>
+    <ul id="notifications"></ul>
 
-    socket.on("connect", () => {
-      console.log("Connected:", socket.id);
-    });
+    <script>
+      const socket = io("http://localhost:8000", {
+        transports: ["websocket"],
+        query: {
+          user_id: "0bb8af02-e78c-40d5-b5d0-e8294cfc0152", //use  user_id to test
+        },
+      });
 
-    function formatDateTime(timestamp) {
-      if (!timestamp) return "-";
-      const date = new Date(timestamp);
-      return date.toLocaleString(); // local date and time
-    }
+      socket.on("connect", () => {
+        console.log("Connected:", socket.id);
+      });
 
-    function addNotification(notification) {
-      const ul = document.getElementById("notifications");
-      const li = document.createElement("li");
+      function formatDateTime(timestamp) {
+        if (!timestamp) return "-";
+        const date = new Date(timestamp);
+        return date.toLocaleString(); // local date and time
+      }
 
-      const readAtText = notification.read_at ? `Read at: ${formatDateTime(notification.read_at)}` : "";
+      function addNotification(notification) {
+        const ul = document.getElementById("notifications");
+        const li = document.createElement("li");
 
-      li.innerHTML = `
+        const readAtText = notification.read_at
+          ? `Read at: ${formatDateTime(notification.read_at)}`
+          : "";
+
+        li.innerHTML = `
         <div class="title">${notification.title}</div>
         <div class="message">${notification.message}</div>
-        <div class="timestamp">Created: ${formatDateTime(notification.createdAt)}</div>
+        <div class="timestamp">Created: ${formatDateTime(
+          notification.createdAt
+        )}</div>
         <div class="read-at">${readAtText}</div>
-        <span class="status ${notification.is_read ? 'read' : 'unread'}">
-          ${notification.is_read ? 'Read' : 'Unread'}
+        <span class="status ${notification.is_read ? "read" : "unread"}">
+          ${notification.is_read ? "Read" : "Unread"}
         </span>
-        ${notification.is_read ? '' : `<button onclick="markAsRead(this, '${notification.id}')">Mark as Read</button>`}
+        ${
+          notification.is_read
+            ? ""
+            : `<button onclick="markAsRead(this, '${notification.id}')">Mark as Read</button>`
+        }
       `;
 
-      ul.prepend(li);
-    }
+        ul.prepend(li);
+      }
 
-    socket.on("notification", (notification) => {
-      console.log("Received notification:", notification);
-      addNotification(notification);
-    });
+      socket.on("notification", (notification) => {
+        console.log("Received notification:", notification);
+        addNotification(notification);
+      });
 
-    function markAsRead(button, notificationId) {
-      const li = button.parentElement;
-      const status = li.querySelector(".status");
-      const readAtDiv = li.querySelector(".read-at");
+      function markAsRead(button, notificationId) {
+        const li = button.parentElement;
+        const status = li.querySelector(".status");
+        const readAtDiv = li.querySelector(".read-at");
 
-      // Update UI
-      status.textContent = "Read";
-      status.classList.remove("unread");
-      status.classList.add("read");
-      readAtDiv.textContent = `Read at: ${formatDateTime(new Date())}`;
-      button.remove();
+        // Update UI
+        status.textContent = "Read";
+        status.classList.remove("unread");
+        status.classList.add("read");
+        readAtDiv.textContent = `Read at: ${formatDateTime(new Date())}`;
+        button.remove();
 
-      // Call backend API
-      fetch(`http://localhost:8000/api/notification/${notificationId}/read`, {
-        method: "PUT"
-      })
-      .then(res => res.json())
-      .then(data => console.log("Marked as read:", data))
-      .catch(err => console.error("Error marking as read:", err));
-    }
+        // Call backend API
+        fetch(`http://localhost:8000/api/notification/${notificationId}/read`, {
+          method: "PUT",
+        })
+          .then((res) => res.json())
+          .then((data) => console.log("Marked as read:", data))
+          .catch((err) => console.error("Error marking as read:", err));
+      }
 
-    socket.on("disconnect", () => {
-      console.log("Disconnected from server");
-    });
-  </script>
-</body>
+      socket.on("disconnect", () => {
+        console.log("Disconnected from server");
+      });
+    </script>
+  </body>
 </html>

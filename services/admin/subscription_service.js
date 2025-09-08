@@ -6,6 +6,9 @@ const { getFileUrl } = require("../../utils/file");
 const cleanupUploadedFiles = require("../../utils/cleanUploadedFiles");
 const { Op, fn, col, where: sequelizeWhere } = require("sequelize");
 
+const logActivity = require("../../utils/logActivity");
+const SendNotification = require("../../utils/send_notification");
+
 const VALID_PAYMENT_METHODS = [
   "card",
   "wallet",
@@ -83,7 +86,21 @@ const SubscriptionService = {
         { transaction: t }
       );
 
+      await logActivity({
+        user_id: user.id,
+        module: "Subscription",
+        action: "Subscribe",
+        details: subscription.toJSON(),
+        transaction: t,
+      });
+
       await t.commit();
+
+      await SendNotification.sendSubscriptionNotification(
+        subscription,
+        user_id
+      );
+
       return subscription;
     } catch (err) {
       await t.rollback();
@@ -94,7 +111,7 @@ const SubscriptionService = {
     }
   },
 
-  async updateStatus(id, newStatus) {
+  async updateStatus(id, newStatus, updatedBy) {
     const t = await sequelize.transaction();
     try {
       const subscription = await Subscription.findByPk(id, {
@@ -102,6 +119,8 @@ const SubscriptionService = {
       });
 
       if (!subscription) throwError("Subscription not found", 404);
+
+      const oldData = subscription.toJSON();
 
       if (newStatus === "active") {
         const plan = await Plan.findByPk(subscription.plan_id, {
@@ -145,7 +164,23 @@ const SubscriptionService = {
         await restaurant.save({ transaction: t });
       }
 
+      await logActivity({
+        user_id: updatedBy,
+        module: "Subscription",
+        action: "Update Status",
+        details: { before: oldData, after: subscription.toJSON() },
+        transaction: t,
+      });
+
       await t.commit();
+
+      if (newStatus === "active") {
+        await SendNotification.sendSubscriptionActivatedNotification(
+          subscription,
+          updatedBy
+        );
+      }
+
       return subscription;
     } catch (err) {
       await t.rollback();

@@ -7,7 +7,7 @@ exports.subscribe = asyncHandler(async (req, res) => {
 
   const subscription = await SubscriptionService.subscribe(
     req.body,
-    req.user,
+    req.user.id,
     receiptFile
   );
 
@@ -32,7 +32,11 @@ exports.updateSubscriptionStatus = asyncHandler(async (req, res) => {
     });
   }
 
-  const updated = await SubscriptionService.updateStatus(id, status);
+  const updated = await SubscriptionService.updateStatus(
+    id,
+    status,
+    req.user.id
+  );
 
   // req.app.locals.io
   //   .to(updated.restaurant_id)

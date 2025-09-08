@@ -156,7 +156,11 @@ const ProfileService = {
       if (dob !== undefined) customer.dob = dob;
       if (notes !== undefined) customer.notes = notes;
 
-      if (profileFile) customer.profile_picture = profileFile.filename;
+      if (profileFile)
+        customer.profile_picture = getFileUrl(
+          UPLOAD_FOLDER,
+          profileFile.filename
+        );
 
       await customer.save({ transaction: t });
       await t.commit();
@@ -175,7 +179,7 @@ const ProfileService = {
         },
       };
     } catch (err) {
-      await t.rollback();
+      if (!t.finished) await t.rollback();
       if (files.length) await cleanupUploadedFiles(files);
       throw err;
     }
