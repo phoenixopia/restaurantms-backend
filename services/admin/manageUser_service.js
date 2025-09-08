@@ -16,6 +16,7 @@ const {
 const throwError = require("../../utils/throwError");
 const { sendUserCredentialsEmail } = require("../../utils/sendEmail");
 const { sendSMS } = require("../../utils/sendSMS");
+const logActivity = require("../../utils/logActivity");
 
 const UserService = {
   async createRestaurantAdmin(superAdminId, data) {

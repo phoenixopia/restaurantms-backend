@@ -8,6 +8,7 @@ const path = require("path");
 const ReviewService = require("./review_service");
 const throwError = require("../../utils/throwError");
 const cleanupUploadedFiles = require("../../utils/cleanUploadedFiles");
+const { getFileUrl, getFilePath } = require("../../utils/file");
 
 const { buildPagination } = require("../../utils/pagination");
 const {
@@ -45,8 +46,6 @@ function getDateFilterRange(filterType) {
       return null;
   }
 }
-
-const getFilePath = (filename) => path.join(UPLOADS_DIR, filename);
 
 const FollowService = require("./follow_service");
 
@@ -313,20 +312,20 @@ const RestaurantService = {
 
     try {
       // ====== Resolve restaurant_id ======
-      let restaurant_id = null;
+      let restaurantId = null;
       if (user.restaurant_id) {
-        restaurant_id = user.restaurant_id;
+        restaurantId = user.restaurant_id;
       } else if (user.branch_id) {
         const branch = await Branch.findByPk(user.branch_id, {
           transaction: t,
         });
         if (!branch) throwError("Branch not found", 404);
-        restaurant_id = branch.restaurant_id;
+        restaurantId = branch.restaurant_id;
       } else {
         throwError("User must belong to a restaurant or branch", 400);
       }
 
-      const restaurant = await Restaurant.findByPk(restaurant_id, {
+      const restaurant = await Restaurant.findByPk(restaurantId, {
         include: [SystemSetting],
         transaction: t,
       });
@@ -335,105 +334,91 @@ const RestaurantService = {
       let systemSetting = restaurant.SystemSetting;
       if (!systemSetting) {
         systemSetting = await SystemSetting.create(
-          { restaurant_id },
+          { restaurant_id: restaurantId },
           { transaction: t }
         );
       }
 
+      const changes = {};
+
       // ====== Handle Logo Upload ======
       if (files?.logo?.[0]) {
-        const newLogo = files.logo[0];
-        const relativePath = path.join(UPLOAD_FOLDER, newLogo.filename);
+        const logoFile = files.logo[0];
+        const relativePath = path.join(UPLOAD_FOLDER, logoFile.filename);
 
-        let uploadedLogo = await UploadedFile.findOne({
+        // Delete old logo (file + UploadedFile row)
+        const oldLogo = await UploadedFile.findOne({
           where: {
-            restaurant_id,
+            restaurant_id: restaurantId,
             type: "logo",
             reference_id: systemSetting.id,
           },
           transaction: t,
         });
 
-        if (uploadedLogo) {
-          // delete old file
-          if (uploadedLogo.path) {
-            const oldPath = getFilePath(
-              UPLOAD_FOLDER,
-              path.basename(uploadedLogo.path)
-            );
-            try {
-              await fs.access(oldPath);
-              await fs.unlink(oldPath);
-            } catch {
-              // ignore if not found
-            }
-          }
-
-          uploadedLogo.path = relativePath;
-          uploadedLogo.size_mb = +(newLogo.size / (1024 * 1024)).toFixed(2);
-          uploadedLogo.uploaded_by = user.id;
-          await uploadedLogo.save({ transaction: t });
-        } else {
-          uploadedLogo = await UploadedFile.create(
-            {
-              restaurant_id,
-              path: relativePath,
-              size_mb: +(newLogo.size / (1024 * 1024)).toFixed(2),
-              uploaded_by: user.id,
-              type: "logo",
-              reference_id: systemSetting.id,
-            },
-            { transaction: t }
-          );
+        if (oldLogo) {
+          await this.deleteOldFile(oldLogo.path);
+          await UploadedFile.destroy({
+            where: { id: oldLogo.id },
+            transaction: t,
+          });
         }
 
-        systemSetting.logo_url = getFileUrl(UPLOAD_FOLDER, newLogo.filename);
+        // Insert new UploadedFile row
+        await UploadedFile.create(
+          {
+            restaurant_id: restaurantId,
+            path: relativePath,
+            size_mb: +(logoFile.size / (1024 * 1024)).toFixed(2),
+            uploaded_by: user.id,
+            type: "logo",
+            reference_id: systemSetting.id,
+          },
+          { transaction: t }
+        );
+
+        const newUrl = getFileUrl(UPLOAD_FOLDER, logoFile.filename);
+        changes.logo_url = { before: systemSetting.logo_url, after: newUrl };
+
+        systemSetting.logo_url = newUrl;
         await systemSetting.save({ transaction: t });
       }
 
       // ====== Handle Restaurant Images Upload ======
       if (files?.images?.length) {
-        // remove old images (both file system + DB)
-        const oldUploadedImages = await UploadedFile.findAll({
+        // Delete all old images (files + UploadedFile rows)
+        const oldImages = await UploadedFile.findAll({
           where: {
-            restaurant_id,
+            restaurant_id: restaurantId,
             type: "restaurant-image",
             reference_id: systemSetting.id,
           },
           transaction: t,
         });
 
-        for (const oldImg of oldUploadedImages) {
-          const oldPath = getFilePath(
-            UPLOAD_FOLDER,
-            path.basename(oldImg.path)
-          );
-          try {
-            await fs.access(oldPath);
-            await fs.unlink(oldPath);
-          } catch {
-            // ignore missing file
-          }
+        for (const old of oldImages) {
+          await this.deleteOldFile(old.path);
         }
 
         await UploadedFile.destroy({
           where: {
-            restaurant_id,
+            restaurant_id: restaurantId,
             type: "restaurant-image",
             reference_id: systemSetting.id,
           },
           transaction: t,
         });
 
-        const uploadedImages = [];
-        for (const img of files.images) {
-          const relativePath = path.join(UPLOAD_FOLDER, img.filename);
+        // Insert new UploadedFile rows
+        const newImageUrls = [];
+        for (const imgFile of files.images) {
+          const relativePath = path.join(UPLOAD_FOLDER, imgFile.filename);
 
           await UploadedFile.create(
             {
-              restaurant_id,
+              restaurant_id: restaurantId,
               path: relativePath,
-              size_mb: +(img.size / (1024 * 1024)).toFixed(2),
+              size_mb: +(imgFile.size / (1024 * 1024)).toFixed(2),
               uploaded_by: user.id,
               type: "restaurant-image",
               reference_id: systemSetting.id,
@@ -441,29 +426,32 @@ const RestaurantService = {
             { transaction: t }
           );
 
-          uploadedImages.push(getFileUrl(UPLOAD_FOLDER, img.filename));
+          newImageUrls.push(getFileUrl(UPLOAD_FOLDER, imgFile.filename));
         }
 
-        systemSetting.images = uploadedImages;
+        changes.images = { before: systemSetting.images, after: newImageUrls };
+
+        systemSetting.images = newImageUrls;
         await systemSetting.save({ transaction: t });
       }
 
       await t.commit();
 
-      return await Restaurant.findByPk(restaurant_id, {
-        include: [SystemSetting],
-      });
+      return {
+        message: "Restaurant media updated successfully",
+        data: await Restaurant.findByPk(restaurantId, {
+          include: [SystemSetting],
+        }),
+      };
     } catch (err) {
       await t.rollback();
 
-      // cleanup newly uploaded files if transaction failed
+      // cleanup uploaded files if failed
       if (files) {
         await cleanupUploadedFiles(
           Object.values(files)
             .flat()
-            .map((f) => ({
-              path: getFilePath(UPLOAD_FOLDER, f.filename),
-            }))
+            .map((f) => ({ path: getFilePath(UPLOAD_FOLDER, f.filename) }))
         );
       }
 
@@ -471,6 +459,20 @@ const RestaurantService = {
     }
   },
 
+  // Utility for deleting old file safely
+  async deleteOldFile(filePath) {
+    if (!filePath) return;
+    const fullPath = path.isAbsolute(filePath)
+      ? filePath
+      : getFilePath(UPLOAD_FOLDER, path.basename(filePath));
+
+    try {
+      await fs.promises.access(fullPath);
+      await fs.promises.unlink(fullPath);
+    } catch {
+      // ignore if file doesn’t exist
+    }
+  },
   async updateBasicInfo(id, body, user) {
     const transaction = await sequelize.transaction();
 

@@ -1,28 +1,19 @@
 const express = require("express");
 const router = express.Router();
+
+const ProfileController = require("../../controllers/admin/profile_controller");
 const { protect } = require("../../middleware/protect");
 const ValidateUploadedFiles = require("../../middleware/validateUploadedFiles");
 const Upload = require("../../middleware/uploads");
-const ProfileController = require("../../controllers/customer/profileController");
+
+router.get("/get-profile", protect("user"), ProfileController.getProfile);
 
 router.put(
-  "/edit-profile",
-  protect("customer"),
+  "/update-profile",
+  protect("user"),
   Upload.uploadProfilePicture,
   ValidateUploadedFiles.validateUploadedFiles("profile"),
   ProfileController.updateProfile
-);
-
-router.put(
-  "/address",
-  protect("customer"),
-  ProfileController.updateMultipleAddresses
-);
-
-router.put(
-  "/address/:type",
-  protect("customer"),
-  ProfileController.updateAddress
 );
 
 module.exports = router;

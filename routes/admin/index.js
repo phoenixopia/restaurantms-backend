@@ -1,9 +1,12 @@
 const express = require("express");
 const router = express.Router();
 
+//================ Auth and Profile Done =================
 router.use("/auth", require("./authRoutes"));
-
+router.use("/profile", require("./profile_routes"));
+//=============== Subscription Done ======================
 router.use("/subscription", require("./subscription_routes"));
+
 router.use("/user", require("./userManage_routes"));
 router.use("/restaurant", require("./restaurant_routes"));
 router.use("/kds", require("./kds"));
