@@ -33,12 +33,7 @@ exports.uploadLogoImage = asyncHandler(async (req, res) => {
 });
 
 exports.updateBasicInfo = asyncHandler(async (req, res) => {
-  const result = await RestaurantService.updateBasicInfo(
-    req.params.id,
-    req.body,
-    req.user
-  );
-
+  const result = await RestaurantService.updateBasicInfo(req.body, req.user);
   return success(res, "Restaurant basic info updated successfully", result);
 });
 

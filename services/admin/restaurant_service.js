@@ -90,7 +90,6 @@ const RestaurantService = {
         {
           model: SystemSetting,
           required: false,
-          attributes: ["logo_url", "images"],
         },
         {
           model: ContactInfo,
@@ -473,7 +472,8 @@ const RestaurantService = {
       // ignore if file doesn’t exist
     }
   },
-  async updateBasicInfo(id, body, user) {
+
+  async updateBasicInfo(body, user) {
     const transaction = await sequelize.transaction();
 
     try {
@@ -489,33 +489,22 @@ const RestaurantService = {
         throwError("Access Denied", 403);
       }
 
-      if (!restaurant_id)
-        throwError("Unable to determine user's restaurant", 403);
-
-      const restaurant = await Restaurant.findByPk(id, {
+      const restaurant = await Restaurant.findByPk(restaurant_id, {
         include: [SystemSetting],
         transaction,
       });
       if (!restaurant) throwError("Restaurant not found", 404);
 
-      if (restaurant.id !== restaurant_id)
-        throwError(
-          "Access denied: You can only update your own restaurant",
-          403
-        );
-
       if (body.restaurant_name) {
         const existing = await Restaurant.findOne({
           where: {
             restaurant_name: body.restaurant_name,
-            id: { [Op.ne]: id },
+            id: { [Op.ne]: restaurant_id },
           },
           transaction,
         });
 
-        if (existing) {
-          throwError("Restaurant name already in use", 400);
-        }
+        if (existing) throwError("Restaurant name already in use", 400);
       }
 
       const updates = {};
@@ -524,13 +513,11 @@ const RestaurantService = {
       if (body.restaurant_name) updates.restaurant_name = body.restaurant_name;
       if (body.primary_color) settingUpdates.primary_color = body.primary_color;
       if (body.language) settingUpdates.default_language = body.language;
-      if (typeof body.rtl_enabled === "boolean") {
+      if (typeof body.rtl_enabled === "boolean")
         settingUpdates.rtl_enabled = body.rtl_enabled;
-      }
       if (body.font_family) settingUpdates.font_family = body.font_family;
-      if (typeof body.sms_enabled === "boolean") {
+      if (typeof body.sms_enabled === "boolean")
         settingUpdates.sms_enabled = body.sms_enabled;
-      }
 
       if (Object.keys(updates).length) {
         await restaurant.update(updates, { transaction });
@@ -550,9 +537,14 @@ const RestaurantService = {
       }
 
       await transaction.commit();
-      return await Restaurant.findByPk(id, { include: [SystemSetting] });
+
+      return await Restaurant.findByPk(restaurant_id, {
+        include: [SystemSetting],
+      });
     } catch (error) {
-      await transaction.rollback();
+      if (!transaction.finished) {
+        await transaction.rollback();
+      }
       throw error;
     }
   },

@@ -59,7 +59,7 @@ router.get(
 );
 
 router.put(
-  "/update-basic-info/:id",
+  "/update-basic-info",
   protect("user"),
   // permissionCheck("update_restaurant"),
   RestaurantController.updateBasicInfo

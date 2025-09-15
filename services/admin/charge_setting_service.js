@@ -47,7 +47,26 @@ const ChargeSettingService = {
       ],
     });
 
-    if (!chargeSetting) throwError("Charge setting not found", 404);
+    if (!chargeSetting) {
+      const restaurant = await Restaurant.findByPk(restaurantId, {
+        attributes: ["id", "restaurant_name"],
+      });
+
+      return {
+        restaurant: {
+          id: restaurant?.id || restaurantId,
+          name: restaurant?.restaurant_name || null,
+        },
+        service_charge_fee: null,
+        package_charge_fee: null,
+        delivery_fee_type: null,
+        delivery_fee_fixed: null,
+        delivery_fee_dynamic: null,
+        dine_in_fee_type: null,
+        dine_in_fee_fixed: null,
+        dine_in_fee_dynamic: null,
+      };
+    }
 
     return {
       restaurant: {

@@ -110,10 +110,22 @@ const ContactInfoService = {
         {
           model: Restaurant,
           attributes: ["id", "restaurant_name"],
-          as: "restaurant",
         },
-        { model: Branch, attributes: ["id", "name"], as: "branch" },
       ],
+      attributes: {
+        include: [
+          [
+            sequelize.literal(`(
+            SELECT name 
+            FROM branches AS b
+            WHERE 
+              b.id = "ContactInfo"."module_id" 
+              AND "ContactInfo"."module_type" = 'branch'
+          )`),
+            "branch_name",
+          ],
+        ],
+      },
     });
 
     return {
