@@ -60,11 +60,11 @@ const TableService = {
         transaction: t,
       });
 
-      await SendNotification.tableNotification({
-        table,
-        action: "create",
-        created_by: user.id,
-      });
+      // await SendNotification.tableNotification({
+      //   table,
+      //   action: "create",
+      //   created_by: user.id,
+      // });
 
       await t.commit();
       return { message: "Table created successfully", data: table };
@@ -191,11 +191,11 @@ const TableService = {
         transaction: t,
       });
 
-      await SendNotification.tableNotification({
-        table,
-        action: "update",
-        created_by: user.id,
-      });
+      // await SendNotification.tableNotification({
+      //   table,
+      //   action: "update",
+      //   created_by: user.id,
+      // });
 
       await t.commit();
       return { message: "Table updated successfully", data: table };
@@ -242,11 +242,11 @@ const TableService = {
         transaction: t,
       });
 
-      await SendNotification.tableNotification({
-        table,
-        action: "delete",
-        created_by: user.id,
-      });
+      // await SendNotification.tableNotification({
+      //   table,
+      //   action: "delete",
+      //   created_by: user.id,
+      // });
 
       await t.commit();
       return { message: "Table deleted successfully", data: null };

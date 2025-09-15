@@ -111,7 +111,7 @@ const SendNotification = {
       const notification = await Notification.create({
         title,
         message,
-        type: "ADMIN",
+        type: "SYSTEM",
         state: "info",
         data: null,
         created_by,
