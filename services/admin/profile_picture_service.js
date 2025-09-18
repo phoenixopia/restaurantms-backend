@@ -1,4 +1,5 @@
 const fs = require("fs/promises");
+const path = require("path");
 
 const { Op } = require("sequelize");
 const throwError = require("../../utils/throwError");
@@ -18,7 +19,7 @@ const ProfileService = {
   },
 
   async updateProfile(userId, body, files = []) {
-    const { first_name, last_name, type, emailOrPhone, dob, notes } = body;
+    const { first_name, last_name, type, emailOrPhone } = body;
     const profileFile = files.find((file) => file.fieldname === "profile");
 
     const t = await sequelize.transaction();
@@ -31,9 +32,9 @@ const ProfileService = {
 
       const oldData = user.toJSON();
 
-      // delete old profile picture if new one is uploaded
       if (profileFile && user.profile_picture) {
-        const oldPath = getFilePath(UPLOAD_FOLDER, user.profile_picture);
+        const filename = path.basename(user.profile_picture);
+        const oldPath = getFilePath(UPLOAD_FOLDER, filename);
         await fs.unlink(oldPath).catch(() => {});
       }
 
@@ -43,11 +44,9 @@ const ProfileService = {
         user.email = emailOrPhone;
       else if (type === "phone" && emailOrPhone !== undefined)
         user.phone_number = emailOrPhone;
-      if (dob !== undefined) user.dob = dob;
-      if (notes !== undefined) user.notes = notes;
 
-      // save new profile picture filename
-      if (profileFile) user.profile_picture = profileFile.filename;
+      if (profileFile)
+        user.profile_picture = getFileUrl(UPLOAD_FOLDER, profileFile.filename);
 
       await user.save({ transaction: t });
 
@@ -71,11 +70,7 @@ const ProfileService = {
           last_name: user.last_name,
           phone_number: user.phone_number,
           email: user.email,
-          dob: user.dob,
-          notes: user.notes,
-          profile: user.profile_picture
-            ? getFileUrl(UPLOAD_FOLDER, user.profile_picture)
-            : null,
+          profile: user.profile_picture ?? null,
         },
       };
     } catch (err) {
