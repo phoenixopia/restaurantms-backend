@@ -7,7 +7,7 @@ exports.subscribe = asyncHandler(async (req, res) => {
 
   const subscription = await SubscriptionService.subscribe(
     req.body,
-    req.user.id,
+    req.user,
     receiptFile
   );
 

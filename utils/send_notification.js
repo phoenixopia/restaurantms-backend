@@ -518,6 +518,7 @@ const SendNotification = {
         branch_id: { [Op.is]: null },
       },
     });
+
     for (const u of superAdmins) {
       const notification = await Notification.create({
         title: "Subscription Activated",

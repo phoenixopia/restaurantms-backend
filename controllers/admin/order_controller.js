@@ -54,3 +54,8 @@ exports.updateOrderPaymentStatus = asyncHandler(async (req, res) => {
   );
   return success(res, "Order payment status updated successfully.", updated);
 });
+
+exports.deleteOrder = asyncHandler(async (req, res) => {
+  const deleted = await OrderService.deleteOrder(req.params.id, req.user);
+  return success(res, "Order deleted successfully.", deleted);
+});

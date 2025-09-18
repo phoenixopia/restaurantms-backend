@@ -88,11 +88,7 @@ const NotificationService = {
     const offset = (page - 1) * limit;
 
     const where = {
-      [Op.or]: [
-        { target_user_id: user?.id || null },
-        { branch_id: user?.branch_id || null },
-        { restaurant_id: user?.restaurant_id || null },
-      ],
+      target_user_id: user.id,
     };
 
     const { count, rows } = await Notification.findAndCountAll({
