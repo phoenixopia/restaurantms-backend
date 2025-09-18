@@ -10,6 +10,13 @@ const {
   PlanLimit,
   Permission,
   RolePermission,
+  ActivityLog,
+  Order,
+  UploadedFile,
+  Video,
+  Payment,
+  Notification,
+  SupportTicket,
   Subscription,
   sequelize,
 } = require("../../models");
@@ -286,13 +293,30 @@ const UserService = {
       const user = await User.findByPk(id, { transaction: t });
       if (!user) throwError("User not found", 404);
 
-      console.log(user.created_by, deleterId);
-
       if (user.created_by !== deleterId) {
         throwError("You are not authorized to delete this user", 403);
       }
 
+      await ActivityLog.destroy({ where: { user_id: id }, transaction: t });
+      await SupportTicket.destroy({ where: { user_id: id }, transaction: t });
+      await Notification.destroy({
+        where: { target_user_id: id },
+        transaction: t,
+      });
+      await Notification.destroy({ where: { created_by: id }, transaction: t });
+      await Payment.destroy({ where: { user_id: id }, transaction: t });
+      await Video.destroy({ where: { uploaded_by: id }, transaction: t });
+      await UploadedFile.destroy({
+        where: { uploaded_by: id },
+        transaction: t,
+      });
+      await Order.destroy({ where: { user_id: id }, transaction: t });
+
+      await User.destroy({ where: { created_by: id }, transaction: t });
+
+      // finally delete the user
       await user.destroy({ transaction: t });
+
       await t.commit();
     } catch (err) {
       await t.rollback();

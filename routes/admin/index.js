@@ -1,20 +1,12 @@
 const express = require("express");
 const router = express.Router();
 
-//================ Auth and Profile Done =================
+//================ Completed Routes =================
 router.use("/auth", require("./authRoutes"));
 router.use("/profile", require("./profile_routes"));
-//=============== Subscription Done ======================
 router.use("/subscription", require("./subscription_routes"));
-
 router.use("/user", require("./userManage_routes"));
 router.use("/restaurant", require("./restaurant_routes"));
-router.use("/kds", require("./kds"));
-
-// ===================================================
-router.use("/catering", require("./catering_routes"));
-//====================================================
-
 router.use("/table", require("./table_routes"));
 router.use("/social-media", require("./video_routes"));
 router.use("/transaction", require("./transaction_routes"));
@@ -26,5 +18,12 @@ router.use("/review", require("./review_routes"));
 router.use("/plan", require("./plan_routes"));
 router.use("/rbac", require("./rbac_routes"));
 router.use("/menu", require("./menu_routes"));
+
+// ==================================================
+router.use("/kds", require("./kds"));
+router.use("/catering", require("./catering_routes"));
+//====================================================
+
+router.use("/analytics", require("./analytics_routes"));
 
 module.exports = router;

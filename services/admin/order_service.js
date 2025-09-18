@@ -941,6 +941,15 @@ const OrderService = {
 
     return result;
   },
+
+  async deleteOrder(kdsId, user) {
+    const t = await sequelize.transaction();
+    try {
+    } catch (err) {
+      await t.rollback();
+      throw err;
+    }
+  },
 };
 
 module.exports = OrderService;

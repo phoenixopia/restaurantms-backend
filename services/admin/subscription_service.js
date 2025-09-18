@@ -87,7 +87,7 @@ const SubscriptionService = {
       );
 
       await logActivity({
-        user_id: user.id,
+        user_id: user_id.id,
         module: "Subscription",
         action: "Subscribe",
         details: subscription.toJSON(),
@@ -98,7 +98,7 @@ const SubscriptionService = {
 
       await SendNotification.sendSubscriptionNotification(
         subscription,
-        user_id
+        user_id.id
       );
 
       return subscription;

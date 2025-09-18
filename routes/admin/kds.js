@@ -39,4 +39,11 @@ router.post(
   OrderController.createOrder
 );
 
+router.delete(
+  "/delete-order/:id",
+  protect("user"),
+  // permissionCheck("delete_order"),
+  OrderController.deleteOrder
+);
+
 module.exports = router;
