@@ -19,6 +19,7 @@ exports.updateMultipleAddresses = asyncHandler(async (req, res) => {
   return success(res, result.message, result.data, 200);
 });
 
+// update profile picture and details 
 exports.updateProfile = asyncHandler(async (req, res) => {
   const result = await ProfileService.updateProfile(
     req.user.id,
