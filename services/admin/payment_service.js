@@ -394,17 +394,17 @@ const ArifpayService = {
       where: { customer_id: customerId },
       include: [
         { model: Order, attributes: ["id", "status", "total_amount"] },
-          {
-            model: Customer,
-            attributes: [
-              "id",
-              "first_name",
-              "last_name",
-              "email",
-              "phone_number",
-              "profile_picture",
-            ],
-          },
+        {
+          model: Customer,
+          attributes: [
+            "id",
+            "first_name",
+            "last_name",
+            "email",
+            "phone_number",
+            "profile_picture",
+          ],
+        },
       ],
       order,
       offset,

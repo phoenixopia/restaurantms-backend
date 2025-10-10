@@ -44,6 +44,8 @@ exports.getOrderHistory = asyncHandler(async (req, res) => {
   return success(res, "Order history fetched successfully.", result);
 });
 
+
+// Get Order by ID for Customer
 exports.getOrderById = asyncHandler(async (req, res) => {
   const customerId = req.user.id;
   const { id: orderId } = req.params;
@@ -51,4 +53,12 @@ exports.getOrderById = asyncHandler(async (req, res) => {
   const order = await OrderService.getOrderByIdForCustomer(orderId, customerId);
 
   return success(res, "Order fetched successfully", order);
+});
+
+
+// Get Orders with Table for Customer
+exports.getOrdersWithTableForCustomer = asyncHandler(async (req, res) => {
+  const customerId = req.user.id || req.params.customerId;
+  const result = await OrderService.getOrdersWithTable(customerId,  req.query);
+  return success(res, "Orders with table fetched successfully", result);
 });

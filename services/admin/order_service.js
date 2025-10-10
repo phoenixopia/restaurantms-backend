@@ -18,6 +18,7 @@ const {
 } = require("../../models");
 const { Op, fn, col, literal, QueryTypes, where } = require("sequelize");
 const throwError = require("../../utils/throwError");
+const { buildPagination } = require("../../utils/pagination");
 
 const OrderService = {
   async createOrder(data, user) {
@@ -629,7 +630,11 @@ const OrderService = {
         restaurant_name: order.Restaurant?.restaurant_name || null,
         branch_name: order.Branch?.name || null,
         branch_id: order.Branch?.id || null,
-        customer_name: personName,
+        // customer_name: personName,
+        customer_name: `${order?.Customer?.first_name} ${order?.Customer?.last_name}` || null,
+        customer_id: order?.Customer?.id || null,
+        user_name: `${order?.User?.first_name} ${order?.User?.last_name}` || null,
+        user_id: order.User?.id || null,
 
         table_number:
           order.type === "dine-in" ? order.Table?.table_number || null : null,
@@ -657,6 +662,9 @@ const OrderService = {
       },
     };
   },
+
+
+
   async updateOrderStatus(id, status, user) {
     const t = await sequelize.transaction();
     try {
@@ -802,6 +810,8 @@ const OrderService = {
       items: orderedItems,
     };
   },
+
+
 
   async getOrderByIdForCustomer(orderId, customerId) {
     const baseOrder = await Order.findOne({
@@ -951,6 +961,44 @@ const OrderService = {
       throw err;
     }
   },
+
+
+  // Get Orders with Table for Customer
+  async getOrdersWithTable(customerId, query) {
+    const { page, limit, offset, order } = buildPagination(query);
+
+    const totalItems = await Order.count({
+      where: { customer_id: customerId, type: 'dine-in' },
+    });
+
+    const tables = await Order.findAll({
+      where: { customer_id: customerId, type: 'dine-in' },
+      include: [
+        { model: Table, attributes: ["id", "table_number", "capacity"] },
+        { model: Branch, attributes: ["id", "name"] },
+        { model: Restaurant, attributes: ["id", "restaurant_name"] },
+        { model: Customer, attributes: ["id", "first_name", "last_name", "email", "phone_number", "profile_picture",],},
+        // { model: User, attributes: ["id", "first_name", "last_name", "email", "phone_number", "profile_picture",],},
+        { model: Location, attributes: ["id", "address", "latitude", "longitude"],},
+      ],
+      order,
+      offset,
+      limit,
+    });
+
+    const totalPages = Math.ceil(totalItems / limit);
+
+    return {
+        tables,
+        pagination: {
+          totalItems,
+          totalPages,
+          currentPage: page,
+          pageSize: limit,
+        },
+      };
+  },
+
 };
 
 module.exports = OrderService;

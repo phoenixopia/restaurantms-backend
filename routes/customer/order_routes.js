@@ -22,5 +22,6 @@ router.get(
 );
 
 router.get("/:id/order", protect("customer"), OrderController.getOrderById);
+router.get("/with-table/:customerId?", protect("customer"), OrderController.getOrdersWithTableForCustomer);
 
 module.exports = router;

@@ -107,7 +107,7 @@ const AuthService = {
         transaction: t,
       });
 
-      if (!customer) throwError("User not found.", 404);
+      if (!customer) throwError("Customer user not found.", 404);
 
       if (
         customer.social_provider &&
