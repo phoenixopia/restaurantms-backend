@@ -10,4 +10,25 @@ router.get("/error/:orderId", PaymentController.handleError);
 router.get("/success/:orderId", PaymentController.handleSuccess);
 router.post("/notify/:orderId", PaymentController.handleNotification);
 
+// // Get Payment Details by customer ID
+// router.get(
+//   "/customer/:customerId",
+//   protect("customer"),
+//   PaymentController.getPaymentsByCustomer
+// );
+
+// GET Payments by customer ID with pagination
+router.get(
+    "/customer/:customerId?",
+    protect("customer"),
+    PaymentController.getPaymentsByCustomerId
+);
+
+// GET Payments with pagination
+router.get(
+    "/", 
+    // protect("admin"),
+    PaymentController.getAllPayments
+);
+
 module.exports = router;

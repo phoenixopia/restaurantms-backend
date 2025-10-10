@@ -26,9 +26,10 @@ router.get(
 );
 
 router.get(
-  "/:customerId",
+  "/:customerId?",   protect("customer"), 
   ReviewController.getReviewsByCustomerUser
 );
+
 
 router.get(
   "/see/:restaurantId/rating",

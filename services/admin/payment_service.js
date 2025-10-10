@@ -14,6 +14,8 @@ const {
   Reservation,
 } = require("../../models");
 const throwError = require("../../utils/throwError");
+const asyncHandler = require("../../utils/asyncHandler");
+const { buildPagination } = require("../../utils/pagination");
 
 const ArifpayService = {
   async createCheckoutSession(orderId, phoneNumber, customerId) {
@@ -378,6 +380,91 @@ const ArifpayService = {
       throw error;
     }
   },
+
+
+  // Get Payments by customer ID with pagination
+  async PaymentByCustomerId(customerId, query) {
+    const { page, limit, offset, order } = buildPagination(query);
+
+    const totalItems = await Payment.count({
+      where: { customer_id: customerId },
+    });
+
+    const payments = await Payment.findAll({
+      where: { customer_id: customerId },
+      include: [
+        { model: Order, attributes: ["id", "status", "total_amount"] },
+          {
+            model: Customer,
+            attributes: [
+              "id",
+              "first_name",
+              "last_name",
+              "email",
+              "phone_number",
+              "profile_picture",
+            ],
+          },
+      ],
+      order,
+      offset,
+      limit,
+    });
+
+    const totalPages = Math.ceil(totalItems / limit);
+
+    return {
+        payments,
+        pagination: {
+          totalItems,
+          totalPages,
+          currentPage: page,
+          pageSize: limit,
+        },
+      };
+  },
+
+  
+  // Get Payments by customer ID with pagination
+  async getAllPayments(query) {
+    const { page, limit, offset, order } = buildPagination(query);
+
+    const totalItems = await Payment.count({
+    });
+
+    const payments = await Payment.findAll({
+      include: [
+        { model: Order, attributes: ["id", "status", "total_amount"] },
+          {
+            model: Customer,
+            attributes: [
+              "id",
+              "first_name",
+              "last_name",
+              "email",
+              "phone_number",
+              "profile_picture",
+            ],
+          },
+      ],
+      order,
+      offset,
+      limit,
+    });
+
+    const totalPages = Math.ceil(totalItems / limit);
+
+    return {
+        payments,
+        pagination: {
+          totalItems,
+          totalPages,
+          currentPage: page,
+          pageSize: limit,
+        },
+      };
+  }
 };
+
 
 module.exports = ArifpayService;

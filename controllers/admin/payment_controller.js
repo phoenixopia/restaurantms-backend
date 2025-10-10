@@ -3,6 +3,26 @@ const { success } = require("../../utils/apiResponse");
 const ArifpayService = require("../../services/admin/payment_service");
 const { Order } = require("../../models");
 
+
+// Get Payments by Customer ID
+exports.getPaymentsByCustomerId = asyncHandler(async (req, res) => {
+  const customerId = req.user.id || req.params.customerId;
+  const payments = await ArifpayService.PaymentByCustomerId(
+    customerId, req.query
+  );
+  return success(res, "Payments for this user fetched successfully", payments);
+});
+
+
+// Get All Payments
+exports.getAllPayments = asyncHandler(async (req, res) => {
+  const payments = await ArifpayService.getAllPayments(
+    req.query
+  );
+  return success(res, "Payments fetched successfully", payments);
+});
+
+
 exports.createCheckout = asyncHandler(async (req, res) => {
   const { orderId, phoneNumber } = req.body;
   const customerId = req.user.id;
