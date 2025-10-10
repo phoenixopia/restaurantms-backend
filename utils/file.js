@@ -13,12 +13,24 @@ const SERVER_URL = (process.env.SERVER_URL || "http://localhost:8000").replace(
 );
 
 // --------------------------- Core Functions ---------------------------
+// function getFileUrl(folder, filename) {
+//   if (!filename) return null;
+//   const cleanFolder = folder.replace(/^\/+|\/+$/g, "");
+//   const encodedFile = encodeURIComponent(filename);
+//   return `${SERVER_URL}/uploads/${cleanFolder}/${encodedFile}`;
+// }
 function getFileUrl(folder, filename) {
   if (!filename) return null;
+
+  // 🔹 If it's already a complete URL, just return it
+  if (/^https?:\/\//i.test(filename)) {
+    return filename;
+  }
+
   const cleanFolder = folder.replace(/^\/+|\/+$/g, "");
-  const encodedFile = encodeURIComponent(filename);
-  return `${SERVER_URL}/uploads/${cleanFolder}/${encodedFile}`;
+  return `${SERVER_URL}/uploads/${cleanFolder}/${filename}`;
 }
+
 
 function getFilePath(folder, filename) {
   if (!filename) return null;
