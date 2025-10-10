@@ -19,13 +19,13 @@
     "start": "nodemon server.js",
     "create-super-admin": "node config/init/command.js create-super-admin",
     "seed": "node ./seeders/index.js",
-    "seed-data": "node ./seed_data_dashboard/index.js",
-    "postinstall": "npm install @ffprobe-installer/linux-x64"
+    "seed-data": "node ./seed_data_dashboard/index.js"
+    
   },
   "dependencies": {
     "@ffmpeg-installer/ffmpeg": "^1.1.0",
     "@ffprobe-installer/ffprobe": "^2.1.2",
-    "@ffprobe-installer/linux-x64": "^5.2.0",
+
     "axios": "^1.10.0",
     "bcryptjs": "^3.0.2",
     "commander": "^14.0.0",

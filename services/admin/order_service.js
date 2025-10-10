@@ -628,6 +628,7 @@ const OrderService = {
 
         restaurant_name: order.Restaurant?.restaurant_name || null,
         branch_name: order.Branch?.name || null,
+        branch_id: order.Branch?.id || null,
         customer_name: personName,
 
         table_number:

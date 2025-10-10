@@ -26,6 +26,11 @@ router.get(
 );
 
 router.get(
+  "/:customerId",
+  ReviewController.getReviewsByCustomerUser
+);
+
+router.get(
   "/see/:restaurantId/rating",
   ReviewController.calculateRestaurantRating
 );

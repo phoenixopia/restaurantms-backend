@@ -1,7 +1,7 @@
 const {
   Review,
   Order,
-  Restaurant,
+  Customer,
   Branch,
   sequelize,
 } = require("../../models");
@@ -109,6 +109,48 @@ const ReviewService = {
     }
   },
 
+  // Get Reviews by Customer user
+ async getReviewsByCustomerUser(customerId, page = 1, limit = 10) {
+    if (!customerId) throwError("User ID is required", 400);
+
+    const offset = (page - 1) * limit;
+
+    const { count: total, rows: reviews } = await Review.findAndCountAll({
+      where: { customer_id: customerId },
+      include: [
+        {
+          model: Customer,
+          attributes: ["id", "first_name", "last_name", "profile_picture"],
+        },
+      ],
+      order: [["created_at", "DESC"]],
+      limit,
+      offset,
+    });
+
+    const formattedReviews = reviews.map((review) => ({
+      comment: review.comment,
+      rating: parseInt(review.rating),
+      created_at: review.created_at,
+      customer: {
+        id: review.Customer.id,
+        first_name: review.Customer.first_name,
+        last_name: review.Customer.last_name,
+        profile_picture: review.Customer.profile_picture,
+      },
+    }));
+
+    return {
+      total,
+      page,
+      limit,
+      total_pages: Math.ceil(total / limit),
+      reviews: formattedReviews,
+    };
+  },
+
+
+  // get Reviews by Restaurant
   async getReviewsByRestaurant(restaurantId, page = 1, limit = 10) {
     if (!restaurantId) throwError("Restaurant ID is required", 400);
 

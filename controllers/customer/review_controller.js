@@ -28,6 +28,7 @@ exports.deleteReview = asyncHandler(async (req, res) => {
   return success(res, result.message, { id: review_id });
 });
 
+// Get Reviews by Restaurant
 exports.getReviewsByRestaurant = asyncHandler(async (req, res) => {
   const { restaurantId } = req.params;
   const { page, limit } = req.query;
@@ -40,6 +41,22 @@ exports.getReviewsByRestaurant = asyncHandler(async (req, res) => {
 
   return success(res, "Reviews retrieved successfully", data);
 });
+
+
+// Get Review for a Customer user
+exports.getReviewsByCustomerUser = asyncHandler(async (req, res) => {
+  const { customerId } = req.params;
+  const { page, limit } = req.query;
+
+  const data = await ReviewService.getReviewsByCustomerUser(
+    customerId,
+    parseInt(page) || 1,
+    parseInt(limit) || 10
+  );
+
+  return success(res, "Reviews retrieved successfully", data);
+});
+
 
 exports.getReview = asyncHandler(async (req, res) => {
   const { page, limit } = req.query;
