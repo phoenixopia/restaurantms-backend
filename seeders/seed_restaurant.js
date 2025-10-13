@@ -16,7 +16,7 @@ module.exports = async () => {
   const [basicPlan, restaurantAdminRole, superAdmin] = await Promise.all([
     Plan.findOne({ where: { name: "Basic", billing_cycle: "monthly" } }),
     Role.findOne({ where: { name: "Restaurant Administrator" } }),
-    User.findOne({ where: { email: "natikeleme1@gmail.com" } }),
+    User.findOne({ where: { email: "superadmin@gmail.com" } }),
   ]);
 
   if (!basicPlan || !restaurantAdminRole || !superAdmin) {

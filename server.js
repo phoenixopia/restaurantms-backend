@@ -24,20 +24,20 @@ sequelize
     const io = initSocket(server);
     console.log("Socket.io initialized");
 
-    // app.set("io", io);
+    app.set("io", io);
 
-    // io.on("connection", (socket) => {
-    //   console.log(`Socket connected: ${socket.id}`);
+    io.on("connection", (socket) => {
+      console.log(`Socket connected: ${socket.id}`);
 
-    //   socket.on("joinRoom", (room) => {
-    //     socket.join(room);
-    //     console.log(`Socket ${socket.id} joined room ${room}`);
-    //   });
+      socket.on("joinRoom", (room) => {
+        socket.join(room);
+        console.log(`Socket ${socket.id} joined room ${room}`);
+      });
 
-    //   socket.on("disconnect", () => {
-    //     console.log(`Socket disconnected: ${socket.id}`);
-    //   });
-    // });
+      socket.on("disconnect", () => {
+        console.log(`Socket disconnected: ${socket.id}`);
+      });
+    });
 
     server.listen(PORT, "0.0.0.0", () => {
       console.log(`🚀 Server is running on http://localhost:${PORT}`);

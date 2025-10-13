@@ -222,6 +222,7 @@ module.exports = (sequelize, DataTypes) => {
     Customer.hasMany(models.VideoFavorite, { foreignKey: "customer_id" });
     Customer.hasMany(models.VideoLike, { foreignKey: "customer_id" });
     Customer.hasMany(models.RestaurantFollower, { foreignKey: "customer_id" });
+    Customer.hasMany(models.Favorite, { foreignKey: "customer_id" });
 
     Customer.belongsToMany(models.Restaurant, {
       through: models.RestaurantFollower,

@@ -153,6 +153,10 @@ module.exports = (sequelize) => {
     Restaurant.hasMany(models.UploadedFile, {
       foreignKey: "restaurant_id",
     });
+
+    Restaurant.hasMany(models.Favorite, {
+      foreignKey: "targetId",
+    });
   };
 
   Restaurant.paginate = async function (page = 1, limit = 10, filter = {}) {
