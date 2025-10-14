@@ -70,6 +70,7 @@ class FavoriteService {
       success: true,
       message: "Favorites retrieved successfully",
       data: {
+        favorites,
         total,
         page,
         limit,

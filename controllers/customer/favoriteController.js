@@ -29,7 +29,6 @@ class FavoriteController {
 
   // Get all favorites (or filter by type)
   static async getFavorites(req, res) {
-    console.log("\n\nFetching favorites for customer:", req.user, "\n\n\n")
     try {
       const customerId = req.user.id;
 
