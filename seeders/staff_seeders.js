@@ -92,7 +92,7 @@ module.exports = async () => {
         email: `staff${i}${restaurant.restaurant_name
           .toLowerCase()
           .replace(/\s+/g, "")}@gmail.com`,
-        password: "12345678",
+        password: "1234567890",
         branch_id: branch ? branch.id : null,
         restaurant_id: null,
         role_id: assignedRole.id,

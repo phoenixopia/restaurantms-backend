@@ -131,7 +131,7 @@ module.exports = async () => {
       first_name: "Admin",
       last_name: data.name,
       email: data.adminEmail,
-      password: "12345678",
+      password: "1234567890",
       restaurant_id: restaurant.id,
       role_id: restaurantAdminRole.id,
       role_tag_id: restaurantAdminRole.role_tag_id,
