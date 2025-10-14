@@ -10,10 +10,10 @@ router.post("/toggle", protect("customer"), FavoriteController.toggleFavorite);
 // Get all favorites (optionally filter by ?type=menu or restaurant)
 router.get("/", protect("customer"), FavoriteController.getFavorites);
 
-// Get only menu favorites
-router.get("/menus/:menuId", protect("customer"), FavoriteController.getMenuFavorites);
+// // Get only menu favorites
+// router.get("/menus/:menuId", protect("customer"), FavoriteController.getMenuFavorites);
 
-// Get only restaurant favorites
-router.get("/restaurants/:restaurantId", protect("customer"), FavoriteController.getRestaurantFavorites);
+// // Get only restaurant favorites
+// router.get("/restaurants/:restaurantId", protect("customer"), FavoriteController.getRestaurantFavorites);
 
 module.exports = router;

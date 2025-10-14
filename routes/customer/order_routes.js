@@ -2,8 +2,6 @@ const express = require("express");
 const router = express.Router();
 const OrderController = require("../../controllers/customer/order_controller");
 const { protect } = require("../../middleware/protect");
-const { authorize } = require("../../middleware/authorize");
-const { permissionCheck } = require("../../middleware/permissionCheck");
 
 router.post("/create-order", protect("customer"), OrderController.createOrder);
 
@@ -21,7 +19,14 @@ router.get(
   OrderController.getOrderHistory
 );
 
-router.get("/:id/order", protect("customer"), OrderController.getOrderById);
-router.get("/with-table/:customerId?", protect("customer"), OrderController.getOrdersWithTableForCustomer);
+router.post(
+  "/create",
+  protect("customer"),
+  // permissionCheck("create_order"),
+  OrderController.createOrder
+);
+
+router.get("/with-table", protect("customer"), OrderController.getOrdersWithTableForCustomer);
+router.get("/:id", protect("customer"), OrderController.getOrderByIdForCustomer); // order detail of a customer
 
 module.exports = router;

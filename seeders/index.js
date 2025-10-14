@@ -90,9 +90,21 @@ const { sequelize } = require("../models/index");
     // await require("./notification_seeders")();
     // console.log("✅ Notification seeded");
 
+    // console.log("Seeding favorites...");
+    // await require("./favorites_seeder")();
+    // console.log("✅ Favorites seeded");
+
     console.log("Seeding favorites...");
     await require("./favorites_seeder")();
     console.log("✅ Favorites seeded");
+
+    // console.log("Seeding orders...");
+    // await require("./order_seeder")();
+    // console.log("✅ Orders seeded");
+
+    // console.log("Seeding kds...");
+    // await require("./kds_seeders")();
+    // console.log("✅ KDS seeded");
 
     console.log("🎉 All seeders completed successfully");
   } catch (error) {

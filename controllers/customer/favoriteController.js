@@ -31,9 +31,8 @@ class FavoriteController {
   static async getFavorites(req, res) {
     try {
       const customerId = req.user.id;
-      const { type } = req.query; // ?type=menu or restaurant
 
-      const favorites = await FavoriteService.getFavorites(customerId, type);
+      const favorites = await FavoriteService.getFavorites(customerId, req.query);
       res.status(200).json({ success: true, data: favorites });
     } catch (error) {
       console.error("Error fetching favorites:", error);
@@ -41,88 +40,31 @@ class FavoriteController {
     }
   }
 
-  // Get menu favorites only
-  static async getMenuFavorites(req, res) {
-    try {
-      const customerId = req.user.id;
-      const {menuId} = req.params;
-      const favorites = await FavoriteService.getMenuFavorites(customerId, menuId);
-      res.status(200).json({ success: true, data: favorites });
-    } catch (error) {
-      console.error("Error fetching menu favorites:", error);
-      res.status(500).json({ message: "Internal server error." });
-    }
-  }
+  // // Get menu favorites only
+  // static async getMenuFavorites(req, res) {
+  //   try {
+  //     const customerId = req.user.id;
+  //     const {menuId} = req.params;
+  //     const favorites = await FavoriteService.getMenuFavorites(customerId, menuId);
+  //     res.status(200).json({ success: true, data: favorites });
+  //   } catch (error) {
+  //     console.error("Error fetching menu favorites:", error);
+  //     res.status(500).json({ message: "Internal server error." });
+  //   }
+  // }
 
-  // Get restaurant favorites only
-  static async getRestaurantFavorites(req, res) {
-    try {
-      const customerId = req.user.id;
-      const {restaurantId} = req.params;
-      const favorites = await FavoriteService.getRestaurantFavorites(customerId, restaurantId);
-      res.status(200).json({ success: true, data: favorites });
-    } catch (error) {
-      console.error("Error fetching restaurant favorites:", error);
-      res.status(500).json({ message: "Internal server error." });
-    }
-  }
+  // // Get restaurant favorites only
+  // static async getRestaurantFavorites(req, res) {
+  //   try {
+  //     const customerId = req.user.id;
+  //     const {restaurantId} = req.params;
+  //     const favorites = await FavoriteService.getRestaurantFavorites(customerId, restaurantId);
+  //     res.status(200).json({ success: true, data: favorites });
+  //   } catch (error) {
+  //     console.error("Error fetching restaurant favorites:", error);
+  //     res.status(500).json({ message: "Internal server error." });
+  //   }
+  // }
 }
 
 module.exports = FavoriteController;
-
-
-
-
-
-
-// const FavoriteService = require("../services/favorite.service");
-
-// class FavoriteController {
-//   // ----------- RESTAURANT FAVORITES -----------
-//   static async toggleRestaurantFavorite(req, res, next) {
-//     try {
-//       const customerId = req.user.id;
-//       const { restaurantId } = req.params;
-
-//       const result = await FavoriteService.toggleRestaurantFavorite(customerId, restaurantId);
-//       res.json(result);
-//     } catch (err) {
-//       next(err);
-//     }
-//   }
-
-//   static async getRestaurantFavorites(req, res, next) {
-//     try {
-//       const customerId = req.user.id;
-//       const result = await FavoriteService.getRestaurantFavorites(customerId);
-//       res.json(result);
-//     } catch (err) {
-//       next(err);
-//     }
-//   }
-
-//   // ----------- MENU FAVORITES -----------
-//   static async toggleMenuFavorite(req, res, next) {
-//     try {
-//       const customerId = req.user.id;
-//       const { menuId } = req.params;
-
-//       const result = await FavoriteService.toggleMenuFavorite(customerId, menuId);
-//       res.json(result);
-//     } catch (err) {
-//       next(err);
-//     }
-//   }
-
-//   static async getMenuFavorites(req, res, next) {
-//     try {
-//       const customerId = req.user.id;
-//       const result = await FavoriteService.getMenuFavorites(customerId);
-//       res.json(result);
-//     } catch (err) {
-//       next(err);
-//     }
-//   }
-// }
-
-// module.exports = FavoriteController;
