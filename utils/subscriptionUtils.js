@@ -44,7 +44,7 @@ const expireTrialRestaurants = async () => {
     const expiredTrials = await Restaurant.findAll({
       where: {
         status: "trial",
-        created_at: { [Op.lte]: trialExpirationDate },
+        createdAt: { [Op.lte]: trialExpirationDate },
       },
       transaction,
     });

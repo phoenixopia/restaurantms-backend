@@ -4,11 +4,11 @@ const { Order, Customer, User, Restaurant, Branch, Table, Location } = require("
 const { v4: uuidv4 } = require("uuid");
 
 module.exports = async () => {
-     await Order.sync({ force: true });
+    await Order.sync({ force: true });
     const now = new Date();
 
     // Fetch some existing records
-    const customers = await Customer.findOne({where:{ email: "sarahjones@gmail.com" }});
+    const customers = await Customer.findOne({where:{ email: "customer1@gmail.com" }});
     const users = await User.findAll({ limit: 2 });
     const restaurants = await Restaurant.findAll({ limit: 2 });
     const branches = await Branch.findAll({ limit: 2 });
@@ -34,8 +34,8 @@ module.exports = async () => {
             total_amount: (Math.random() * 200 + 50).toFixed(2),
             payment_status: "Unpaid",
             is_seen_by_customer: false,
-            created_at: now,
-            updated_at: now,
+            createdAt: now,
+            updatedAt: now,
         },
         {
             restaurant_id: restaurants[1].id,
@@ -50,8 +50,8 @@ module.exports = async () => {
             total_amount: (Math.random() * 200 + 50).toFixed(2),
             payment_status: "Paid",
             is_seen_by_customer: false,
-            created_at: now,
-            updated_at: now,
+            createdAt: now,
+            updatedAt: now,
         },
         {
             restaurant_id: restaurants[0].id,
@@ -66,8 +66,8 @@ module.exports = async () => {
             total_amount: (Math.random() * 200 + 50).toFixed(2),
             payment_status: "Unpaid",
             is_seen_by_customer: false,
-            created_at: now,
-            updated_at: now,
+            createdAt: now,
+            updatedAt: now,
         },
         {
             restaurant_id: restaurants[1].id,
@@ -82,8 +82,8 @@ module.exports = async () => {
             total_amount: (Math.random() * 200 + 50).toFixed(2),
             payment_status: "Paid",
             is_seen_by_customer: true,
-            created_at: now,
-            updated_at: now,
+            createdAt: now,
+            updatedAt: now,
         },
     ]);
 

@@ -77,7 +77,7 @@ const ActivityLogService = {
           ],
         },
       ],
-      order: [["created_at", "DESC"]],
+      order: [["createdAt", "DESC"]],
       limit: parseInt(limit),
       offset: parseInt(offset),
     });
@@ -101,7 +101,7 @@ const ActivityLogService = {
         module: log.module,
         action: log.action,
         details: log.details,
-        created_at: log.created_at,
+        createdAt: log.createdAt,
         user: u
           ? {
               id: u.id,
@@ -162,7 +162,7 @@ const ActivityLogService = {
       module: log.module,
       action: log.action,
       details: log.details,
-      created_at: log.created_at,
+      createdAt: log.createdAt,
       user: {
         id: u?.id,
         first_name: u?.first_name,
@@ -201,7 +201,7 @@ const ActivityLogService = {
           ],
         },
       ],
-      order: [["created_at", "DESC"]],
+      order: [["createdAt", "DESC"]],
       limit: parseInt(limit),
       offset: parseInt(offset),
     });
@@ -215,7 +215,7 @@ const ActivityLogService = {
         module: log.module,
         action: log.action,
         details: log.details,
-        created_at: log.created_at,
+        createdAt: log.createdAt,
         user: u
           ? {
               id: u.id,
@@ -287,7 +287,7 @@ const ActivityLogService = {
       module: log.module,
       action: log.action,
       details: log.details,
-      created_at: log.created_at,
+      createdAt: log.createdAt,
       user: u
         ? {
             id: u.id,

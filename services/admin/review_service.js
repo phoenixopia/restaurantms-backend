@@ -123,7 +123,7 @@ const ReviewService = {
           attributes: ["id", "first_name", "last_name", "profile_picture"],
         },
       ],
-      order: [["created_at", "DESC"]],
+      order: [["createdAt", "DESC"]],
       limit,
       offset,
     });
@@ -131,7 +131,7 @@ const ReviewService = {
     const formattedReviews = reviews.map((review) => ({
       comment: review.comment,
       rating: parseInt(review.rating),
-      created_at: review.created_at,
+      createdAt: review.createdAt,
       customer: {
         id: review.Customer.id,
         first_name: review.Customer.first_name,
@@ -164,7 +164,7 @@ const ReviewService = {
           attributes: ["first_name", "last_name", "profile_picture"],
         },
       ],
-      order: [["created_at", "DESC"]],
+      order: [["createdAt", "DESC"]],
       limit,
       offset,
     });
@@ -172,7 +172,7 @@ const ReviewService = {
     const formattedReviews = reviews.map((review) => ({
       comment: review.comment,
       rating: parseInt(review.rating),
-      created_at: review.created_at,
+      createdAt: review.createdAt,
       customer: {
         first_name: review.Customer.first_name,
         last_name: review.Customer.last_name,
@@ -214,7 +214,7 @@ const ReviewService = {
           attributes: ["first_name", "last_name", "profile_picture"],
         },
       ],
-      order: [["created_at", "DESC"]],
+      order: [["createdAt", "DESC"]],
       limit,
       offset,
     });
@@ -222,7 +222,7 @@ const ReviewService = {
     const formattedReviews = reviews.map((review) => ({
       comment: review.comment,
       rating: parseInt(review.rating),
-      created_at: review.created_at,
+      createdAt: review.createdAt,
       customer: {
         first_name: review.Customer.first_name,
         last_name: review.Customer.last_name,

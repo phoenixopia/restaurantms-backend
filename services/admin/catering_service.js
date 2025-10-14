@@ -305,7 +305,7 @@ const CateringService = {
 
     const { count, rows } = await Catering.findAndCountAll({
       where: { restaurant_id: restaurantId },
-      order: [["created_at", "DESC"]],
+      order: [["createdAt", "DESC"]],
       limit,
       offset,
     });
@@ -408,7 +408,7 @@ const CateringService = {
           required: false,
         },
       ],
-      order: [["created_at", "DESC"]],
+      order: [["createdAt", "DESC"]],
       limit,
       offset,
     });
@@ -434,7 +434,7 @@ const CateringService = {
         location: location
           ? { id: location.id, address: location.address }
           : null,
-        created_at: req.created_at,
+        createdAt: req.createdAt,
       };
     });
 
@@ -510,7 +510,7 @@ const CateringService = {
       location: location
         ? { id: location.id, address: location.address }
         : null,
-      created_at: request.created_at,
+      createdAt: request.createdAt,
     };
   },
 
@@ -551,7 +551,7 @@ const CateringService = {
     return {
       id: request.id,
       status: request.status,
-      updated_at: request.updated_at,
+      updatedAt: request.updatedAt,
     };
   },
 
@@ -627,7 +627,7 @@ const CateringService = {
         catering_request: {
           id: request.id,
           status: request.status,
-          updated_at: request.updatedAt,
+          updatedAt: request.updatedAt,
         },
         catering_quote: {
           id: quote.id,
@@ -637,7 +637,7 @@ const CateringService = {
           description: quote.description,
           status: quote.status,
           payment_status: quote.payment_status,
-          created_at: quote.createdAt,
+          createdAt: quote.createdAt,
         },
       };
     } catch (err) {
@@ -714,7 +714,7 @@ const CateringService = {
         estimated_price: quote.estimated_price,
         description: quote.description,
         status: quote.status,
-        created_at: quote.createdAt,
+        createdAt: quote.createdAt,
       };
     } catch (err) {
       await t.rollback();
@@ -774,7 +774,7 @@ const CateringService = {
         estimated_price: quote.estimated_price,
         description: quote.description,
         status: quote.status,
-        updated_at: quote.updatedAt,
+        updatedAt: quote.updatedAt,
       };
     } catch (err) {
       await t.rollback();
@@ -821,7 +821,7 @@ const CateringService = {
           ],
         },
       ],
-      order: [["created_at", "DESC"]],
+      order: [["createdAt", "DESC"]],
       limit,
       offset,
     });
@@ -831,7 +831,7 @@ const CateringService = {
         id: quote.id,
         status: quote.status,
         estimated_price: quote.estimated_price,
-        created_at: quote.createdAt,
+        createdAt: quote.createdAt,
         catering_title: quote.Catering.title,
         prepayment_percentage: quote.Catering.prepayment_percentage,
         customer_name: quote.CateringRequest?.Customer
@@ -891,7 +891,7 @@ const CateringService = {
       status: quote.status,
       estimated_price: quote.estimated_price,
       description: quote.description,
-      created_at: quote.createdAt,
+      createdAt: quote.createdAt,
       catering: {
         id: quote.Catering.id,
         title: quote.Catering.title,

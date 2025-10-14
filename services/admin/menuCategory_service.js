@@ -295,11 +295,11 @@ const MenuCategoryService = {
     if (filters.dateRange === "weekly") {
       const startOfWeek = new Date();
       startOfWeek.setDate(startOfWeek.getDate() - 7);
-      whereClause.created_at = { [Op.gte]: startOfWeek };
+      whereClause.createdAt = { [Op.gte]: startOfWeek };
     } else if (filters.dateRange === "monthly") {
       const startOfMonth = new Date();
       startOfMonth.setMonth(startOfMonth.getMonth() - 1);
-      whereClause.created_at = { [Op.gte]: startOfMonth };
+      whereClause.createdAt = { [Op.gte]: startOfMonth };
     }
 
     const offset = (page - 1) * limit;
@@ -338,7 +338,7 @@ const MenuCategoryService = {
                 filters.sortOrder || "DESC",
               ],
             ]
-          : [["created_at", "DESC"]],
+          : [["createdAt", "DESC"]],
       offset,
       limit,
       distinct: true,

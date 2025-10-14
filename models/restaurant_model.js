@@ -166,7 +166,7 @@ module.exports = (sequelize) => {
       where: filter,
       offset,
       limit,
-      order: [["created_at", "DESC"]],
+      order: [["createdAt", "DESC"]],
       include: [
         {
           model: sequelize.models.Location,

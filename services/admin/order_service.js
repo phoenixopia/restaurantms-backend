@@ -453,7 +453,7 @@ const OrderService = {
           attributes: ["quantity"],
         },
       ],
-      order: [["created_at", "DESC"]],
+      order: [["createdAt", "DESC"]],
       limit,
       offset,
     });
@@ -472,7 +472,7 @@ const OrderService = {
         total_items: totalItems,
         type: order.type,
         status: order.status,
-        created_at: order.createdAt,
+        createdAt: order.createdAt,
       };
     });
 
@@ -526,7 +526,7 @@ const OrderService = {
           attributes: ["quantity"],
         },
       ],
-      order: [["created_at", "DESC"]],
+      order: [["createdAt", "DESC"]],
       limit,
       offset,
     });
@@ -545,7 +545,7 @@ const OrderService = {
         total_items: totalItems,
         type: order.type,
         status: order.status,
-        created_at: order.createdAt,
+        createdAt: order.createdAt,
       };
     });
 
@@ -576,11 +576,11 @@ const OrderService = {
 
     let orderWhere = {};
     if (from && to) {
-      orderWhere.created_at = { [Op.between]: [new Date(from), new Date(to)] };
+      orderWhere.createdAt = { [Op.between]: [new Date(from), new Date(to)] };
     } else if (from) {
-      orderWhere.created_at = { [Op.gte]: new Date(from) };
+      orderWhere.createdAt = { [Op.gte]: new Date(from) };
     } else if (to) {
-      orderWhere.created_at = { [Op.lte]: new Date(to) };
+      orderWhere.createdAt = { [Op.lte]: new Date(to) };
     }
 
     const { rows: kdsOrders, count } = await KdsOrder.findAndCountAll({
@@ -602,7 +602,7 @@ const OrderService = {
           ],
         },
       ],
-      order: [["created_at", "DESC"]],
+      order: [["createdAt", "DESC"]],
       limit: parseInt(limit),
       offset: parseInt(offset),
       distinct: true, // important when using include
@@ -625,7 +625,7 @@ const OrderService = {
         total_amount: order.total_amount,
         payment_status: order.payment_status,
         order_date: order.order_date,
-        created_at: order.created_at,
+        createdAt: order.createdAt,
 
         restaurant_name: order.Restaurant?.restaurant_name || null,
         branch_name: order.Branch?.name || null,
@@ -783,7 +783,7 @@ const OrderService = {
       total_amount: order.total_amount,
       payment_status: order.payment_status,
       order_date: order.order_date,
-      created_at: order.created_at,
+      createdAt: order.createdAt,
 
       restaurant: {
         id: order.Restaurant?.id || null,
@@ -920,7 +920,7 @@ const OrderService = {
       total_items: items.reduce((sum, item) => sum + item.quantity, 0),
       status: order.status,
       type: order.type,
-      created_at: order.createdAt,
+      createdAt: order.createdAt,
       items,
       branch: {
         name: order.Branch?.name,

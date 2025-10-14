@@ -195,7 +195,7 @@ const SubscriptionService = {
       restaurant_name,
       page = 1,
       limit = 10,
-      sort = "created_at",
+      sort = "createdAt",
       order = "DESC",
     } = query;
 
@@ -254,7 +254,7 @@ const SubscriptionService = {
       end_date: sub.end_date,
       receipt: sub.receipt || null,
       status: sub.status,
-      created_at: sub.created_at,
+      createdAt: sub.createdAt,
     }));
 
     return {

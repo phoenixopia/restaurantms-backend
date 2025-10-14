@@ -47,8 +47,8 @@ module.exports = async () => {
           status: ["pending", "confirmed", "cancelled"][
             Math.floor(Math.random() * 3)
           ],
-          created_at: new Date(),
-          updated_at: new Date(),
+          createdAt: new Date(),
+          updatedAt: new Date(),
         });
       }
 

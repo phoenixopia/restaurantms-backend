@@ -110,8 +110,8 @@ module.exports = async () => {
       id: uuidv4(),
       restaurant_name: data.name,
       status: "active",
-      created_at: now,
-      updated_at: now,
+      createdAt: now,
+      updatedAt: now,
     });
 
     await RestaurantBankAccount.create({
@@ -122,8 +122,8 @@ module.exports = async () => {
       account_name: "Natnael Kelemie",
       is_default: true,
       is_active: true,
-      created_at: now,
-      updated_at: now,
+      createdAt: now,
+      updatedAt: now,
     });
 
     await User.create({
@@ -139,8 +139,8 @@ module.exports = async () => {
       is_active: true,
       email_verified_at: now,
       password_changed_at: now,
-      created_at: now,
-      updated_at: now,
+      createdAt: now,
+      updatedAt: now,
     });
 
     await Subscription.create({
@@ -150,8 +150,8 @@ module.exports = async () => {
       end_date: moment(now).add(1, "month").toDate(),
       status: "active",
       payment_method: "card",
-      created_at: now,
-      updated_at: now,
+      createdAt: now,
+      updatedAt: now,
     });
 
     await SystemSetting.create({
@@ -161,8 +161,8 @@ module.exports = async () => {
       default_theme: "Light",
       primary_color: "#FF5733",
       font_family: "Roboto",
-      created_at: now,
-      updated_at: now,
+      createdAt: now,
+      updatedAt: now,
     });
   }
 

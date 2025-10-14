@@ -46,8 +46,8 @@ module.exports = async () => {
         }.`,
         status: "open",
         priority: priorities[(i - 1) % priorities.length],
-        created_at: now,
-        updated_at: now,
+        createdAt: now,
+        updatedAt: now,
       });
     }
 

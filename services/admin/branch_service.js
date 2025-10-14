@@ -174,7 +174,7 @@ const BranchService = {
 
     const { count, rows } = await Branch.findAndCountAll({
       where,
-      order: [["created_at", "DESC"]],
+      order: [["createdAt", "DESC"]],
       limit,
       offset,
       include: [
@@ -240,8 +240,8 @@ const BranchService = {
         main_branch: branch.main_branch,
         opening_time: branch.opening_time,
         closing_time: branch.closing_time,
-        created_at: branch.created_at,
-        updated_at: branch.updated_at,
+        createdAt: branch.createdAt,
+        updatedAt: branch.updatedAt,
         location: branch.Location
           ? {
               id: branch.Location.id,
@@ -334,8 +334,8 @@ const BranchService = {
       main_branch: branch.main_branch,
       opening_time: branch.opening_time,
       closing_time: branch.closing_time,
-      created_at: branch.created_at,
-      updated_at: branch.updated_at,
+      createdAt: branch.createdAt,
+      updatedAt: branch.updatedAt,
       location: branch.Location?.address || null,
       restaurant_name: branch.Restaurant?.restaurant_name || null,
       total_staffs: totalStaffs,

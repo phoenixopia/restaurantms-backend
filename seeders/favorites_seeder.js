@@ -1,16 +1,17 @@
 "use strict";
 
-const { Favorite, Customer, Restaurant, Menu } = require("../models");
+const { Favorite, Customer, Restaurant, Menu } = require("../models/index");
 const { v4: uuidv4 } = require("uuid");
 
 module.exports = async () => {
+  await Favorite.sync({ force: true });
   const now = new Date();
 
   // Fetch some existing records to link favorites realistically
   // const customers = await Customer.findAll({ limit: 2 });
-  const customers = await Customer.findOne({where:{ email: "sarahjones@gmail.com" }});
-  const restaurants = await Restaurant.findAll({ limit: 2 });
-  const menus = await Menu.findAll({ limit: 2 });
+  const customers = await Customer.findOne({where:{ email: "customer1@gmail.com" }});
+  const restaurants = await Restaurant.findAll({ limit: 4 });
+  const menus = await Menu.findAll({ limit: 4 });
 
   if (!customers || (!restaurants.length && !menus.length)) {
     console.warn("⚠️ Skipping Favorite seeder: Missing required data.");
@@ -24,16 +25,16 @@ module.exports = async () => {
       targetId: restaurants[0]?.id,
       targetType: "restaurant",
       is_favorite: true,
-      created_at: now,
-      updated_at: now,
+      createdAt: now,
+      updatedAt: now,
     },
     // {
     //   customer_id: customers[1].id,
     //   targetId: restaurants[1]?.id,
     //   targetType: "restaurant",
     //   is_favorite: true,
-    //   created_at: now,
-    //   updated_at: now,
+    //   createdAt: now,
+    //   updatedAt: now,
     // },
 
     // --- Menu Favorites ---
@@ -42,16 +43,16 @@ module.exports = async () => {
       targetId: menus[0]?.id,
       targetType: "menu",
       is_favorite: true,
-      created_at: now,
-      updated_at: now,
+      createdAt: now,
+      updatedAt: now,
     },
     // {
     //   customer_id: customers[1].id,
     //   targetId: menus[1]?.id,
     //   targetType: "menu",
     //   is_favorite: true,
-    //   created_at: now,
-    //   updated_at: now,
+    //   createdAt: now,
+    //   updatedAt: now,
     // },
   ]);
 

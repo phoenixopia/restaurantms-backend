@@ -30,8 +30,8 @@ module.exports = async () => {
       email_verified_at: now,
       role_id: customerRole.id,
       role_tag_id: customerRoleTag.id,
-      created_at: now,
-      updated_at: now,
+      createdAt: now,
+      updatedAt: now,
     },
     {
       id: uuidv4(),
@@ -45,8 +45,8 @@ module.exports = async () => {
       email_verified_at: now,
       role_id: customerRole.id,
       role_tag_id: customerRoleTag.id,
-      created_at: now,
-      updated_at: now,
+      createdAt: now,
+      updatedAt: now,
     },
     {
       id: uuidv4(),
@@ -59,8 +59,8 @@ module.exports = async () => {
       email_verified_at: now,
       role_id: customerRole.id,
       role_tag_id: customerRoleTag.id,
-      created_at: now,
-      updated_at: now,
+      createdAt: now,
+      updatedAt: now,
     },
     {
       id: uuidv4(),
@@ -73,8 +73,8 @@ module.exports = async () => {
       email_verified_at: now,
       role_id: customerRole.id,
       role_tag_id: customerRoleTag.id,
-      created_at: now,
-      updated_at: now,
+      createdAt: now,
+      updatedAt: now,
     },
   ];
 

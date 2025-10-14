@@ -103,7 +103,7 @@ const ContactInfoService = {
 
     const { count, rows } = await ContactInfo.findAndCountAll({
       where,
-      order: [["created_at", "DESC"]],
+      order: [["createdAt", "DESC"]],
       offset,
       limit,
       include: [

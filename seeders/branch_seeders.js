@@ -29,8 +29,8 @@ module.exports = async () => {
         main_branch: true,
         opening_time: "02:00:00",
         closing_time: "04:00:00",
-        created_at: now,
-        updated_at: now,
+        createdAt: now,
+        updatedAt: now,
       },
       {
         id: uuidv4(),
@@ -41,8 +41,8 @@ module.exports = async () => {
         main_branch: false,
         opening_time: "02:00:00",
         closing_time: "03:00:00",
-        created_at: now,
-        updated_at: now,
+        createdAt: now,
+        updatedAt: now,
       },
       {
         id: uuidv4(),
@@ -53,8 +53,8 @@ module.exports = async () => {
         main_branch: false,
         opening_time: "02:30:00",
         closing_time: "03:00:00",
-        created_at: now,
-        updated_at: now,
+        createdAt: now,
+        updatedAt: now,
       }
     );
   });

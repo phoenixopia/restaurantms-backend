@@ -88,7 +88,7 @@ module.exports = (sequelize, DataTypes) => {
     page = 1,
     limit = 10,
     where = {},
-    order = [["created_at", "DESC"]],
+    order = [["createdAt", "DESC"]],
     include = [],
   } = {}) {
     const offset = (page - 1) * limit;

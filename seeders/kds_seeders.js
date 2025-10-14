@@ -4,6 +4,7 @@ const { KdsOrder, Order, Restaurant, Branch } = require("../models");
 const { v4: uuidv4 } = require("uuid");
 
 module.exports = async () => {
+  await KdsOrder.sync({ force: true });
   const now = new Date();
 
   // Fetch existing orders, restaurants, and branches
@@ -24,8 +25,8 @@ module.exports = async () => {
       status: ["Pending", "InProgress", "Preparing", "Ready", "Served", "Cancelled"][
         Math.floor(Math.random() * 6)
       ],
-      created_at: now,
-      updated_at: now,
+      createdAt: now,
+      updatedAt: now,
     }))
   );
 

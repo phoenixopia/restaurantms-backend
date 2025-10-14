@@ -131,8 +131,8 @@ module.exports = async () => {
               description: `Delicious ${categoryData.category}`,
               sort_order: k + 1,
               is_active: true,
-              created_at: now,
-              updated_at: now,
+              // createdAt: now,
+              // updatedAt: now,
             },
           });
 
@@ -144,10 +144,10 @@ module.exports = async () => {
                 menu_category_id: menuCategory.id,
                 category_tag_id: tag.id,
               },
-              defaults: {
-                created_at: now,
-                updated_at: now,
-              },
+              // defaults: {
+              //   createdAt: now,
+              //   updatedAt: now,
+              // },
             });
           }
 
@@ -163,8 +163,8 @@ module.exports = async () => {
                 image: foodImages[l % foodImages.length],
                 is_active: true,
                 seasonal: false,
-                created_at: now,
-                updated_at: now,
+                // createdAt: now,
+                // updatedAt: now,
               },
             });
           }

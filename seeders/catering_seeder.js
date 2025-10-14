@@ -79,8 +79,8 @@ module.exports = async () => {
         contact_person: "John Doe",
         contact_info: "+251 912 345 678",
         is_active: true,
-        created_at: now,
-        updated_at: now,
+        createdAt: now,
+        updatedAt: now,
       });
     }
   }

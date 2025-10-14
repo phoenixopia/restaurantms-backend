@@ -140,7 +140,7 @@ const RbacService = {
   async getAllRoleTags() {
     return await RoleTag.findAll({
       attributes: ["id", "name", "description"],
-      order: [["created_at", "DESC"]],
+      order: [["createdAt", "DESC"]],
     });
   },
 
@@ -379,7 +379,7 @@ const RbacService = {
           through: { attributes: [] },
         },
       ],
-      order: [["created_at", "DESC"]],
+      order: [["createdAt", "DESC"]],
       limit,
       offset,
     });
@@ -604,7 +604,7 @@ const RbacService = {
       attributes: ["id", "name"],
       offset,
       limit,
-      order: [["created_at", "DESC"]],
+      order: [["createdAt", "DESC"]],
     });
 
     return {
