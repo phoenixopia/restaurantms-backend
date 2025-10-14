@@ -141,11 +141,11 @@ const ReviewService = {
     }));
 
     return {
+      reviews: formattedReviews,
       total,
       page,
       limit,
       total_pages: Math.ceil(total / limit),
-      reviews: formattedReviews,
     };
   },
 
@@ -231,11 +231,11 @@ const ReviewService = {
     }));
 
     return {
+      reviews: formattedReviews,
       total,
       page,
       limit,
       total_pages: Math.ceil(total / limit),
-      reviews: formattedReviews,
     };
   },
 
