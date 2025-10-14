@@ -7,14 +7,14 @@ const { permissionCheck } = require("../../middleware/permissionCheck");
 router.get(
   "/see-review",
   protect("user"),
-  permissionCheck("see_review_rating"),
+  // permissionCheck("see_review_rating"),
   ReviewController.getReview
 );
 
 router.get(
   "/see-review-rating",
   protect("user"),
-  permissionCheck("see_review_rating"),
+  // permissionCheck("see_review_rating"),
   ReviewController.seeTotalCaluclatedRating
 );
 

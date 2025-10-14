@@ -25,15 +25,16 @@ router.get(
   ReviewController.getReviewsByRestaurant
 );
 
-router.get(
-  "/:customerId?",   protect("customer"), 
-  ReviewController.getReviewsByCustomerUser
-);
-
 
 router.get(
   "/see/:restaurantId/rating",
   ReviewController.calculateRestaurantRating
+);
+
+router.get(
+  "/",   
+  protect("customer"),
+  ReviewController.getReviewsByCustomerUser
 );
 
 module.exports = router;

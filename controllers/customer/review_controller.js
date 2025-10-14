@@ -45,7 +45,9 @@ exports.getReviewsByRestaurant = asyncHandler(async (req, res) => {
 
 // Get Review for a Customer user
 exports.getReviewsByCustomerUser = asyncHandler(async (req, res) => {
-  const customerId = req.user.id || req.params.id;
+
+  console.log("\\n\nFetching reviews for customer:", req.user, "\n\n\n")
+  const customerId = req.user.id;
   const { page, limit } = req.query;
 
   const data = await ReviewService.getReviewsByCustomerUser(

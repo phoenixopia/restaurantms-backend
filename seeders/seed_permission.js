@@ -221,6 +221,7 @@ module.exports = async () => {
     },
     { name: "edit_video", description: "Permission to edit videos" },
     { name: "delete_video", description: "Permission to delete videos" },
+    { name: "see_review_rating", description: "Permission to view reviews" },
   ];
 
   await Permission.bulkCreate(permissions.map((p) => ({ ...p, id: uuidv4() })));

@@ -44,7 +44,7 @@ module.exports = async () => {
     first_name: "Temp",
     last_name: "User",
     email: "tempuser@example.com",
-    password: "12345678",
+    password: "1234567890",
     role_id: null,
     role_tag_id: superAdminRoleTag.id,
     is_active: true,
