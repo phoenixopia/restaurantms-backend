@@ -103,7 +103,7 @@ const RestaurantService = {
           attributes: ["type", "value", "is_primary", "module_id"],
         },
       ],
-      attributes: { exclude: ["created_at", "updated_at"] },
+      attributes: { exclude: ["createdAt", "updatedAt"] },
     });
 
     if (!restaurant) throwError("Restaurant not found", 404);
@@ -127,7 +127,7 @@ const RestaurantService = {
 
     const startDate = getDateFilterRange(filters.createdFilter);
     if (startDate) {
-      where.created_at = { [Op.gte]: startDate };
+      where.createdAt = { [Op.gte]: startDate };
     }
 
     if (filters.subscriptionStatus) {
@@ -140,7 +140,7 @@ const RestaurantService = {
 
     const { count, rows } = await Restaurant.findAndCountAll({
       where,
-      attributes: { exclude: ["created_at", "updated_at"] },
+      attributes: { exclude: ["createdAt", "updatedAt"] },
       include: [
         {
           model: SystemSetting,
@@ -168,7 +168,7 @@ const RestaurantService = {
           ],
           separate: true,
           limit: 1,
-          order: [["created_at", "DESC"]],
+          order: [["createdAt", "DESC"]],
         },
         {
           model: ContactInfo,
@@ -184,7 +184,7 @@ const RestaurantService = {
       ],
       offset,
       limit,
-      order: [["created_at", "DESC"]],
+      order: [["createdAt", "DESC"]],
       distinct: true,
     });
 
@@ -200,7 +200,7 @@ const RestaurantService = {
   // this by id
   async getRestaurantWithSubscriptionById(restaurantId) {
     const restaurant = await Restaurant.findByPk(restaurantId, {
-      attributes: { exclude: ["created_at", "updated_at"] },
+      attributes: { exclude: ["createdAt", "updatedAt"] },
       include: [
         {
           model: Subscription,
@@ -659,7 +659,7 @@ const RestaurantService = {
     const offset = (page - 1) * limit;
 
     const orderOptions = {
-      latest: [["created_at", "DESC"]],
+      latest: [["createdAt", "DESC"]],
       most_viewed: [[literal("total_views"), "DESC"]],
       most_liked: [[literal("total_likes"), "DESC"]],
     };
@@ -723,7 +723,7 @@ const RestaurantService = {
         thumbnail_url: video.thumbnail_url,
         total_likes: Number(video.getDataValue("total_likes") || 0),
         total_views: Number(video.getDataValue("total_views") || 0),
-        created_at: video.created_at,
+        createdAt: video.createdAt,
       })),
       pagination: {
         page: Number(page),

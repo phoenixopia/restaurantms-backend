@@ -14,8 +14,8 @@ module.exports = async () => {
       name: `${restaurant.restaurant_name} Main Menu`,
       description: `The main menu for ${restaurant.restaurant_name}`,
       is_active: true,
-      created_at: now,
-      updated_at: now,
+      createdAt: now,
+      updatedAt: now,
     });
 
     console.log(`🍽️ Menu created for ${restaurant.restaurant_name}`);

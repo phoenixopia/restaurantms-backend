@@ -123,8 +123,8 @@ module.exports = async () => {
           status: "approved",
           uploaded_by: admin.id,
           branch_id: null,
-          created_at: now,
-          updated_at: now,
+          createdAt: now,
+          updatedAt: now,
         };
 
         if (menuItems.length) {

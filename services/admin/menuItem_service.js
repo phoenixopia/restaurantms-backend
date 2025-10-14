@@ -120,7 +120,7 @@ const MenuItemService = {
     const { rows, count } = await MenuItem.findAndCountAll({
       where: whereClause,
       include,
-      order: [["created_at", "DESC"]],
+      order: [["createdAt", "DESC"]],
       limit: parseInt(limit),
       offset: parseInt(offset),
       distinct: true,

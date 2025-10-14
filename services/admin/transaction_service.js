@@ -113,7 +113,7 @@ const TransactionService = {
       ],
       limit: parseInt(limit),
       offset: parseInt(offset),
-      order: [["created_at", "DESC"]],
+      order: [["createdAt", "DESC"]],
       distinct: true,
     });
 

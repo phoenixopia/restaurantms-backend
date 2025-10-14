@@ -79,7 +79,7 @@ const TicketService = {
       page = 1,
       limit = 10,
       search = "",
-      sortBy = "created_at",
+      sortBy = "createdAt",
       order = "DESC",
       status,
       priority,

@@ -38,8 +38,8 @@ module.exports = async () => {
         state: "info",
         restaurant_id: adminUser.restaurant_id,
         created_by: adminUser.id,
-        created_at: now,
-        updated_at: now,
+        createdAt: now,
+        updatedAt: now,
       });
     }
 
@@ -57,8 +57,8 @@ module.exports = async () => {
           branch_id: branch ? branch.id : null,
           restaurant_id: branch ? branch.restaurant_id : null,
           created_by: staffUser.id,
-          created_at: now,
-          updated_at: now,
+          createdAt: now,
+          updatedAt: now,
         },
         {
           id: uuidv4(),
@@ -70,8 +70,8 @@ module.exports = async () => {
           branch_id: branch ? branch.id : null,
           restaurant_id: branch ? branch.restaurant_id : null,
           created_by: staffUser.id,
-          created_at: now,
-          updated_at: now,
+          createdAt: now,
+          updatedAt: now,
         }
       );
     }

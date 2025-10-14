@@ -22,7 +22,7 @@ const CateringService = {
       where: { restaurant_id },
       limit,
       offset,
-      order: [["created_at", "DESC"]],
+      order: [["createdAt", "DESC"]],
     });
 
     const setting = await SystemSetting.findOne({
@@ -67,7 +67,7 @@ const CateringService = {
     const [results] = await sequelize.query(`
     SELECT DISTINCT ON (restaurant_id) *
     FROM "caterings"
-    ORDER BY restaurant_id, created_at DESC
+    ORDER BY restaurant_id, createdAt DESC
   `);
 
     const totalItems = results.length;
@@ -386,7 +386,7 @@ const CateringService = {
           attributes: ["id", "address", "latitude", "longitude"],
         },
       ],
-      order: [["created_at", "DESC"]],
+      order: [["createdAt", "DESC"]],
       offset,
       limit,
     });
@@ -438,7 +438,7 @@ const CateringService = {
       prepayment_percentage: request.Catering.prepayment_percentage,
       contact_person: request.Catering.contact_person,
       contact_info: request.Catering.contact_info,
-      created_at: quote.created_at,
+      createdAt: quote.createdAt,
     };
   },
 
@@ -549,7 +549,7 @@ const CateringService = {
           attributes: ["id", "event_date", "guest_count"],
         },
       ],
-      order: [["created_at", "DESC"]],
+      order: [["createdAt", "DESC"]],
       limit,
       offset,
     });
@@ -564,7 +564,7 @@ const CateringService = {
         description: quote.description,
         status: quote.status,
         payment_status: quote.payment_status,
-        created_at: quote.created_at,
+        createdAt: quote.createdAt,
         catering_request: {
           id: quote.CateringRequest.id,
           event_date: quote.CateringRequest.event_date,

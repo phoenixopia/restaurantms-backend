@@ -53,8 +53,8 @@ module.exports = async () => {
         role_tag_id: staffRoleTag.id,
         created_by: restaurantAdmin.id,
         description: `${roleName} role for ${restaurant.restaurant_name}`,
-        created_at: now,
-        updated_at: now,
+        createdAt: now,
+        updatedAt: now,
       });
       createdRoles.push(staffRole);
 
@@ -68,8 +68,8 @@ module.exports = async () => {
         id: uuidv4(),
         role_id: staffRole.id,
         permission_id: perm.id,
-        created_at: now,
-        updated_at: now,
+        createdAt: now,
+        updatedAt: now,
       }));
 
       if (rolePermissionsData.length) {
@@ -101,8 +101,8 @@ module.exports = async () => {
         is_active: true,
         email_verified_at: now,
         password_changed_at: now,
-        created_at: now,
-        updated_at: now,
+        createdAt: now,
+        updatedAt: now,
       });
     }
 

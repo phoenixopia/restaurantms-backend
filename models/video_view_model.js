@@ -32,7 +32,7 @@ module.exports = (sequelize, DataTypes) => {
       tableName: "video_views",
       timestamps: true,
       updatedAt: false,
-      createdAt: "created_at",
+      createdAt: "createdAt",
       underscored: true,
       indexes: [
         {

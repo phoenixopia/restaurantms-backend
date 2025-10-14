@@ -37,8 +37,8 @@ module.exports = async () => {
       id: uuidv4(),
       role_id: superAdminRole.id,
       permission_id: permission.id,
-      created_at: new Date(),
-      updated_at: new Date(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
     });
   });
 
@@ -49,8 +49,8 @@ module.exports = async () => {
         id: uuidv4(),
         role_id: restaurantAdminRole.id,
         permission_id: permission.id,
-        created_at: new Date(),
-        updated_at: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
       });
     }
   });

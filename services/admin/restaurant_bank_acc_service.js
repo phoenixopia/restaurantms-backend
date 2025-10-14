@@ -194,7 +194,7 @@ const RestaurantBankAccountService = {
       where,
       limit,
       offset,
-      order: [["created_at", "DESC"]],
+      order: [["createdAt", "DESC"]],
       include: [
         {
           model: Branch,

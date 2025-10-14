@@ -113,7 +113,7 @@ const TableService = {
           attributes: ["id", "restaurant_name"],
         },
       ],
-      order: [["created_at", "DESC"]],
+      order: [["createdAt", "DESC"]],
       limit,
       offset,
       distinct: true, // ensures correct count when using include

@@ -444,7 +444,7 @@ const UserService = {
         "phone_number",
         "profile_picture",
         "is_active",
-        "created_at",
+        "createdAt",
       ],
       include: [
         {
@@ -467,7 +467,7 @@ const UserService = {
           attributes: ["id", "name"],
         },
       ],
-      order: [["created_at", "DESC"]],
+      order: [["createdAt", "DESC"]],
       limit,
       offset,
     });

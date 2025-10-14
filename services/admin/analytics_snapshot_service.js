@@ -24,9 +24,9 @@ const AnalyticsSnapshot = {
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
       if (filter === "thisWeek") {
-        whereClause.created_at = { [Op.gte]: startOfWeek };
+        whereClause.createdAt = { [Op.gte]: startOfWeek };
       } else if (filter === "thisMonth") {
-        whereClause.created_at = { [Op.gte]: startOfMonth };
+        whereClause.createdAt = { [Op.gte]: startOfMonth };
       }
 
       const [totalRestaurants, totalRestaurantAdmins, totalCustomers] =

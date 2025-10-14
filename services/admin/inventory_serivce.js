@@ -20,7 +20,7 @@ const InventoryService = {
       page = 1,
       limit = 10,
       search = "",
-      sortBy = "created_at",
+      sortBy = "createdAt",
       order = "DESC",
       branchId = null,
     }
@@ -407,7 +407,7 @@ const InventoryService = {
       page = 1,
       limit = 10,
       search = "",
-      sortBy = "created_at",
+      sortBy = "createdAt",
       order = "DESC",
       branchId = null,
     }
@@ -465,8 +465,8 @@ const InventoryService = {
       type: item.type,
       quantity: item.quantity,
       reason: item.reason,
-      created_at: item.createdAt,
-      updated_at: item.updatedAt,
+      createdAt: item.createdAt,
+      updatedAt: item.updatedAt,
     }));
 
     return {

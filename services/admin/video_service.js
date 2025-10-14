@@ -59,7 +59,7 @@ const VideoService = {
       status,
       branch_id,
       menu_item_id,
-      sortBy = "created_at",
+      sortBy = "createdAt",
       sortOrder = "DESC",
     } = filters;
 
@@ -80,19 +80,19 @@ const VideoService = {
     if (status) where.status = status;
     if (menu_item_id) where.menu_item_id = menu_item_id;
 
-    // date filter (use Video.created_at to avoid ambiguity)
+    // date filter (use Video.createdAt to avoid ambiguity)
     if (date === "daily") {
-      where["$Video.created_at$"] = {
+      where["$Video.createdAt$"] = {
         [Op.gte]: sequelize.literal(`CURRENT_DATE`),
       };
     }
     if (date === "weekly") {
-      where["$Video.created_at$"] = {
+      where["$Video.createdAt$"] = {
         [Op.gte]: sequelize.literal(`CURRENT_DATE - interval '7 days'`),
       };
     }
     if (date === "monthly") {
-      where["$Video.created_at$"] = {
+      where["$Video.createdAt$"] = {
         [Op.gte]: sequelize.literal(`CURRENT_DATE - interval '1 month'`),
       };
     }
@@ -122,13 +122,13 @@ const VideoService = {
     };
 
     // ordering
-    let order = [["Video", "created_at", "DESC"]];
+    let order = [["Video", "createdAt", "DESC"]];
     const sortMap = {
       views: literal('"view_count"'),
       likes: literal('"like_count"'),
       favorites: literal('"favorite_count"'),
       comments: literal('"comment_count"'),
-      created_at: col("Video.created_at"),
+      createdAt: col("Video.createdAt"),
     };
     if (sortMap[sortBy]) order = [[sortMap[sortBy], sortOrder]];
 
@@ -765,7 +765,7 @@ const VideoService = {
           "comment_count",
         ],
       ],
-      exclude: ["updated_at"],
+      exclude: ["updatedAt"],
     };
 
     const getVideos = async (where, lim, off) => {
@@ -773,7 +773,7 @@ const VideoService = {
         where,
         limit: lim,
         offset: off,
-        order: [["created_at", "DESC"]],
+        order: [["createdAt", "DESC"]],
         attributes: baseAttributes,
         include: includeCommon,
         group: [
@@ -869,7 +869,7 @@ const VideoService = {
         where: baseWhere,
         limit,
         offset,
-        order: [["created_at", "DESC"]],
+        order: [["createdAt", "DESC"]],
         attributes: baseAttributes,
         include: includeCommon,
         group: [
@@ -1065,7 +1065,7 @@ const VideoService = {
 
     const { count, rows } = await VideoComment.findAndCountAll({
       where: { video_id: videoId },
-      order: [["created_at", "DESC"]],
+      order: [["createdAt", "DESC"]],
       limit,
       offset,
       include: [

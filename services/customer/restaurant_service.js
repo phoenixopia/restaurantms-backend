@@ -244,7 +244,7 @@ const CustomerRestaurantService = {
         attributes: { exclude: ["createdAt", "updatedAt"] },
         limit: limit,
         offset: (page - 1) * limit,
-        order: [["created_at", "ASC"]],
+        order: [["createdAt", "ASC"]],
       });
 
       return {
@@ -274,7 +274,7 @@ const CustomerRestaurantService = {
             attributes: { exclude: ["createdAt", "updatedAt"] },
             limit: limit,
             offset: (page - 1) * limit,
-            order: [["created_at", "ASC"]],
+            order: [["createdAt", "ASC"]],
           });
 
           return {
@@ -388,7 +388,7 @@ const CustomerRestaurantService = {
     nearby,
     lat,
     lng,
-    sort = "created_at",
+    sort = "createdAt",
     order = "DESC",
     page = 1,
     limit = 10,
@@ -686,7 +686,7 @@ const CustomerRestaurantService = {
     const offset = (page - 1) * limit;
 
     const orderOptions = {
-      latest: [["created_at", "DESC"]],
+      latest: [["createdAt", "DESC"]],
       most_viewed: [[literal("total_views"), "DESC"]],
       most_liked: [[literal("total_likes"), "DESC"]],
     };
@@ -750,7 +750,7 @@ const CustomerRestaurantService = {
         thumbnail_url: video.thumbnail_url,
         total_likes: Number(video.getDataValue("total_likes") || 0),
         total_views: Number(video.getDataValue("total_views") || 0),
-        created_at: video.created_at,
+        createdAt: video.createdAt,
       })),
       pagination: {
         page: Number(page),
