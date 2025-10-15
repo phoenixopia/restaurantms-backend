@@ -1,6 +1,6 @@
 "use strict";
 
-const { sequelize, Favorite, Customer, Restaurant, Menu } = require("../models/index");
+const { Favorite, Customer, Restaurant, Menu } = require("../models/index");
 const { v4: uuidv4 } = require("uuid");
 
 module.exports = async () => {

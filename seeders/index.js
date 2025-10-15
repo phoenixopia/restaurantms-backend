@@ -42,9 +42,9 @@ const { sequelize } = require("../models/index");
       // await require("./branch_seeders")();
       // console.log("✅ Branches seeded");
 
-      // console.log("Seeding staff...");
-      // await require("./staff_seeders")();
-      // console.log("✅ Staff seeded");
+      console.log("Seeding staff...");
+      await require("./staff_seeders")();
+      console.log("✅ Staff seeded");
 
       // console.log("Seeding analytics snapshots...");
       // await require("./snapshot_seeders")();
@@ -102,9 +102,9 @@ const { sequelize } = require("../models/index");
       // await require("./kds_seeders")();
       // console.log("✅ KDS seeded");
 
-      console.log("Seeding reviews...");
-      await require("./review_seeders")();
-      console.log("✅ Reviews seeded");
+      // console.log("Seeding reviews...");
+      // await require("./review_seeders")();
+      // console.log("✅ Reviews seeded");
 
       console.log("🎉 All seeders completed successfully");
     } catch (error) {

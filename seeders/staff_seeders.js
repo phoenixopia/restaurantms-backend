@@ -12,6 +12,8 @@ const {
 } = require("../models");
 
 module.exports = async () => {
+  await User.sync({ force: true });
+
   const [staffRoleTag, adminRole] = await Promise.all([
     RoleTag.findOne({ where: { name: "staff" } }),
     Role.findOne({ where: { name: "Restaurant Administrator" } }),
@@ -94,7 +96,7 @@ module.exports = async () => {
           .replace(/\s+/g, "")}@gmail.com`,
         password: "1234567890",
         branch_id: branch ? branch.id : null,
-        restaurant_id: null,
+        restaurant_id: restaurant.id,
         role_id: assignedRole.id,
         role_tag_id: staffRoleTag.id,
         created_by: restaurantAdmin.id,

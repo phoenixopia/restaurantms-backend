@@ -236,7 +236,7 @@ const UserService = {
           password,
           role_id: role.id,
           role_tag_id: role.role_tag_id,
-          restaurant_id: null,
+          restaurant_id: creator.restaurant_id,
           branch_id,
           created_by: restaurantAdminId,
           email_verified_at: creatorMode === "email" ? now : null,
