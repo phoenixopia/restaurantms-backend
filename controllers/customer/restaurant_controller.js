@@ -6,7 +6,13 @@ const throwError = require("../../utils/throwError");
 
 
 
-// // 
+// Get filtered restaurants
+exports.getFilteredRestaurants = asyncHandler(async (req, res) => {
+  console.log("Filtering restaurants with query:", req.query)
+  const result = await CustomerRestaurantService.getFilteredRestaurants(req.query);
+  return success(res, "Filtered restaurants fetched successfully", result);
+});
+
 // module.exports = {
 //   filterRestaurants: async (req, res, next) => {
 //     try {
@@ -28,6 +34,7 @@ const throwError = require("../../utils/throwError");
 //     }
 //   },
 // }
+
 
 // Get all restaurants
 exports.getAllRestaurants = asyncHandler(async (req, res) => {

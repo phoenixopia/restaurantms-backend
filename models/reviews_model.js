@@ -39,8 +39,10 @@ module.exports = (sequelize, DataTypes) => {
       },
 
       rating: {
-        type: DataTypes.ENUM("1", "2", "3", "4", "5"),
-      },
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        validate: { min: 1, max: 5 },
+      }
     },
     {
       tableName: "reviews",

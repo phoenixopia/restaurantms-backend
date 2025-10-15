@@ -62,7 +62,7 @@ module.exports = async () => {
             delivery_location_id: locations[0]?.id || null,
             order_date: now,
             type: "dine-in",
-            status: "Ready",
+            status: "Served",
             total_amount: (Math.random() * 200 + 50).toFixed(2),
             payment_status: "Unpaid",
             is_seen_by_customer: false,

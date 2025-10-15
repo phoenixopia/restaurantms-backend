@@ -14,6 +14,12 @@ router.get(
 );
 
 router.get(
+  "/",
+  protect("customer"),
+  OrderController.getCustomerOrders
+);
+
+router.get(
   "/order-history",
   protect("customer"),
   OrderController.getOrderHistory
@@ -27,6 +33,6 @@ router.post(
 );
 
 router.get("/with-table", protect("customer"), OrderController.getOrdersWithTableForCustomer);
-router.get("/:id", protect("customer"), OrderController.getOrderByIdForCustomer); // order detail of a customer
+// router.get("/:id", protect("customer"), OrderController.getOrderByIdForCustomer); // order detail of a customer
 
 module.exports = router;

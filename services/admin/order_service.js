@@ -413,44 +413,43 @@ const OrderService = {
     }
   },
 
-  async getActiveOrders(customerId, page = 1, limit = 10) {
+
+
+  // Get all orders for customer service 
+  async getllCustomerOrders(customerId, page = 1, limit = 10) {
     page = parseInt(page);
     limit = parseInt(limit);
     const offset = (page - 1) * limit;
 
-    const activeStatuses = [
-      "Pending",
-      "InProgress",
-      "Preparing",
-      "Ready",
-      "Served",
-    ];
+    // const activeStatuses = [
+    //   "Pending",
+    //   "InProgress",
+    //   "Preparing",
+    //   "Ready",
+    //   "Served",
+    // ];
 
     const { count, rows: orders } = await Order.findAndCountAll({
       where: {
         customer_id: customerId,
-        [Op.or]: [
-          { status: { [Op.in]: activeStatuses.slice(0, -1) } },
-          {
-            status: "Served",
-            is_seen_by_customer: false,
-          },
-        ],
+        // [Op.or]: [
+        //   { status: { [Op.in]: activeStatuses.slice(0, -1) } },
+        // ],
       },
       include: [
         {
           model: Restaurant,
-          attributes: ["restaurant_name"],
+          attributes: ["id", "restaurant_name"],
           include: [
             {
               model: SystemSetting,
-              attributes: ["logo_url"],
+              attributes: ["id", "logo_url"],
             },
           ],
         },
         {
           model: OrderItem,
-          attributes: ["quantity"],
+          attributes: ["id", "quantity"],
         },
       ],
       order: [["createdAt", "DESC"]],
@@ -467,6 +466,7 @@ const OrderService = {
       return {
         id: order.id,
         restaurant_name: order.Restaurant?.restaurant_name,
+        restaurant_id: order.Restaurant?.id,
         logo_url: order.Restaurant?.SystemSetting?.logo_url || null,
         total_amount: order.total_amount,
         total_items: totalItems,
@@ -499,6 +499,97 @@ const OrderService = {
     };
   },
 
+
+  // Get active orders service
+  async getActiveOrders(customerId, page = 1, limit = 10) {
+    page = parseInt(page);
+    limit = parseInt(limit);
+    const offset = (page - 1) * limit;
+
+    const activeStatuses = [
+      "Pending",
+      "InProgress",
+      "Preparing",
+      "Ready",
+      "Served",
+    ];
+
+    const { count, rows: orders } = await Order.findAndCountAll({
+      where: {
+        customer_id: customerId,
+        [Op.or]: [
+          { status: { [Op.in]: activeStatuses.slice(0, -1) } },
+          {
+            status: "Served",
+            is_seen_by_customer: false,
+          },
+        ],
+      },
+      include: [
+        {
+          model: Restaurant,
+          attributes: ["id", "restaurant_name"],
+          include: [
+            {
+              model: SystemSetting,
+              attributes: ["id", "logo_url"],
+            },
+          ],
+        },
+        {
+          model: OrderItem,
+          attributes: ["id", "quantity"],
+        },
+      ],
+      order: [["createdAt", "DESC"]],
+      limit,
+      offset,
+    });
+
+    const formatted = orders.map((order) => {
+      const totalItems = order.OrderItems.reduce(
+        (sum, item) => sum + item.quantity,
+        0
+      );
+
+      return {
+        id: order.id,
+        restaurant_name: order.Restaurant?.restaurant_name,
+        restaurant_id: order.Restaurant?.id,
+        logo_url: order.Restaurant?.SystemSetting?.logo_url || null,
+        total_amount: order.total_amount,
+        total_items: totalItems,
+        type: order.type,
+        status: order.status,
+        createdAt: order.createdAt,
+      };
+    });
+
+    const servedOrderIds = orders
+      .filter((order) => order.status === "Served")
+      .map((order) => order.id);
+
+    if (servedOrderIds.length > 0) {
+      await Order.update(
+        { is_seen_by_customer: true },
+        {
+          where: {
+            id: { [Op.in]: servedOrderIds },
+          },
+        }
+      );
+    }
+
+    return {
+      totalItems: count,
+      currentPage: page,
+      totalPages: Math.ceil(count / limit),
+      data: formatted,
+    };
+  },
+
+
+  // Get order history
   async getCustomerOrderHistory(user, page = 1, limit = 10) {
     page = parseInt(page);
     limit = parseInt(limit);
@@ -989,7 +1080,7 @@ const OrderService = {
     const totalPages = Math.ceil(totalItems / limit);
 
     return {
-        tables,
+        orderTable: tables,
         pagination: {
           totalItems,
           totalPages,

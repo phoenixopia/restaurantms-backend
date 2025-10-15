@@ -20,6 +20,8 @@ router.get(
   RestaurantController.getRestaurantsByCategoryTagId
 );
 
+router.get("/filter", RestaurantController.getFilteredRestaurants);
+
 router.get(
   "/:restaurantId/branches/:branchId/menus",
   RestaurantController.getBranchMenus

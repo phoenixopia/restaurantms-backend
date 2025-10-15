@@ -23,6 +23,19 @@ exports.cancelOrder = asyncHandler(async (req, res) => {
   return success(res, "Order cancelled successfully.", canceled);
 });
 
+
+// Get all orders for a Customer
+exports.getCustomerOrders = asyncHandler(async (req, res) => {
+  const customerId = req.user.id;
+  const { page = 1, limit = 10 } = req.query;
+
+  const result = await OrderService.getllCustomerOrders(customerId, page, limit);
+
+  return success(res, "Active orders fetched successfully", result);
+});
+
+
+// Get active orders for a Customer
 exports.getActiveOrders = asyncHandler(async (req, res) => {
   const customerId = req.user.id;
   const { page = 1, limit = 10 } = req.query;

@@ -6,6 +6,7 @@ const {
   sequelize,
   Restaurant,
 } = require("../../models");
+const throwError = require("../../utils/throwError");
 
 const ReviewService = {
 
@@ -20,7 +21,7 @@ const ReviewService = {
         where: {
           id: order_id,
           customer_id,
-          restaurant_id,
+          // restaurant_id,
         },
         transaction: t,
       });
@@ -45,7 +46,7 @@ const ReviewService = {
       const review = await Review.create(
         {
           order_id,
-          restaurant_id,
+          restaurant_id: order.restaurant_id,
           customer_id,
           rating,
           comment,
