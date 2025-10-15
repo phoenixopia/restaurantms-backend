@@ -4,6 +4,7 @@ const {
   Customer,
   Branch,
   sequelize,
+  Restaurant,
 } = require("../../models");
 
 const ReviewService = {
@@ -122,26 +123,28 @@ const ReviewService = {
           model: Customer,
           attributes: ["id", "first_name", "last_name", "profile_picture"],
         },
+        { model: Restaurant, },
+        { model: Order, },
       ],
       order: [["createdAt", "DESC"]],
       limit,
       offset,
     });
 
-    const formattedReviews = reviews.map((review) => ({
-      comment: review.comment,
-      rating: parseInt(review.rating),
-      createdAt: review.createdAt,
-      customer: {
-        id: review.Customer.id,
-        first_name: review.Customer.first_name,
-        last_name: review.Customer.last_name,
-        profile_picture: review.Customer.profile_picture,
-      },
-    }));
+    // const formattedReviews = reviews.map((review) => ({
+    //   comment: review.comment,
+    //   rating: parseInt(review.rating),
+    //   createdAt: review.createdAt,
+    //   customer: {
+    //     id: review.Customer.id,
+    //     first_name: review.Customer.first_name,
+    //     last_name: review.Customer.last_name,
+    //     profile_picture: review.Customer.profile_picture,
+    //   },
+    // }));
 
     return {
-      reviews: formattedReviews,
+      reviews: reviews,
       total,
       page,
       limit,

@@ -7,12 +7,12 @@ module.exports = (sequelize, DataTypes) => {
       primaryKey: true,
     },
     customer_id: {
-        type: DataTypes.UUID,
-        allowNull: false,
-        references: {
-          model: "customers",
-          key: "id",
-        },
+      type: DataTypes.UUID,
+      allowNull: false,
+      references: {
+        model: "customers",
+        key: "id",
+      },
     },
     targetId: {
       type: DataTypes.UUID,
@@ -23,21 +23,15 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
     },
     is_favorite: {
-        type: DataTypes.BOOLEAN,
-        defaultValue: true,
+      type: DataTypes.BOOLEAN,
+      defaultValue: true,
     },
   });
 
   Favorite.associate = (models) => {
     Favorite.belongsTo(models.Customer, { foreignKey: "customer_id" });
-    Favorite.belongsTo(models.Restaurant, {
-      foreignKey: "targetId",
-      constraints: false,
-    });
-    Favorite.belongsTo(models.Menu, {
-      foreignKey: "targetId",
-      constraints: false,
-    });
+    Favorite.belongsTo(models.Restaurant, { foreignKey: "targetId", constraints: false });
+    Favorite.belongsTo(models.Menu, { foreignKey: "targetId", constraints: false });
   };
 
   return Favorite;
