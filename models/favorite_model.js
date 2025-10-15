@@ -26,7 +26,8 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.BOOLEAN,
       defaultValue: true,
     },
-  });
+  },
+  );
 
   Favorite.associate = (models) => {
     Favorite.belongsTo(models.Customer, { foreignKey: "customer_id" });

@@ -59,6 +59,8 @@ const CateringService = {
     };
   },
 
+
+  // list one catering per restaurant
   async listOneCateringPerRestaurant({ page = 1, limit = 10 }) {
     page = parseInt(page);
     limit = parseInt(limit);
@@ -67,7 +69,7 @@ const CateringService = {
     const [results] = await sequelize.query(`
     SELECT DISTINCT ON (restaurant_id) *
     FROM "caterings"
-    ORDER BY restaurant_id, createdAt DESC
+    ORDER BY restaurant_id, created_at DESC
   `);
 
     const totalItems = results.length;
@@ -109,6 +111,8 @@ const CateringService = {
     };
   },
 
+
+  // get catering by id with restaurant info
   async getCateringById(id) {
     const catering = await Catering.findByPk(id);
     if (!catering) throwError("Catering not found", 404);

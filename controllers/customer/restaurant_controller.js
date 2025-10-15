@@ -4,11 +4,39 @@ const MenuCategoryService = require("../../services/admin/menuCategory_service")
 const { success } = require("../../utils/apiResponse");
 const throwError = require("../../utils/throwError");
 
+
+
+// // 
+// module.exports = {
+//   filterRestaurants: async (req, res, next) => {
+//     try {
+//       const filters = {
+//         hasDelivery: req.query.hasDelivery === "true",
+//         hasCatering: req.query.hasCatering === "true",
+//         minRating: req.query.minRating ? parseFloat(req.query.minRating) : null,
+//         userLat: req.query.lat ? parseFloat(req.query.lat) : null,
+//         userLng: req.query.lng ? parseFloat(req.query.lng) : null,
+//         sortBy: req.query.sortBy || "rating", // rating / popularity / distance
+//         page: parseInt(req.query.page) || 1,
+//         limit: parseInt(req.query.limit) || 10,
+//       };
+
+//       const result = await restaurantService.filterRestaurants(filters);
+//       return res.status(200).json(result);
+//     } catch (err) {
+//       next(err);
+//     }
+//   },
+// }
+
+// Get all restaurants
 exports.getAllRestaurants = asyncHandler(async (req, res) => {
   const result = await CustomerRestaurantService.getAllRestaurants(req.query);
   return success(res, "All registered restaurants fetched", result);
 });
 
+
+// Get all restaurants with their cheapest item
 exports.getAllRestaurantWithCheapestItems = asyncHandler(async (req, res) => {
   const { page = 1, limit = 10 } = req.query;
 
@@ -25,6 +53,8 @@ exports.getAllRestaurantWithCheapestItems = asyncHandler(async (req, res) => {
   );
 });
 
+
+// List all category tags
 exports.listCategoryTags = asyncHandler(async (req, res) => {
   const { page = 1, limit = 10 } = req.query;
   const tags = await MenuCategoryService.listAllCategoriesTags(

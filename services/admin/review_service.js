@@ -8,6 +8,8 @@ const {
 } = require("../../models");
 
 const ReviewService = {
+
+  // create review
   async createReview(
     { order_id, restaurant_id, rating, comment },
     customer_id
@@ -59,6 +61,8 @@ const ReviewService = {
     }
   },
 
+
+  // update review
   async updateReview({ review_id, rating, comment }, customer_id) {
     const t = await sequelize.transaction();
     try {
@@ -166,29 +170,31 @@ const ReviewService = {
           model: Customer,
           attributes: ["first_name", "last_name", "profile_picture"],
         },
+        { model: Restaurant, attributes: ["id", "restaurant_name"] },
       ],
       order: [["createdAt", "DESC"]],
       limit,
       offset,
     });
 
-    const formattedReviews = reviews.map((review) => ({
-      comment: review.comment,
-      rating: parseInt(review.rating),
-      createdAt: review.createdAt,
-      customer: {
-        first_name: review.Customer.first_name,
-        last_name: review.Customer.last_name,
-        profile_picture: review.Customer.profile_picture,
-      },
-    }));
+    // const formattedReviews = reviews.map((review) => ({
+    //   comment: review.comment,
+    //   rating: parseInt(review.rating),
+    //   createdAt: review.createdAt,
+    //   customer: {
+    //     first_name: review.Customer.first_name,
+    //     last_name: review.Customer.last_name,
+    //     profile_picture: review.Customer.profile_picture,
+    //   },
+    //   restaurants: reviews.Restaurant
+    // }));
 
     return {
+      reviews: reviews,
       total,
       page,
       limit,
       total_pages: Math.ceil(total / limit),
-      reviews: formattedReviews,
     };
   },
 
