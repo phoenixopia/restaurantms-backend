@@ -49,7 +49,7 @@ const CustomerRestaurantService = {
         include: [
           {
             model: Location,
-            attributes: ["latitude", "longitude", "address", "name"],
+            attributes: ["latitude", "longitude", "address"],
           },
         ],
       },
@@ -76,7 +76,15 @@ const CustomerRestaurantService = {
       offset,
       limit,
       attributes,
-      group: ["Restaurant.id", "Branches.id"],
+      // group: ["Restaurant.id", "Branches.id"],
+      group: [
+        "Restaurant.id",
+        "Branches.id",
+        "Branches->Location.id",
+        "Branches->Location.latitude",
+        "Branches->Location.longitude",
+        "Branches->Location.address",
+      ],
     };
 
     // Apply minRating filter using HAVING

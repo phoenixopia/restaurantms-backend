@@ -16,7 +16,7 @@ router.get(
 router.get(
   "/view-analytics-admin",
   protect("user"),
-  authorize("restaurant_admin"),
+  authorize("restaurant_admin", "staff"),
   AnalyticsSnapshotController.viewAnalyticsAdminSide
 );
 

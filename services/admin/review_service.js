@@ -10,43 +10,67 @@ const throwError = require("../../utils/throwError");
 
 const ReviewService = {
 
-  // create review
-  async createReview(
-    { order_id, restaurant_id, rating, comment },
-    customer_id
-  ) {
+  // create review (supports both order-based and restaurant-based)
+  async createReview({ order_id, restaurant_id, rating, comment }, customer_id) {
     const t = await sequelize.transaction();
     try {
-      const order = await Order.findOne({
-        where: {
-          id: order_id,
-          customer_id,
-          // restaurant_id,
-        },
-        transaction: t,
-      });
+      let restaurantId;
 
-      if (!order) {
-        throwError("Order not found or not associated with this customer", 404);
+      if (order_id) {
+        // If order_id is provided → validate order
+        const order = await Order.findOne({
+          where: { id: order_id, customer_id },
+          transaction: t,
+        });
+
+        if (!order) {
+          throwError("Order not found or not associated with this customer", 404);
+        }
+
+        if (order.status !== "Served") {
+          throwError("Only served orders can be reviewed", 400);
+        }
+
+        restaurantId = order.restaurant_id;
+        // restaurant = await Restaurant.findByPk(order.restaurant_id, { transaction: t });
+
+        // prevent duplicate reviews for same order
+        const existingOrderReview = await Review.findOne({
+          where: { order_id },
+          transaction: t,
+        });
+        if (existingOrderReview) {
+          throwError("This order has already been reviewed", 409);
+        }
+
+      } else if (restaurant_id) {
+        // If restaurant_id is provided → validate restaurant
+        const restaurant = await Restaurant.findByPk(restaurant_id, { transaction: t });
+
+        if (!restaurant) {
+          throwError("Restaurant not found", 404);
+        }
+
+        // prevent duplicate reviews for same restaurant by same customer
+        const existingRestaurantReview = await Review.findOne({
+          where: { restaurant_id, customer_id },
+          transaction: t,
+        });
+        if (existingRestaurantReview) {
+          throwError("You have already reviewed this restaurant", 409);
+        }
+
+        restaurantId = restaurant.id;
+
+      } else {
+        throwError("Either order_id or restaurant_id is required", 400);
       }
 
-      if (order.status !== "Served") {
-        throwError("Only served orders can be reviewed", 400);
-      }
-
-      const alreadyReviewed = await Review.findOne({
-        where: { order_id },
-        transaction: t,
-      });
-
-      if (alreadyReviewed) {
-        throwError("This order has already been reviewed", 409);
-      }
-
+      // Create review
       const review = await Review.create(
         {
-          order_id,
-          restaurant_id: order.restaurant_id,
+          order_id: order_id || null,
+          restaurant_id: restaurantId,
           customer_id,
           rating,
           comment,
@@ -61,6 +85,58 @@ const ReviewService = {
       throw err;
     }
   },
+
+  // // create review
+  // async createReview(
+  //   { order_id, restaurant_id, rating, comment },
+  //   customer_id
+  // ) {
+  //   const t = await sequelize.transaction();
+  //   try {
+  //     const order = await Order.findOne({
+  //       where: {
+  //         id: order_id,
+  //         customer_id,
+  //         // restaurant_id,
+  //       },
+  //       transaction: t,
+  //     });
+
+  //     if (!order) {
+  //       throwError("Order not found or not associated with this customer", 404);
+  //     }
+
+  //     if (order.status !== "Served") {
+  //       throwError("Only served orders can be reviewed", 400);
+  //     }
+
+  //     const alreadyReviewed = await Review.findOne({
+  //       where: { order_id },
+  //       transaction: t,
+  //     });
+
+  //     if (alreadyReviewed) {
+  //       throwError("This order has already been reviewed", 409);
+  //     }
+
+  //     const review = await Review.create(
+  //       {
+  //         order_id,
+  //         restaurant_id: order.restaurant_id,
+  //         customer_id,
+  //         rating,
+  //         comment,
+  //       },
+  //       { transaction: t }
+  //     );
+
+  //     await t.commit();
+  //     return review;
+  //   } catch (err) {
+  //     await t.rollback();
+  //     throw err;
+  //   }
+  // },
 
 
   // update review
