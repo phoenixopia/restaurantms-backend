@@ -39,21 +39,21 @@ const videoDescriptions = [
 //   "https://www.dailymotion.com/video/x8sansc",
 // ];
 
-// const videoUrls = [
-//   "http://localhost:8000/uploads/videos/MexicanSalad.mp4",
-//   "http://localhost:8000/uploads/videos/SaladRecipes.mp4",
-//   "http://localhost:8000/uploads/videos/SuperYummy.mp4",
-//   "http://localhost:8000/uploads/videos/MexicanSalad.mp4",
-//   "http://localhost:8000/uploads/videos/SuperYummy.mp4",
-// ];
-
 const videoUrls = [
-  "https://rms1-backend.vercel.app/videos/MexicanSalad.mp4",
-  "https://rms1-backend.vercel.app/videos/SaladRecipes.mp4",
-  "https://rms1-backend.vercel.app/videos/SuperYummy.mp4",
-  "https://rms1-backend.vercel.app/videos/MexicanSalad.mp4",
-  "https://rms1-backend.vercel.app/videos/SuperYummy.mp4",
+  "http://localhost:8000/uploads/videos/MexicanSalad.mp4",
+  "http://localhost:8000/uploads/videos/SaladRecipes.mp4",
+  "http://localhost:8000/uploads/videos/SuperYummy.mp4",
+  "http://localhost:8000/uploads/videos/MexicanSalad.mp4",
+  "http://localhost:8000/uploads/videos/SuperYummy.mp4",
 ];
+
+// const videoUrls = [
+  // "https://rms1-backend.vercel.app/uploads/videos/MexicanSalad.mp4",
+//   "https://rms1-backend.vercel.app/uploads/videos/SaladRecipes.mp4",
+//   "https://rms1-backend.vercel.app/uploads/videos/SuperYummy.mp4",
+//   "https://rms1-backend.vercel.app/uploads/videos/MexicanSalad.mp4",
+//   "https://rms1-backend.vercel.app/uploads/videos/SuperYummy.mp4",
+// ];
 
 
 const thumbnailUrls = [
