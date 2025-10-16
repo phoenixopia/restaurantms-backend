@@ -1,5 +1,7 @@
 // controllers/favorite.controller.js
 const FavoriteService = require("../../services/customer/favorite_service");
+const { success } = require("../../utils/apiResponse");
+const throwError = require("../../utils/throwError");
 
 class FavoriteController {
   // Toggle favorite (menu or restaurant)
@@ -13,17 +15,15 @@ class FavoriteController {
       }
 
       const favorite = await FavoriteService.toggleFavorite(customerId, targetId, targetType);
-
-      res.status(200).json({
-        success: true,
-        message: favorite.is_favorite
+      const message = favorite.is_favorite
           ? "Added to favorites"
-          : "Removed from favorites",
-        data: favorite,
-      });
+          : "Removed from favorites";
+
+      return success(res, message, favorite);
     } catch (error) {
       console.error("Error toggling favorite:", error);
-      res.status(500).json({ message: "Internal server error." });
+      // res.status(500).json({ message: "Internal server error." });
+      return throwError(res, 500, "Internal server error.");
     }
   }
 
@@ -33,38 +33,47 @@ class FavoriteController {
       const customerId = req.user.id;
 
       const favorites = await FavoriteService.getFavorites(customerId, req.query);
-      res.status(200).json({ success: true, data: favorites });
+      return success(res, "Fetched favorites successfully.", favorites);
     } catch (error) {
       console.error("Error fetching favorites:", error);
-      res.status(500).json({ message: "Internal server error." });
+      return throwError(res, 500, "Internal server error.");
     }
   }
 
-  // // Get menu favorites only
-  // static async getMenuFavorites(req, res) {
-  //   try {
-  //     const customerId = req.user.id;
-  //     const {menuId} = req.params;
-  //     const favorites = await FavoriteService.getMenuFavorites(customerId, menuId);
-  //     res.status(200).json({ success: true, data: favorites });
-  //   } catch (error) {
-  //     console.error("Error fetching menu favorites:", error);
-  //     res.status(500).json({ message: "Internal server error." });
-  //   }
-  // }
+  // Remove favorite by ID
+  static async removeFavorite(req, res) {
+    try {
+      const customerId = req.user.id;
+      const favoriteId = req.params.id;
 
-  // // Get restaurant favorites only
-  // static async getRestaurantFavorites(req, res) {
-  //   try {
-  //     const customerId = req.user.id;
-  //     const {restaurantId} = req.params;
-  //     const favorites = await FavoriteService.getRestaurantFavorites(customerId, restaurantId);
-  //     res.status(200).json({ success: true, data: favorites });
-  //   } catch (error) {
-  //     console.error("Error fetching restaurant favorites:", error);
-  //     res.status(500).json({ message: "Internal server error." });
-  //   }
-  // }
+      const result = await FavoriteService.removeFavorite(customerId, favoriteId);
+      if (result) {
+        return success(res, "Favorite removed successfully.", result);
+      } else {
+        return throwError(res, 404, "Favorite not found.");
+      }
+    } catch (error) {
+      console.error("Error removing favorite:", error);
+      return throwError(res, 500, "Internal server error.");
+    }
+  }
+
+  // Get favorite by targetId
+  static async getFavoriteByTargetId(req, res) {
+    try {
+      const targetId = req.params.targetId;
+      const favorite = await FavoriteService.getFavoriteByTargetId(targetId);
+      if (favorite) {
+        return success(res, "Favorite fetched successfully.", favorite);
+      } else {
+        return throwError(res, 404, "Favorite not found.");
+      }
+    } catch (error) {
+      console.error("Error fetching favorite:", error);
+      return throwError(res, 500, "Internal server error.");
+    }
+  }
+
 }
 
 module.exports = FavoriteController;

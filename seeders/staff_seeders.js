@@ -12,8 +12,6 @@ const {
 } = require("../models");
 
 module.exports = async () => {
-  await User.sync({ force: true });
-
   const [staffRoleTag, adminRole] = await Promise.all([
     RoleTag.findOne({ where: { name: "staff" } }),
     Role.findOne({ where: { name: "Restaurant Administrator" } }),

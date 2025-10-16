@@ -1,8 +1,45 @@
 // services/favorite.service.js
-const { Favorite, Restaurant, Menu } = require("../../models/index");
+const { Favorite, Restaurant, Menu, SystemSetting, Review } = require("../../models/index");
 const { buildPagination } = require("../../utils/pagination");
 
 class FavoriteService {
+
+  // Get favorite by targetId
+  static async getFavoriteByTargetId(targetId) {
+    try {
+      const favorite = await Favorite.findOne({
+        where: { targetId }
+      });
+      if (favorite) {
+        await favorite.destroy();
+        return { message: "Favorite removed successfully." };
+      } else {
+        return { message: "Favorite not found." };
+      }
+    } catch (err) {
+      throw err;
+    }
+  }
+
+  // Remove favorite by ID
+  static async removeFavorite(customerId, favoriteId) {
+    try{
+      const favorite = await Favorite.findOne({
+        where: { id: favoriteId, customer_id: customerId },
+      });
+
+      if (favorite) {
+        await favorite.destroy();
+        return { message: "Favorite removed successfully." };
+      } else {
+        return { message: "Favorite not found." };
+      }
+    } catch (err) {
+      await t.rollback();
+      throw err;
+    }
+  }
+
   // Toggle favorite (add/remove)
   static async toggleFavorite(customerId, targetId, targetType) {
     let favorite = await Favorite.findOne({
@@ -24,19 +61,7 @@ class FavoriteService {
     return favorite;
   }
 
-  // // Get all favorites for a menu
-  // static async getFavorites(customerId, query) {
-  //   const where = { customer_id: customerId, is_favorite: true, targetType: query.type};
 
-  //   const include =
-  //     targetType === "menu"
-  //       ? [{ model: Menu }]
-  //       : targetType === "restaurant"
-  //       ? [{ model: Restaurant }]
-  //       : [{ model: Menu }, { model: Restaurant }];
-
-  //   return Favorite.findAll({ where, include });
-  // }
 
   // Get all favorites (optionally filtered by targetType) with pagination
   static async getFavorites(customerId, query = {}) {
@@ -47,10 +72,40 @@ class FavoriteService {
 
     const include =
       query?.targetType === "menu"
-        ? [{ model: Menu }]
+        ? [
+            { model: Menu },
+          ]
         : query?.targetType === "restaurant"
-        ? [{ model: Restaurant }]
-        : [{ model: Menu }, { model: Restaurant }];
+        ? [
+            {
+              model: Restaurant,
+              include: [
+                {
+                  model: SystemSetting,
+                  attributes: ["logo_url", "images"],
+                },
+                {
+                  model: Review,
+                },
+              ],
+            },
+          ]
+        : [
+            { model: Menu },
+            {
+              model: Restaurant,
+              include: [
+                {
+                  model: SystemSetting,
+                  attributes: ["logo_url", "images"],
+                  required: false,
+                },
+                {
+                  model: Review,
+                },
+              ],
+            },
+          ];
 
     // Count total favorites
     const total = await Favorite.count({ where });
@@ -70,11 +125,11 @@ class FavoriteService {
       success: true,
       message: "Favorites retrieved successfully",
       data: {
-        favorites,
         total,
         page,
         limit,
         total_pages: totalPages,
+        favorites,
       },
     };
   }

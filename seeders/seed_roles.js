@@ -94,7 +94,6 @@ module.exports = async () => {
   // Delete temp user
   await tempUser.destroy();
 
-  console.log(`
-✅ Seeding completed successfully:
+  console.log(`✅ Seeding role completed successfully:
 `);
 };
