@@ -31,13 +31,22 @@ const videoDescriptions = [
   "This is why our customers keep coming back",
 ];
 
+// const videoUrls = [
+//   "https://www.dailymotion.com/video/x8sansc",
+//   "https://www.dailymotion.com/video/x8sansc",
+//   "https://www.dailymotion.com/video/x8sansc",
+//   "https://www.dailymotion.com/video/x8sansc",
+//   "https://www.dailymotion.com/video/x8sansc",
+// ];
+
 const videoUrls = [
-  "https://www.dailymotion.com/video/x8sansc",
-  "https://www.dailymotion.com/video/x8sansc",
-  "https://www.dailymotion.com/video/x8sansc",
-  "https://www.dailymotion.com/video/x8sansc",
-  "https://www.dailymotion.com/video/x8sansc",
+  "https://rms1-backend.vercel.app/uploads/videos/MexicanSalad.mp4",
+  "https://rms1-backend.vercel.app/uploads/videos/SaladRecipes.mp4",
+  "https://rms1-backend.vercel.app/uploads/videos/SuperYummy.mp4",
+  "https://rms1-backend.vercel.app/uploads/videos/MexicanSalad.mp4",
+  "https://rms1-backend.vercel.app/uploads/videos/SuperYummy.mp4",
 ];
+
 
 const thumbnailUrls = [
   "https://d1csarkz8obe9u.cloudfront.net/posterpreviews/restaurant-instagram-reels-promotion-design-template-64b1fcbb3161914748df8064d291635f_screen.jpg?ts=1664733714",
@@ -51,6 +60,7 @@ module.exports = async () => {
   const now = new Date();
 
   try {
+      await Video.sync({ force: true });
     console.log("Starting video seeding...");
 
     // Ensure Restaurant Administrator role exists

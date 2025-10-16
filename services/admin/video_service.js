@@ -50,341 +50,349 @@ const VIDEO_UPLOAD_FOLDER = "videos";
 /* --------------------------- Video Service ----------------------------- */
 
 const VideoService = {
-  async getAllVideos(user, filters) {
-    const {
-      page = 1,
-      limit = 10,
-      title,
-      date,
-      status,
-      branch_id,
-      menu_item_id,
-      sortBy = "createdAt",
-      sortOrder = "DESC",
-    } = filters;
+      // Get all videos for admin side with filters
+      async getAllVideos(user, filters) {
+        const {
+          page = 1,
+          limit = 10,
+          title,
+          date,
+          status,
+          branch_id,
+          menu_item_id,
+          sortBy = "createdAt",
+          sortOrder = "DESC",
+        } = filters;
 
-    const offset = (page - 1) * limit;
+        const offset = (page - 1) * limit;
 
-    const where = {};
+        const where = {};
 
-    // scope by restaurant/branch
-    if (user.restaurant_id && !user.branch_id) {
-      where.restaurant_id = user.restaurant_id;
-      if (branch_id) where.branch_id = branch_id;
-    } else if (user.branch_id) {
-      where.branch_id = user.branch_id;
-    }
+        // scope by restaurant/branch
+        if (user.restaurant_id && !user.branch_id) {
+          where.restaurant_id = user.restaurant_id;
+          if (branch_id) where.branch_id = branch_id;
+        } else if (user.branch_id) {
+          where.branch_id = user.branch_id;
+        }
 
-    // filters
-    if (title) where.title = { [Op.iLike]: `%${title}%` };
-    if (status) where.status = status;
-    if (menu_item_id) where.menu_item_id = menu_item_id;
+        // filters
+        if (title) where.title = { [Op.iLike]: `%${title}%` };
+        if (status) where.status = status;
+        if (menu_item_id) where.menu_item_id = menu_item_id;
 
-    // date filter (use Video.createdAt to avoid ambiguity)
-    if (date === "daily") {
-      where["$Video.createdAt$"] = {
-        [Op.gte]: sequelize.literal(`CURRENT_DATE`),
-      };
-    }
-    if (date === "weekly") {
-      where["$Video.createdAt$"] = {
-        [Op.gte]: sequelize.literal(`CURRENT_DATE - interval '7 days'`),
-      };
-    }
-    if (date === "monthly") {
-      where["$Video.createdAt$"] = {
-        [Op.gte]: sequelize.literal(`CURRENT_DATE - interval '1 month'`),
-      };
-    }
+        // date filter (use Video.createdAt to avoid ambiguity)
+        if (date === "daily") {
+          where["$Video.createdAt$"] = {
+            [Op.gte]: sequelize.literal(`CURRENT_DATE`),
+          };
+        }
+        if (date === "weekly") {
+          where["$Video.createdAt$"] = {
+            [Op.gte]: sequelize.literal(`CURRENT_DATE - interval '7 days'`),
+          };
+        }
+        if (date === "monthly") {
+          where["$Video.createdAt$"] = {
+            [Op.gte]: sequelize.literal(`CURRENT_DATE - interval '1 month'`),
+          };
+        }
 
-    // relations
-    const include = [
-      { model: VideoLike, attributes: [] },
-      { model: VideoFavorite, attributes: [] },
-      { model: VideoComment, attributes: [] },
-      { model: VideoView, attributes: [] },
-      {
-        model: MenuItem,
-        attributes: ["id", "name", "description", "unit_price", "image"],
-        include: [{ model: MenuCategory, attributes: ["id", "name"] }],
-      },
-      { model: Branch, attributes: ["id", "name"] },
-    ];
-
-    // counts
-    const attributes = {
-      include: [
-        [fn("COUNT", col("VideoLikes.id")), "like_count"],
-        [fn("COUNT", col("VideoFavorites.id")), "favorite_count"],
-        [fn("COUNT", col("VideoComments.id")), "comment_count"],
-        [fn("COUNT", col("VideoViews.id")), "view_count"],
-      ],
-    };
-
-    // ordering
-    let order = [["Video", "createdAt", "DESC"]];
-    const sortMap = {
-      views: literal('"view_count"'),
-      likes: literal('"like_count"'),
-      favorites: literal('"favorite_count"'),
-      comments: literal('"comment_count"'),
-      createdAt: col("Video.createdAt"),
-    };
-    if (sortMap[sortBy]) order = [[sortMap[sortBy], sortOrder]];
-
-    // fetch videos
-    const videos = await Video.findAll({
-      where,
-      attributes,
-      include,
-      group: [
-        "Video.id",
-        "MenuItem.id",
-        "MenuItem->MenuCategory.id",
-        "Branch.id",
-      ],
-      order,
-      limit,
-      offset,
-      subQuery: false,
-    });
-
-    // total count
-    const total = await Video.count({ where });
-
-    return {
-      total,
-      page: Number(page),
-      limit: Number(limit),
-      total_pages: Math.ceil(total / limit),
-      rows: videos,
-    };
-  },
-  async getVideoStatsOverview() {
-    const totalVideos = await Video.count();
-    const totalComments = await VideoComment.count();
-    const totalLikes = await VideoLike.count();
-    const totalFavorites = await VideoFavorite.count();
-    const totalViews = await VideoView.count();
-
-    return {
-      totalVideos,
-      totalComments,
-      totalLikes,
-      totalFavorites,
-      totalViews,
-    };
-  },
-
-  async getProfileData(user) {
-    let restaurantId;
-
-    if (user.restaurant_id && !user.branch_id) {
-      restaurantId = user.restaurant_id;
-    } else if (user.branch_id) {
-      const branch = await Branch.findByPk(user.branch_id);
-      if (!branch) throwError("Branch not found", 404);
-
-      restaurantId = branch.restaurant_id;
-    } else {
-      throwError("Invalid user access", 403);
-    }
-
-    const stats = await FollowService.getRestaurantFullStats(restaurantId);
-
-    return {
-      restaurant_id: restaurantId,
-      stats,
-    };
-  },
-
-  async uploadVideo(user, body, files = {}) {
-    const { title, description, menu_item_id, branch_id } = body;
-    const videoFile = files.video?.[0];
-    const thumbnailFile = files.thumbnail?.[0];
-
-    if (!videoFile || !thumbnailFile) {
-      await cleanupUploadedFiles([videoFile, thumbnailFile].filter(Boolean));
-      throwError("Missing required fildes", 400);
-    }
-
-    if (!body.title) {
-      await cleanupUploadedFiles([videoFile, thumbnailFile]);
-      throwError("Title is required", 400);
-    }
-
-    await ensureFolder(VIDEO_UPLOAD_FOLDER);
-
-    const videoPath = getFilePath(VIDEO_UPLOAD_FOLDER, videoFile.filename);
-    const thumbPath = getFilePath(VIDEO_UPLOAD_FOLDER, thumbnailFile.filename);
-    console.log("Video path:", videoPath);
-    console.log("Thumbnail path:", thumbPath);
-
-    if (
-      !(await fileExists(VIDEO_UPLOAD_FOLDER, videoFile.filename)) ||
-      !(await fileExists(VIDEO_UPLOAD_FOLDER, thumbnailFile.filename))
-    ) {
-      await cleanupUploadedFiles([videoFile, thumbnailFile].filter(Boolean));
-      throwError("Video or thumbnail file does not exist", 400);
-    }
-
-    let duration;
-    try {
-      console.log("Video path:", videoPath);
-      console.log("Thumbnail path:", thumbPath);
-
-      duration = await getVideoDuration(videoPath);
-      if (duration > 180) {
-        await cleanupUploadedFiles([videoFile, thumbnailFile]);
-        throwError("Video must be 3 minutes or less", 400);
-      }
-    } catch (err) {
-      console.error("Error reading video duration:", err);
-      await cleanupUploadedFiles([videoFile, thumbnailFile]);
-      throwError("Unable to read video duration", 500);
-    }
-
-    if (!user.restaurant_id && !user.branch_id) {
-      await cleanupUploadedFiles([videoFile, thumbnailFile]);
-      throwError("Invalid user access", 403);
-    }
-
-    const t = await sequelize.transaction();
-    try {
-      let restaurantId = null;
-      let branchId = null;
-
-      if (menu_item_id) {
-        const menuItem = await MenuItem.findByPk(menu_item_id, {
-          include: {
-            model: MenuCategory,
-            attributes: ["id", "branch_id", "restaurant_id"],
+        // relations
+        const include = [
+          { model: VideoLike, attributes: [] },
+          { model: VideoFavorite, attributes: [] },
+          { model: VideoComment, attributes: [] },
+          { model: VideoView, attributes: [] },
+          {
+            model: MenuItem,
+            attributes: ["id", "name", "description", "unit_price", "image"],
+            include: [{ model: MenuCategory, attributes: ["id", "name"] }],
           },
-          transaction: t,
+          { model: Branch, attributes: ["id", "name"] },
+        ];
+
+        // counts
+        const attributes = {
+          include: [
+            [fn("COUNT", col("VideoLikes.id")), "like_count"],
+            [fn("COUNT", col("VideoFavorites.id")), "favorite_count"],
+            [fn("COUNT", col("VideoComments.id")), "comment_count"],
+            [fn("COUNT", col("VideoViews.id")), "view_count"],
+          ],
+        };
+
+        // ordering
+        let order = [["Video", "createdAt", "DESC"]];
+        const sortMap = {
+          views: literal('"view_count"'),
+          likes: literal('"like_count"'),
+          favorites: literal('"favorite_count"'),
+          comments: literal('"comment_count"'),
+          createdAt: col("Video.createdAt"),
+        };
+        if (sortMap[sortBy]) order = [[sortMap[sortBy], sortOrder]];
+
+        // fetch videos
+        const videos = await Video.findAll({
+          where,
+          attributes,
+          include,
+          group: [
+            "Video.id",
+            "MenuItem.id",
+            "MenuItem->MenuCategory.id",
+            "Branch.id",
+          ],
+          order,
+          limit,
+          offset,
+          subQuery: false,
         });
 
-        if (!menuItem) {
-          await cleanupUploadedFiles([videoFile, thumbnailFile]);
-          throwError("Menu item not found", 404);
+        // total count
+        const total = await Video.count({ where });
+
+        return {
+          total,
+          page: Number(page),
+          limit: Number(limit),
+          total_pages: Math.ceil(total / limit),
+          rows: videos,
+        };
+      },
+
+
+      // Get video stats overview for admin dashboard    
+      async getVideoStatsOverview() {
+        const totalVideos = await Video.count();
+        const totalComments = await VideoComment.count();
+        const totalLikes = await VideoLike.count();
+        const totalFavorites = await VideoFavorite.count();
+        const totalViews = await VideoView.count();
+
+        return {
+          totalVideos,
+          totalComments,
+          totalLikes,
+          totalFavorites,
+          totalViews,
+        };
+      },
+
+      async getProfileData(user) {
+        let restaurantId;
+
+        if (user.restaurant_id && !user.branch_id) {
+          restaurantId = user.restaurant_id;
+        } else if (user.branch_id) {
+          const branch = await Branch.findByPk(user.branch_id);
+          if (!branch) throwError("Branch not found", 404);
+
+          restaurantId = branch.restaurant_id;
+        } else {
+          throwError("Invalid user access", 403);
         }
 
-        const category = menuItem.MenuCategory;
-        if (!category) {
-          await cleanupUploadedFiles([videoFile, thumbnailFile]);
-          throwError("Menu category is missing", 400);
+        const stats = await FollowService.getRestaurantFullStats(restaurantId);
+
+        return {
+          restaurant_id: restaurantId,
+          stats,
+        };
+      },
+
+
+      // Upload a new video
+      async uploadVideo(user, body, files = {}) {
+        const { title, description, menu_item_id, branch_id } = body;
+        const videoFile = files.video?.[0];
+        const thumbnailFile = files.thumbnail?.[0];
+
+        if (!videoFile || !thumbnailFile) {
+          await cleanupUploadedFiles([videoFile, thumbnailFile].filter(Boolean));
+          throwError("Missing required fildes", 400);
         }
 
-        // Authorization check
+        if (!body.title) {
+          await cleanupUploadedFiles([videoFile, thumbnailFile]);
+          throwError("Title is required", 400);
+        }
+
+        await ensureFolder(VIDEO_UPLOAD_FOLDER);
+
+        const videoPath = getFilePath(VIDEO_UPLOAD_FOLDER, videoFile.filename);
+        const thumbPath = getFilePath(VIDEO_UPLOAD_FOLDER, thumbnailFile.filename);
+        console.log("Video path:", videoPath);
+        console.log("Thumbnail path:", thumbPath);
+
         if (
-          user.restaurant_id &&
-          category.restaurant_id !== user.restaurant_id
+          !(await fileExists(VIDEO_UPLOAD_FOLDER, videoFile.filename)) ||
+          !(await fileExists(VIDEO_UPLOAD_FOLDER, thumbnailFile.filename))
         ) {
-          await cleanupUploadedFiles([videoFile, thumbnailFile]);
-          throwError("Unauthorized: menu item not in your restaurant", 403);
+          await cleanupUploadedFiles([videoFile, thumbnailFile].filter(Boolean));
+          throwError("Video or thumbnail file does not exist", 400);
         }
-        if (user.branch_id) {
-          const branch = await Branch.findByPk(user.branch_id, {
+
+        let duration;
+        try {
+          console.log("Video path:", videoPath);
+          console.log("Thumbnail path:", thumbPath);
+
+          duration = await getVideoDuration(videoPath);
+          if (duration > 180) {
+            await cleanupUploadedFiles([videoFile, thumbnailFile]);
+            throwError("Video must be 3 minutes or less", 400);
+          }
+        } catch (err) {
+          console.error("Error reading video duration:", err);
+          await cleanupUploadedFiles([videoFile, thumbnailFile]);
+          throwError("Unable to read video duration", 500);
+        }
+
+        if (!user.restaurant_id && !user.branch_id) {
+          await cleanupUploadedFiles([videoFile, thumbnailFile]);
+          throwError("Invalid user access", 403);
+        }
+
+        const t = await sequelize.transaction();
+        try {
+          let restaurantId = null;
+          let branchId = null;
+
+          if (menu_item_id) {
+            const menuItem = await MenuItem.findByPk(menu_item_id, {
+              include: {
+                model: MenuCategory,
+                attributes: ["id", "branch_id", "restaurant_id"],
+              },
+              transaction: t,
+            });
+
+            if (!menuItem) {
+              await cleanupUploadedFiles([videoFile, thumbnailFile]);
+              throwError("Menu item not found", 404);
+            }
+
+            const category = menuItem.MenuCategory;
+            if (!category) {
+              await cleanupUploadedFiles([videoFile, thumbnailFile]);
+              throwError("Menu category is missing", 400);
+            }
+
+            // Authorization check
+            if (
+              user.restaurant_id &&
+              category.restaurant_id !== user.restaurant_id
+            ) {
+              await cleanupUploadedFiles([videoFile, thumbnailFile]);
+              throwError("Unauthorized: menu item not in your restaurant", 403);
+            }
+            if (user.branch_id) {
+              const branch = await Branch.findByPk(user.branch_id, {
+                transaction: t,
+              });
+              if (!branch || category.restaurant_id !== branch.restaurant_id) {
+                await cleanupUploadedFiles([videoFile, thumbnailFile]);
+                throwError("Unauthorized: menu item not in your branch", 403);
+              }
+            }
+
+            restaurantId = category.restaurant_id;
+            branchId = category.branch_id;
+          } else if (branch_id || user.branch_id) {
+            const branch = await Branch.findByPk(branch_id || user.branch_id, {
+              transaction: t,
+            });
+            if (!branch) {
+              await cleanupUploadedFiles([videoFile, thumbnailFile]);
+              throwError("Branch not found", 404);
+            }
+            restaurantId = branch.restaurant_id;
+            branchId = branch.id;
+          } else {
+            restaurantId = user.restaurant_id;
+            branchId = null;
+          }
+
+          const newVideo = await Video.create(
+            {
+              title,
+              description,
+              video_url: getFileUrl(VIDEO_UPLOAD_FOLDER, videoFile.filename),
+              thumbnail_url: getFileUrl(
+                VIDEO_UPLOAD_FOLDER,
+                thumbnailFile.filename
+              ),
+              duration,
+              restaurant_id: restaurantId,
+              branch_id: branchId,
+              menu_item_id: menu_item_id || null,
+              uploaded_by: user.id,
+              status: "pending",
+            },
+            { transaction: t }
+          );
+
+          await UploadedFile.bulkCreate(
+            [
+              {
+                restaurant_id: restaurantId,
+                path: `videos/${videoFile.filename}`,
+                size_mb: parseFloat((videoFile.size / (1024 * 1024)).toFixed(2)),
+                uploaded_by: user.id,
+                type: "video",
+                reference_id: newVideo.id,
+              },
+              {
+                restaurant_id: restaurantId,
+                path: `videos/${thumbnailFile.filename}`,
+                size_mb: parseFloat(
+                  (thumbnailFile.size / (1024 * 1024)).toFixed(2)
+                ),
+                uploaded_by: user.id,
+                type: "video-thumbnail",
+                reference_id: newVideo.id,
+              },
+            ],
+            { transaction: t }
+          );
+
+          await logActivity({
+            user_id: user.id,
+            module: "Video",
+            action: "Create",
+            details: {
+              id: newVideo.id,
+              title: newVideo.title,
+              restaurant_id: restaurantId,
+              branch_id: branchId,
+            },
             transaction: t,
           });
-          if (!branch || category.restaurant_id !== branch.restaurant_id) {
-            await cleanupUploadedFiles([videoFile, thumbnailFile]);
-            throwError("Unauthorized: menu item not in your branch", 403);
-          }
+
+          await t.commit();
+
+          await SendNotification.sendVideoUploadedNotification(newVideo, user.id);
+
+          return {
+            id: newVideo.id,
+            title: newVideo.title,
+            description: newVideo.description,
+            video_url: newVideo.video_url,
+            thumbnail_url: newVideo.thumbnail_url,
+            duration: newVideo.duration,
+            status: newVideo.status,
+          };
+        } catch (err) {
+          await t.rollback();
+          await cleanupUploadedFiles([videoFile, thumbnailFile].filter(Boolean));
+          throw err;
         }
+      },
 
-        restaurantId = category.restaurant_id;
-        branchId = category.branch_id;
-      } else if (branch_id || user.branch_id) {
-        const branch = await Branch.findByPk(branch_id || user.branch_id, {
-          transaction: t,
-        });
-        if (!branch) {
-          await cleanupUploadedFiles([videoFile, thumbnailFile]);
-          throwError("Branch not found", 404);
-        }
-        restaurantId = branch.restaurant_id;
-        branchId = branch.id;
-      } else {
-        restaurantId = user.restaurant_id;
-        branchId = null;
-      }
 
-      const newVideo = await Video.create(
-        {
-          title,
-          description,
-          video_url: getFileUrl(VIDEO_UPLOAD_FOLDER, videoFile.filename),
-          thumbnail_url: getFileUrl(
-            VIDEO_UPLOAD_FOLDER,
-            thumbnailFile.filename
-          ),
-          duration,
-          restaurant_id: restaurantId,
-          branch_id: branchId,
-          menu_item_id: menu_item_id || null,
-          uploaded_by: user.id,
-          status: "pending",
-        },
-        { transaction: t }
-      );
-
-      await UploadedFile.bulkCreate(
-        [
-          {
-            restaurant_id: restaurantId,
-            path: `videos/${videoFile.filename}`,
-            size_mb: parseFloat((videoFile.size / (1024 * 1024)).toFixed(2)),
-            uploaded_by: user.id,
-            type: "video",
-            reference_id: newVideo.id,
-          },
-          {
-            restaurant_id: restaurantId,
-            path: `videos/${thumbnailFile.filename}`,
-            size_mb: parseFloat(
-              (thumbnailFile.size / (1024 * 1024)).toFixed(2)
-            ),
-            uploaded_by: user.id,
-            type: "video-thumbnail",
-            reference_id: newVideo.id,
-          },
-        ],
-        { transaction: t }
-      );
-
-      await logActivity({
-        user_id: user.id,
-        module: "Video",
-        action: "Create",
-        details: {
-          id: newVideo.id,
-          title: newVideo.title,
-          restaurant_id: restaurantId,
-          branch_id: branchId,
-        },
-        transaction: t,
-      });
-
-      await t.commit();
-
-      await SendNotification.sendVideoUploadedNotification(newVideo, user.id);
-
-      return {
-        id: newVideo.id,
-        title: newVideo.title,
-        description: newVideo.description,
-        video_url: newVideo.video_url,
-        thumbnail_url: newVideo.thumbnail_url,
-        duration: newVideo.duration,
-        status: newVideo.status,
-      };
-    } catch (err) {
-      await t.rollback();
-      await cleanupUploadedFiles([videoFile, thumbnailFile].filter(Boolean));
-      throw err;
-    }
-  },
-
+      // Update video status (approve/reject)
   async updateVideoStatus(videoId, newStatus, user) {
     const t = await sequelize.transaction();
     try {
