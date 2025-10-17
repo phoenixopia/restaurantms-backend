@@ -74,9 +74,9 @@ const { sequelize } = require("../models/index");
       // await require("./catering_seeder")();
       // console.log("✅ Catering seeded");
 
-      console.log("Seeding videos...");
-      await require("./video_seeders")();
-      console.log("✅ Videos seeded");
+      // console.log("Seeding videos...");
+      // await require("./video_seeders")();
+      // console.log("✅ Videos seeded");
 
       // console.log("Seeding activity log...");
       // await require("./activityLog_seeders")();
@@ -90,9 +90,9 @@ const { sequelize } = require("../models/index");
       // await require("./notification_seeders")();
       // console.log("✅ Notification seeded");
 
-      // console.log("Seeding favorites...");
-      // await require("./favorites_seeder")();
-      // console.log("✅ Favorites seeded");
+      console.log("Seeding favorites...");
+      await require("./favorites_seeder")();
+      console.log("✅ Favorites seeded");
 
       // console.log("Seeding orders...");
       // await require("./order_seeder")();

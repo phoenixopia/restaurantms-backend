@@ -73,7 +73,23 @@ class FavoriteService {
     const include =
       query?.targetType === "menu"
         ? [
-            { model: Menu },
+            { 
+              model: Menu,
+              include: [
+                {
+                  model: Restaurant,
+                  include: [
+                    {
+                      model: SystemSetting,
+                      attributes: ["logo_url", "images"],
+                    },
+                    {
+                      model: Review,
+                    },
+                  ],
+                },
+              ]
+            },
           ]
         : query?.targetType === "restaurant"
         ? [
