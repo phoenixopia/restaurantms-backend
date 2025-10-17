@@ -1,5 +1,5 @@
 // services/favorite.service.js
-const { Favorite, Restaurant, Menu, SystemSetting, Review } = require("../../models/index");
+const { Favorite, Restaurant, Menu, SystemSetting, Review, MenuCategory, MenuItem } = require("../../models/index");
 const { buildPagination } = require("../../utils/pagination");
 
 class FavoriteService {
@@ -77,14 +77,12 @@ class FavoriteService {
               model: Menu,
               include: [
                 {
-                  model: Restaurant,
+                  model: MenuCategory,
+                  attributes: ["id", "name"],
                   include: [
                     {
-                      model: SystemSetting,
-                      attributes: ["logo_url", "images"],
-                    },
-                    {
-                      model: Review,
+                      model: MenuItem,
+                      attributes: ["name", "unit_price", "image"],
                     },
                   ],
                 },
