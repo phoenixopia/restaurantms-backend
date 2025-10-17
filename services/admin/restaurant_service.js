@@ -28,6 +28,7 @@ const {
   UploadedFile,
   sequelize,
   Video,
+  RestaurantFollower,
 } = require("../../models");
 
 const UPLOAD_FOLDER = "restaurant";
@@ -596,7 +597,9 @@ const RestaurantService = {
     }
   },
 
-  // for customer
+
+  
+  // Get restaurant profile with videos for customer
   async getRestaurantProfileWithVideos(
     restaurantId,
     customerId,
@@ -729,6 +732,149 @@ const RestaurantService = {
         page: Number(page),
         limit: Number(limit),
       },
+    };
+  },
+
+
+  // Get followed restaurants profiles for a customer
+  async getFollowedRestaurantsProfilesForCustomer(customerId, { page = 1, limit = 10 }) {
+    const offset = (page - 1) * limit;
+    const where = { customer_id: customerId };
+
+    const include = [
+        { 
+          model: Restaurant, 
+          attributes: ["id", "restaurant_name"],
+          include: [
+            {
+              model: SystemSetting,
+              attributes: ["logo_url"],
+            },
+            {
+              model: Branch,
+              as: "mainBranch",
+              required: false,
+              where: { main_branch: true },
+              attributes: ["id", "name"],
+              include: [
+                {
+                  model: Location,
+                  attributes: ["address", "latitude", "longitude"],
+                },
+                ],
+            },
+            {
+              model: ContactInfo,
+              as: "owned_contact_info",
+              where: {
+                module_type: "restaurant",
+                module_id: { [Op.col]: "Restaurant.id" },
+                },
+              attributes: ["type", "value", "is_primary"],
+              required: false,
+            },
+          ],
+        },
+      ];
+
+      // Count total
+      const count = await RestaurantFollower.count({ where });
+
+      // Fetch paginated favorites
+      const followedRestaurant = await RestaurantFollower.findAll({
+        where,
+        attributes: ["restaurant_id"],
+        include,
+        limit,
+        offset,
+        // order, // uses order from buildPagination (e.g. [["createdAt", "DESC"]])
+      });
+
+      const totalPages = Math.ceil(followedRestaurant / limit);
+
+
+    // // First, get the list of followed restaurant IDs
+    // const followedRestaurantIds = await FollowService.getFollowedRestaurantIds(
+    //   customerId
+    // );
+
+    // const followedRestaurantIds = await RestaurantFollower.findAll({
+    //   where: { customer_id: customerId },
+    //   attributes: ["restaurant_id"],
+    //   raw: true,
+    // }).then((rows) => rows.map((row) => row.restaurant_id));
+
+    // // Then, fetch the profiles of those restaurants
+    // const { count, rows } = await Restaurant.findAndCountAll({
+    //   where: {
+    //     id: { [Op.in]: followedRestaurantIds },
+    //   },
+    //   attributes: ["id", "restaurant_name"],
+    //   include: [
+    //     {
+    //       model: SystemSetting,
+    //       attributes: ["logo_url"],
+    //     },
+    //     {
+    //       model: Branch,
+    //       as: "mainBranch",
+    //       required: false,
+    //       where: { main_branch: true },
+    //       attributes: ["id", "name"],
+    //       include: [
+    //         {
+    //           model: Location,
+    //           attributes: ["address", "latitude", "longitude"],
+    //         },
+    //         ],
+    //     },
+    //     {
+    //       model: ContactInfo,
+    //       as: "owned_contact_info",
+    //       where: {
+    //         module_type: "restaurant",
+    //         module_id: { [Op.col]: "Restaurant.id" },
+    //         },
+    //       attributes: ["type", "value", "is_primary"],
+    //       required: false,
+    //     },
+
+    //   ],
+    //   offset,
+    //   limit: parseInt(limit),
+    //   order: [["createdAt", "DESC"]],
+    //   subQuery: false,
+    // });
+
+    return {
+      total: count,
+      page: Number(page),
+      limit: Number(limit),
+      totalPages,
+      data: followedRestaurant,
+      // data: rows.map((restaurant) => ({
+      //   id: restaurant.id,
+      //   name: restaurant.restaurant_name,
+      //   logo_url: restaurant.SystemSetting?.logo_url || null,
+      //   main_branch: restaurant.mainBranch
+      //     ? {
+      //         id: restaurant.mainBranch.id,
+      //         name: restaurant.mainBranch.name,
+      //         location: restaurant.mainBranch.Location
+      //           ? {
+      //               address: restaurant.mainBranch.Location.address,
+      //               latitude: restaurant.mainBranch.Location.latitude,
+      //               longitude: restaurant.mainBranch.Location.longitude,
+      //             }
+      //             : null,
+      //       }
+      //     : null,
+      //   contacts: (restaurant.ContactInfos || []).map((contact) => ({
+      //     type: contact.type,
+      //     value: contact.value,
+      //     is_primary: contact.is_primary,
+      //   })),
+      // })),
     };
   },
 };

@@ -43,6 +43,7 @@ const getVideoDuration = require("../../utils/getVideoDuration");
 /* ------------------------------ Services ------------------------------- */
 const FollowService = require("./follow_service");
 const SendNotification = require("../../utils/send_notification");
+const { buildPagination } = require("../../utils/pagination");
 
 /* ------------------------------ Constants ------------------------------ */
 const VIDEO_UPLOAD_FOLDER = "videos";
@@ -925,6 +926,60 @@ const VideoService = {
     };
   },
 
+
+  // List favorite videos for a customer
+  async listFavoritedVideos(customerId, query = {}) {
+    // const { page = 1, limit = 10 } = query;
+    // const offset = (page - 1) * limit;
+
+     const { page, limit, offset, order } = buildPagination(query);
+
+    const favorites = await VideoFavorite.findAndCountAll({
+      where: { customer_id: customerId },
+      limit,
+      offset,
+      order,
+      include: [
+        {
+          model: Video,
+          // as: "video",
+          include: [
+            { model: VideoLike,},
+            { model: VideoComment },
+          ]
+          // include: [
+          //   {
+          //     model: Restaurant,
+          //     as: "Restaurant",
+          //     include: [
+          //       {
+          //         model: Branch,
+          //         as: "Branches",
+          //         include: [
+          //           {
+          //             model: Location,
+          //             as: "Location",
+          //           },
+          //         ],
+          //       },
+          //     ],
+          //   },
+          // ],
+        },
+      ],
+    });
+
+    return {
+      total: favorites.count,
+      page: Number(page),
+      limit: Number(limit),
+      has_next_page: offset + favorites.rows.length < favorites.count,
+      rows: favorites.rows,
+    };
+  },
+
+
+  // Toggle like for a video
   async toggleLike(videoId, customerId) {
     const t = await sequelize.transaction();
 

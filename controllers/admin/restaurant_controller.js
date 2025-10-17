@@ -86,6 +86,8 @@ exports.getRestaurantWithSubscriptionById = asyncHandler(async (req, res) => {
   return success(res, "Restaurant fetched successfully", restaurant);
 });
 
+
+// Get restaurant profile with videos for customers
 exports.getRestaurantProfileWithVideos = asyncHandler(async (req, res) => {
   const restaurantId = req.params.id;
   const customerId = req.user?.id || null;
@@ -103,6 +105,28 @@ exports.getRestaurantProfileWithVideos = asyncHandler(async (req, res) => {
 
   return success(res, "Restaurant profile fetched successfully", result);
 });
+
+
+
+// Get  followed restaurants profiles for a customer
+  exports.getFollowedRestaurantsProfilesForCustomer = asyncHandler(async (req, res) => {
+    const customerId = req.user.id;
+    const { page = 1, limit = 10 } = req.query;
+
+    const result =
+      await RestaurantService.getFollowedRestaurantsProfilesForCustomer(
+        customerId,
+        {
+          page: parseInt(page),
+          limit: parseInt(limit),
+        }
+      );
+
+    return success(res, "Followed restaurant profiles fetched successfully", result);
+  }
+);
+
+
 
 // ==========================
 // ===== BRANCH MANAGEMENT ==

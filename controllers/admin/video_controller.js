@@ -99,6 +99,12 @@ exports.listCustomerVideos = asyncHandler(async (req, res) => {
   return success(res, "Videos retrieved", videos);
 });
 
+// List favorited videos for customer
+exports.listFavoriteVideosForCustomer = asyncHandler(async (req, res) => {
+  const favoritesData = await VideoService.listFavoritedVideos(req.user.id, req.query);
+  return success(res, "Favorited videos retrieved successfully.", favoritesData);
+});
+
 // View a video
 exports.viewVideo = asyncHandler(async (req, res) => {
   const { videoId } = req.params;

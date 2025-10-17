@@ -8,7 +8,23 @@ const RestaurantController = require("../../controllers/admin/restaurant_control
 const { protect } = require("../../middleware/protect");
 const optionalProtect = require("../../middleware/optionalProtect");
 
+
+// Get list of videos for customers
 router.get("/", optionalProtect, VideoController.listCustomerVideos);
+
+// Get saved or favorited videos for a customer
+router.get(
+  "/favorites",
+  protect("customer"),
+  VideoController.listFavoriteVideosForCustomer
+);
+
+// Get followed restaurants for a customer
+router.get(
+  "/followed/restaurants/profile",
+  protect("customer"),
+  RestaurantController.getFollowedRestaurantsProfilesForCustomer
+);
 
 router.get(
   "/restaurants/:id/profile",
