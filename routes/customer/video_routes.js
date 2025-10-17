@@ -9,8 +9,11 @@ const { protect } = require("../../middleware/protect");
 const optionalProtect = require("../../middleware/optionalProtect");
 
 
-// Get list of videos for customers
+// Get all list of videos
 router.get("/", optionalProtect, VideoController.listCustomerVideos);
+
+// // Get list of videos for customers
+// router.get("/", optionalProtect, VideoController.listCustomerVideos);
 
 // Get saved or favorited videos for a customer
 router.get(

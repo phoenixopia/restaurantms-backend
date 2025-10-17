@@ -742,54 +742,54 @@ const RestaurantService = {
     const where = { customer_id: customerId };
 
     const include = [
-        { 
-          model: Restaurant, 
-          attributes: ["id", "restaurant_name"],
-          include: [
-            {
-              model: SystemSetting,
-              attributes: ["logo_url"],
-            },
-            {
-              model: Branch,
-              as: "mainBranch",
-              required: false,
-              where: { main_branch: true },
-              attributes: ["id", "name"],
-              include: [
-                {
-                  model: Location,
-                  attributes: ["address", "latitude", "longitude"],
-                },
-                ],
-            },
-            {
-              model: ContactInfo,
-              as: "owned_contact_info",
-              where: {
-                module_type: "restaurant",
-                module_id: { [Op.col]: "Restaurant.id" },
-                },
-              attributes: ["type", "value", "is_primary"],
-              required: false,
-            },
-          ],
-        },
-      ];
+      { 
+        model: Restaurant, 
+        attributes: ["id", "restaurant_name"],
+        include: [
+          {
+            model: SystemSetting,
+            attributes: ["logo_url"],
+          },
+          {
+            model: Branch,
+            as: "mainBranch",
+            required: false,
+            where: { main_branch: true },
+            attributes: ["id", "name"],
+            include: [
+              {
+                model: Location,
+                attributes: ["address", "latitude", "longitude"],
+              },
+              ],
+          },
+          {
+            model: ContactInfo,
+            as: "owned_contact_info",
+            where: {
+              module_type: "restaurant",
+              module_id: { [Op.col]: "Restaurant.id" },
+              },
+            attributes: ["type", "value", "is_primary"],
+            required: false,
+          },
+        ],
+      },
+    ];
 
-      // Count total
-      const count = await RestaurantFollower.count({ where });
+    // Count total
+    const count = await RestaurantFollower.count({ where });
 
-      // Fetch paginated favorites
-      const followedRestaurant = await RestaurantFollower.findAll({
-        where,
-        attributes: ["restaurant_id"],
-        include,
-        limit,
-        offset,
-      });
+    // Fetch paginated favorites
+    const followedRestaurant = await RestaurantFollower.findAll({
+      where,
+      attributes: ["restaurant_id"],
+      include,
+      limit,
+      offset,
+    });
 
-      const totalPages = Math.ceil(followedRestaurant / limit);
+    const totalPages = Math.ceil(followedRestaurant / limit);
 
     return {
       total: count,

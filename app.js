@@ -54,6 +54,7 @@ const corsOptions = {
     "Content-Type",
     "Accept",
     "Authorization",
+    "token",
   ],
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
 };
