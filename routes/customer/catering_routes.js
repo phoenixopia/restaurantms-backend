@@ -13,7 +13,7 @@ router.get("/get-catering/:id", CateringController.getCateringById);
 router.post("/request", protect("customer"), CateringController.createRequest);
 
 
-router.get("/filter/status", protect("customer"), CateringController.getCateringsByPaymentStatus);
+// router.get("/filter/status", protect("customer"), CateringController.getCateringsByPaymentStatus);
 
 router.put(
   "/update-my-request/:id",

@@ -14,55 +14,55 @@ const { sendNotificationEmail } = require("../../utils/sendEmail");
 const { buildPagination } = require("../../utils/pagination");
 
 const CateringService = {
-  // list caterings for customer with pagination and filters
-  async listCateringsForCustomer(customerId, query = {}) {
-    const { page, limit, offset, order } = buildPagination(query);
-    const where = { customer_id: customerId };
+  // // list caterings for customer with pagination and filters
+  // async listCateringsForCustomer(customerId, query = {}) {
+  //   const { page, limit, offset, order } = buildPagination(query);
+  //   const where = { customer_id: customerId };
 
-    // const include = [
-    //   {
-    //     model: Menu,
-    //     include: [
-    //       {
-    //         model: MenuCategory,
-    //         attributes: ["id", "name"],
-    //         include: [
-    //           {
-    //             model: MenuItem,
-    //             attributes: ["name", "unit_price", "image"],
-    //           },
-    //         ],
-    //       },
-    //     ]
-    //   },
-    // ];
+  //   // const include = [
+  //   //   {
+  //   //     model: Menu,
+  //   //     include: [
+  //   //       {
+  //   //         model: MenuCategory,
+  //   //         attributes: ["id", "name"],
+  //   //         include: [
+  //   //           {
+  //   //             model: MenuItem,
+  //   //             attributes: ["name", "unit_price", "image"],
+  //   //           },
+  //   //         ],
+  //   //       },
+  //   //     ]
+  //   //   },
+  //   // ];
 
-    // Count total caterings
-    const total = await Catering.count({ where });
+  //   // Count total caterings
+  //   const total = await Catering.count({ where });
 
-    // Fetch paginated caterings
-    const caterings = await Catering.findAll({
-      where,
-      // include,
-      limit,
-      offset,
-      order, // uses order from buildPagination (e.g. [["createdAt", "DESC"]])
-    });
+  //   // Fetch paginated caterings
+  //   const caterings = await Catering.findAll({
+  //     where,
+  //     // include,
+  //     limit,
+  //     offset,
+  //     order, // uses order from buildPagination (e.g. [["createdAt", "DESC"]])
+  //   });
 
-    const totalPages = Math.ceil(total / limit);
+  //   const totalPages = Math.ceil(total / limit);
 
-    return {
-      success: true,
-      message: "Caterings retrieved successfully",
-      data: {
-        total,
-        page,
-        limit,
-        total_pages: totalPages,
-        caterings,
-      },
-    };
-  },
+  //   return {
+  //     success: true,
+  //     message: "Caterings retrieved successfully",
+  //     data: {
+  //       total,
+  //       page,
+  //       limit,
+  //       total_pages: totalPages,
+  //       caterings,
+  //     },
+  //   };
+  // },
 
 
 
