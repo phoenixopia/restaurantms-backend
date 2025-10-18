@@ -4,6 +4,19 @@ const { success } = require("../../utils/apiResponse");
 
 // =============== Catering
 
+// Get CATERINGS FOR CUSTOMER
+exports.listCateringsForCustomer = asyncHandler(async (req, res) => {
+  const customerId = req.user.id;
+
+  const result = await CateringService.listCateringsForCustomer(
+    customerId,
+    req.query
+  );
+
+  return success(res, "Caterings fetched successfully", result);
+});
+
+
 exports.getCateringById = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const result = await CateringService.getCateringById(id);

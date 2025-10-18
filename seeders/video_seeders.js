@@ -39,21 +39,21 @@ const videoDescriptions = [
 //   "https://www.dailymotion.com/video/x8sansc",
 // ];
 
-const videoUrls = [
-  "http://localhost:8000/uploads/videos/MexicanSalad.mp4",
-  "http://localhost:8000/uploads/videos/SaladRecipes.mp4",
-  "http://localhost:8000/uploads/videos/SuperYummy.mp4",
-  "http://localhost:8000/uploads/videos/MexicanSalad.mp4",
-  "http://localhost:8000/uploads/videos/SuperYummy.mp4",
-];
-
 // const videoUrls = [
-  // "https://rms1-backend.vercel.app/uploads/videos/MexicanSalad.mp4",
-//   "https://rms1-backend.vercel.app/uploads/videos/SaladRecipes.mp4",
-//   "https://rms1-backend.vercel.app/uploads/videos/SuperYummy.mp4",
-//   "https://rms1-backend.vercel.app/uploads/videos/MexicanSalad.mp4",
-//   "https://rms1-backend.vercel.app/uploads/videos/SuperYummy.mp4",
+//   "http://localhost:8000/uploads/videos/MexicanSalad.mp4",
+//   "http://localhost:8000/uploads/videos/SaladRecipes.mp4",
+//   "http://localhost:8000/uploads/videos/SuperYummy.mp4",
+//   "http://localhost:8000/uploads/videos/MexicanSalad.mp4",
+//   "http://localhost:8000/uploads/videos/SuperYummy.mp4",
 // ];
+
+const videoUrls = [
+  "https://www.youtube.com/watch?v=oI36qzcC_W0",
+  "https://www.youtube.com/watch?v=oI36qzcC_W0",
+  "https://www.youtube.com/watch?v=oI36qzcC_W0",
+  "https://www.youtube.com/watch?v=oI36qzcC_W0",
+  "https://www.youtube.com/watch?v=oI36qzcC_W0",
+];
 
 
 const thumbnailUrls = [
@@ -65,6 +65,7 @@ const thumbnailUrls = [
 ];
 
 module.exports = async () => {
+  await Video.sync({ force: true });
   const now = new Date();
 
   try {

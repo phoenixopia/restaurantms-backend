@@ -9,6 +9,35 @@ const { getFileUrl, getFilePath } = require("../../utils/file");
 const UPLOAD_FOLDER = "profile";
 
 const ProfileService = {
+  
+  // Get all
+  async getAllAddress() {
+    const locationAddress = await Location.findAll();
+    if (!locationAddress) {
+      throwError("Address not found", 404);
+    }
+
+    return {
+      message: "Address retrieved successfully",
+      data: locationAddress,
+    };
+  },
+
+  // Get by id
+  async getAddressById(customerId, addressId) {
+    const locationAddress = await Location.findByPk(addressId);
+    if (!locationAddress) {
+      throwError("Address not found", 404);
+    }
+
+    return {
+      message: "Address retrieved successfully",
+      data: locationAddress,
+    };
+  },
+
+
+  // Update address
   async updateAddress(customerId, type, { address, latitude, longitude }) {
     if (!["home", "office"].includes(type)) {
       throwError("Invalid address type", 400);

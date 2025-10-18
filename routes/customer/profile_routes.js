@@ -25,4 +25,16 @@ router.put(
   ProfileController.updateAddress
 );
 
+router.get(
+  "/address",
+  protect("customer"),
+  ProfileController.getAllAddress
+);
+
+router.get(
+  "/address/:id",
+  protect("customer"),
+  ProfileController.getAddressById
+);
+
 module.exports = router;

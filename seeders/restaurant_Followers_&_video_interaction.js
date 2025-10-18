@@ -14,6 +14,12 @@ const { v4: uuidv4 } = require("uuid");
 
 module.exports = async () => {
   console.log("🚀 Starting followers & video interactions seeding...");
+  await VideoView.sync({ force: true });
+  await VideoLike.sync({ force: true });
+  await VideoFavorite.sync({ force: true });
+  await VideoComment.sync({ force: true });
+
+
   const now = new Date();
 
   try {
