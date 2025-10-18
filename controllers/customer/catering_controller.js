@@ -77,6 +77,7 @@ exports.updateMyCateringRequest = asyncHandler(async (req, res) => {
 });
 
 exports.getAllMyCateringRequest = asyncHandler(async (req, res) => {
+  console.log("Inside getAllMyCateringRequest controller");
   const customerId = req.user.id;
   const { page = 1, limit = 10, status } = req.query;
 
