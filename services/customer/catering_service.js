@@ -452,7 +452,7 @@ const CateringService = {
       total: count,
       page,
       limit,
-      requests: rows,
+      data: rows,
     };
   },
 
@@ -603,7 +603,7 @@ const CateringService = {
               ],
             },
           ],
-          attributes: ["id", "event_date", "guest_count"],
+          // attributes: ["id", "event_date", "guest_count"],
         },
       ],
       order: [["createdAt", "DESC"]],
@@ -615,7 +615,7 @@ const CateringService = {
       total: count,
       page,
       limit,
-      quotes: rows.map((quote) => ({
+      data: rows.map((quote) => ({
         id: quote.id,
         estimated_price: quote.estimated_price,
         description: quote.description,
@@ -626,6 +626,7 @@ const CateringService = {
           id: quote.CateringRequest.id,
           event_date: quote.CateringRequest.event_date,
           guest_count: quote.CateringRequest.guest_count,
+          event_type: quote.CateringRequest.event_type,
           catering: {
             id: quote.CateringRequest.Catering.id,
             title: quote.CateringRequest.Catering.title,

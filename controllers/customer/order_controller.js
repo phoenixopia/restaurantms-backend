@@ -15,7 +15,7 @@ exports.createOrder = asyncHandler(async (req, res) => {
   //   io,
   // });
 
-  return success(res, "Order created successfully.", order);
+  return success(res, "Order created successfully.", order, 201);
 });
 
 exports.cancelOrder = asyncHandler(async (req, res) => {

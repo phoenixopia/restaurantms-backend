@@ -74,13 +74,17 @@ const { sequelize } = require("../models/index");
       // await require("./catering_seeder")();
       // console.log("✅ Catering seeded");
 
-      console.log("Seeding videos...");
-      await require("./video_seeders")();
-      console.log("✅ Videos seeded");
+      // console.log("Seeding request, tag, quote and payment seeded");
+      // await require("./catering_requests_and_payments_seed")();
+      // console.log("✅ seeding catering request, tag, quote and payment seeded");
 
-      console.log("Seeding restaurant followers & video interactions...");
-      await require("./restaurant_Followers_&_video_interaction")();
-      console.log("✅ Restaurant followers & video interactions seeded");
+      // console.log("Seeding videos...");
+      // await require("./video_seeders")();
+      // console.log("✅ Videos seeded");
+
+      // console.log("Seeding restaurant followers & video interactions...");
+      // await require("./seed_restaurant_Followers_&_video_interaction")();
+      // console.log("✅ Restaurant followers & video interactions seeded");
 
       // console.log("Seeding activity log...");
       // await require("./activityLog_seeders")();
@@ -105,6 +109,10 @@ const { sequelize } = require("../models/index");
       // console.log("Seeding kds...");
       // await require("./kds_seeders")();
       // console.log("✅ KDS seeded");
+
+      console.log("Seeding order items...");
+      await require("./order_items_seed")();
+      console.log("✅ Order items seeded");
 
       // console.log("Seeding reviews...");
       // await require("./review_seeders")();

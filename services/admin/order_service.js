@@ -146,7 +146,7 @@ const OrderService = {
         if (!groupedItems[key]) {
           groupedItems[key] = {
             quantity: 0,
-            price: item.price,
+            unit_price: item.unit_price || item.price,
           };
         }
         groupedItems[key].quantity += item.quantity;
@@ -157,7 +157,7 @@ const OrderService = {
           order_id: order.id,
           menu_item_id,
           quantity: value.quantity,
-          unit_price: value.price,
+          unit_price: value.unit_price | value.price,
         })
       );
 
@@ -538,8 +538,14 @@ const OrderService = {
         },
         {
           model: OrderItem,
-          attributes: ["id", "quantity"],
+          include: [
+            { model: MenuItem }
+          ]
         },
+        {
+          model: Location,
+          attributes: ["id", "address", "latitude", "longitude"],
+        }
       ],
       order: [["createdAt", "DESC"]],
       limit,
@@ -552,16 +558,36 @@ const OrderService = {
         0
       );
 
+      // match items structure: order.OrderItems,
+      const items = order.OrderItems.map((item) => ({
+        id: item.id,
+        order_id: order.id,
+        menu_item_id: item.menu_item_id,
+        name: item.MenuItem?.name || null,
+        quantity: item.quantity,
+        price: item.unit_price,
+        image_url: item.MenuItem?.image || null,
+      }));
+
+
       return {
         id: order.id,
+        order_id: order.id,
+        customer_id: customerId,
         restaurant_name: order.Restaurant?.restaurant_name,
         restaurant_id: order.Restaurant?.id,
-        logo_url: order.Restaurant?.SystemSetting?.logo_url || null,
+        restaurant_logo_url: order.Restaurant?.SystemSetting?.logo_url || null,
         total_amount: order.total_amount,
         total_items: totalItems,
-        type: order.type,
+        order_type: order.type,
         status: order.status,
         createdAt: order.createdAt,
+        updatedAt: order.updatedAt,
+        items ,
+        payment_status: order.payment_status,
+        delivery_address: order.Location?.address,
+        estimated_delivery_time: order.Location?.timestamp,
+        // estimated_delivery_time: order.createdAt ? new Date(order.createdAt.getTime() + 30*60000) : null, // assuming 30 mins delivery time
       };
     });
 
@@ -615,6 +641,7 @@ const OrderService = {
         {
           model: OrderItem,
           attributes: ["quantity"],
+          include: [{ model: MenuItem}]
         },
       ],
       order: [["createdAt", "DESC"]],
@@ -628,6 +655,11 @@ const OrderService = {
         0
       );
 
+      const items = order.OrderItems.map((item) => ({
+        id: item.id,
+        name: item.MenuItem?.name || 'Unknown'
+      }));
+
       return {
         id: order.id,
         restaurant_name: order.Restaurant?.restaurant_name,
@@ -637,8 +669,10 @@ const OrderService = {
         type: order.type,
         status: order.status,
         createdAt: order.createdAt,
+        items,
       };
     });
+
 
     return {
       totalItems: count,
@@ -927,6 +961,7 @@ const OrderService = {
     }
 
     const include = [
+      { model: Customer },
       {
         model: Restaurant,
         attributes: ["restaurant_name"],
@@ -939,11 +974,11 @@ const OrderService = {
       },
       {
         model: Branch,
-        attributes: ["name"],
+        // attributes: ["name"],
         include: [
           {
             model: Location,
-            attributes: ["address", "latitude", "longitude"],
+            attributes: ["id", "address", "latitude", "longitude"],
           },
         ],
       },
@@ -996,21 +1031,34 @@ const OrderService = {
           image: item.MenuItem?.image,
           is_active: isServed ? item.MenuItem?.is_active ?? null : undefined,
           quantity: item.quantity,
-          unit_price: item.unit_price,
+          price: item.unit_price,
         });
       }
     }
 
     const items = Array.from(groupedItemsMap.values());
+    const typeAddress = order.Customer?.office_address_id === order.Branch?.id  
+        ? 'office'
+        : order.Customer?.home_address_id === order.Branch?.id
+        ? 'home'
+        : 'custom';
 
     const result = {
       id: order.id,
+      branch_id: order.Branch.id || null,
+      address: order.Branch.Location.address,
+      address_id: order.Branch.Location.id || null,
       restaurant_name: order.Restaurant?.restaurant_name,
       logo_url: order.Restaurant?.SystemSetting?.logo_url || null,
       total_amount: order.total_amount,
       total_items: items.reduce((sum, item) => sum + item.quantity, 0),
       status: order.status,
       type: order.type,
+      typeAddress,
+      latitude: order.Branch.Location.latitude,
+      longitude: order.Branch.Location.longitude,
+      payment_status: order.payment_status,
+      // unit_price: order.OrderItem.unit_price,
       createdAt: order.createdAt,
       items,
       branch: {
@@ -1026,6 +1074,7 @@ const OrderService = {
     };
 
     if (isDelivery && deliveryLocation) {
+      result.branch_id = deliveryLocation?.id || null;
       result.delivery_location = {
         address: deliveryLocation.address,
         latitude: deliveryLocation.latitude,
@@ -1034,6 +1083,7 @@ const OrderService = {
     }
 
     if (isDineIn && order.Table) {
+      result.table_id = order.Table.id,
       result.table_info = {
         table_number: order.Table.table_number,
         capacity: order.Table.capacity,
