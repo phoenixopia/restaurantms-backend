@@ -28,6 +28,11 @@ module.exports = (sequelize) => {
         ),
         defaultValue: "trial",
       },
+
+      delivery_available: {
+        type: DataTypes.BOOLEAN,
+        defaultValue: false,
+      },
     },
     {
       tableName: "restaurants",

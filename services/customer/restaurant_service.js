@@ -20,107 +20,173 @@ const {
   MenuCategory,
   MenuItem,
   sequelize,
+  Sequelize,
   Video,
-} = require("../../models");
+} = require("../../models/index");
 
 const MAX_NEARBY_DISTANCE_KM = 5;
 
 const CustomerRestaurantService = {
-  // Get filtered restaurants
-  async getFilteredRestaurants(query) {
-    const { page, limit, offset, order: defaultOrder } = buildPagination(query);
 
-    const {
-      hasDelivery,
-      hasCatering,
-      minRating,
-      userLat,
-      userLng,
-      sortBy,
-    } = query;
+async getFilteredRestaurants(query) {
+  const { page, limit, offset, order } = buildPagination(query);
+  const { hasDelivery, hasCatering, minRating, sortBy = 'popularity' } = query;
 
-    const where = { status: "active" }; // only active restaurants
-
-    // Base include
-    const include = [
-      { 
-        model: Branch, 
-        // attributes: ["id", "latitude", "longitude", "name", "delivery_available"],
-        include: [
-          {
-            model: Location,
-            attributes: ["latitude", "longitude", "address"],
-          },
-        ],
-      },
-      { model: Review, attributes: [] },
-      { model: RestaurantFollower, attributes: [] },
-      { model: Catering, attributes: [] },
-    ];
-
-    if (hasDelivery === "true") where["$Branches.delivery_available$"] = true;
-    if (hasCatering === "true") where["$Caterings.id$"] = { [Op.ne]: null };
-
-    const attributes = {
+  // Build relations
+  const include = [
+    {
+      model: Branch,
       include: [
-        [fn("AVG", col("Reviews.rating")), "avgRating"],
-        [fn("COUNT", col("RestaurantFollowers.id")), "popularity"],
+        {
+          model: Location,
+          attributes: ["id", "latitude", "longitude", "address"],
+        },
       ],
-    };
+    },
+    { model: Review },
+    // { model: RestaurantFollower },
+    {
+      model: Catering,
+      required: hasCatering === "true",
+      attributes: ["id"],
 
-    const queryOptions = {
-      where,
-      include,
-      distinct: true,
-      subQuery: false,
-      offset,
+    },
+  ];
+
+  const where = { status: "active" }; 
+
+  if (hasDelivery === "true") where.delivery_available = true;
+    // {
+    // include[0].required = true;
+    // include[0].where = { delivery_available: true };
+  // }
+
+  // Execute query with pagination and relations
+  const result = await Restaurant.findAndCountAll({
+    where,
+    include,
+    order,
+    limit,
+    offset,
+    distinct: true, // Important when using includes with count
+  });
+
+  // let filteredRestaurants = result.rows;
+  // if (minRating !== undefined) {
+  //   filteredRestaurants = result.rows.filter(restaurant => {
+  //     // If restaurant has a rating field, use that
+  //     if (restaurant.Reviews.rating) {
+  //       return restaurant.Reviews.rating >= parseFloat(minRating);
+  //     }
+  //   });
+  // }
+
+  return {
+    pagination: {
+      page,
       limit,
-      attributes,
-      // group: ["Restaurant.id", "Branches.id"],
-      group: [
-        "Restaurant.id",
-        "Branches.id",
-        "Branches->Location.id",
-        "Branches->Location.latitude",
-        "Branches->Location.longitude",
-        "Branches->Location.address",
-      ],
-    };
+      total: result.count,
+      totalPages: Math.ceil(result.count / limit)
+    },
+    restaurants: result.rows,
+  };
+},
 
-    // Apply minRating filter using HAVING
-    if (minRating) {
-      queryOptions.having = literal(`AVG("Reviews"."rating") >= ${parseFloat(minRating)}`);
-    }
+  // // Get filtered restaurants
+  // async getFilteredRestaurants(query) {
+  //   const { page, limit, offset, order: defaultOrder } = buildPagination(query);
 
-    // Sorting
-    if (sortBy === "rating") queryOptions.order = [[literal('"avgRating"'), "DESC"]];
-    else if (sortBy === "popularity") queryOptions.order = [[literal('"popularity"'), "DESC"]];
-    else if (sortBy === "distance" && userLat && userLng) {
-      queryOptions.order = [
-        [
-          literal(`
-            6371 * acos(
-              cos(radians(${userLat}))
-              * cos(radians("Branches->Location"."latitude"))
-              * cos(radians("Branches->Location"."longitude") - radians(${userLng}))
-              + sin(radians(${userLat})) * sin(radians("Branches->Location"."latitude"))
-            )
-          `), "ASC",
-        ],
-      ];
-    } else {
-      queryOptions.order = defaultOrder; // fallback from buildPagination
-    }
+  //   const {
+  //     hasDelivery,
+  //     hasCatering,
+  //     minRating,
+  //     userLat,
+  //     userLng,
+  //     sortBy,
+  //   } = query;
 
-    const { count, rows } = await Restaurant.findAndCountAll(queryOptions);
+  //   const where = { status: "active" }; // only active restaurants
 
-    return {
-      currentPage: page,
-      totalPages: Math.ceil(count.length / limit),
-      totalItems: count.length,
-      data: rows,
-    };
-  },
+  //   // Base include
+  //   const include = [
+  //     { 
+  //       model: Branch, 
+  //       // attributes: ["id", "latitude", "longitude", "name", "delivery_available"],
+  //       include: [
+  //         {
+  //           model: Location,
+  //           attributes: ["latitude", "longitude", "address"],
+  //         },
+  //       ],
+  //     },
+  //     { model: Review, attributes: [] },
+  //     { model: RestaurantFollower, attributes: [] },
+  //     { model: Catering, attributes: [] },
+  //   ];
+
+  //   if (hasDelivery === "true") where["$Branches.delivery_available$"] = true;
+  //   if (hasCatering === "true") where["$Caterings.id$"] = { [Op.ne]: null };
+
+  //   const attributes = {
+  //     include: [
+  //       [fn("AVG", col("Reviews.rating")), "avgRating"],
+  //       [fn("COUNT", col("RestaurantFollowers.id")), "popularity"],
+  //     ],
+  //   };
+
+  //   const queryOptions = {
+  //     where,
+  //     include,
+  //     distinct: true,
+  //     subQuery: false,
+  //     offset,
+  //     limit,
+  //     attributes,
+  //     // group: ["Restaurant.id", "Branches.id"],
+  //     group: [
+  //       "Restaurant.id",
+  //       "Branches.id",
+  //       "Branches->Location.id",
+  //       "Branches->Location.latitude",
+  //       "Branches->Location.longitude",
+  //       "Branches->Location.address",
+  //     ],
+  //   };
+
+  //   // Apply minRating filter using HAVING
+  //   if (minRating) {
+  //     queryOptions.having = literal(`AVG("Reviews"."rating") >= ${parseFloat(minRating)}`);
+  //   }
+
+  //   // Sorting
+  //   if (sortBy === "rating") queryOptions.order = [[literal('"avgRating"'), "DESC"]];
+  //   else if (sortBy === "popularity") queryOptions.order = [[literal('"popularity"'), "DESC"]];
+  //   else if (sortBy === "distance" && userLat && userLng) {
+  //     queryOptions.order = [
+  //       [
+  //         literal(`
+  //           6371 * acos(
+  //             cos(radians(${userLat}))
+  //             * cos(radians("Branches->Location"."latitude"))
+  //             * cos(radians("Branches->Location"."longitude") - radians(${userLng}))
+  //             + sin(radians(${userLat})) * sin(radians("Branches->Location"."latitude"))
+  //           )
+  //         `), "ASC",
+  //       ],
+  //     ];
+  //   } else {
+  //     queryOptions.order = defaultOrder; // fallback from buildPagination
+  //   }
+
+  //   const { count, rows } = await Restaurant.findAndCountAll(queryOptions);
+
+  //   return {
+  //     currentPage: page,
+  //     totalPages: Math.ceil(count.length / limit),
+  //     totalItems: count.length,
+  //     data: rows,
+  //   };
+  // },
 
   //  // Get filtered restaurants
   // async getFilteredRestaurants(query) {
