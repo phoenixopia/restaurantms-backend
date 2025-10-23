@@ -16,8 +16,15 @@ router.get(
 router.get(
   "/view-analytics-admin",
   protect("user"),
-  authorize("restaurant_admin", "staff"),
+  authorize("restaurant_admin"),
   AnalyticsSnapshotController.viewAnalyticsAdminSide
+);
+
+router.get(
+  "/view-analytics-staff",
+  protect("user"),
+  authorize("staff"),
+  AnalyticsSnapshotController.viewAnalyticsStaffSide
 );
 
 module.exports = router;
