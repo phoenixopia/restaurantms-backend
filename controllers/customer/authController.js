@@ -6,7 +6,7 @@ const { sendTokenResponse } = require("../../utils/sendTokenResponse");
 // Register new user
 exports.register = asyncHandler(async (req, res) => {
   const result = await AuthService.register(req.body, req.originalUrl);
-  return success(res, result.message, null, 201);
+  return success(res, result.message, result.data, 201);
 });
 
 exports.preLogin = asyncHandler(async (req, res) => {
