@@ -19,7 +19,7 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
     },
     targetType: {
-      type: DataTypes.ENUM("menu", "restaurant"),
+      type: DataTypes.ENUM("item", "restaurant"),
       allowNull: false,
     },
     is_favorite: {
@@ -32,7 +32,7 @@ module.exports = (sequelize, DataTypes) => {
   Favorite.associate = (models) => {
     Favorite.belongsTo(models.Customer, { foreignKey: "customer_id" });
     Favorite.belongsTo(models.Restaurant, { foreignKey: "targetId", constraints: false });
-    Favorite.belongsTo(models.Menu, { foreignKey: "targetId", constraints: false });
+    Favorite.belongsTo(models.MenuItem, { foreignKey: "targetId", constraints: false });
   };
 
   return Favorite;

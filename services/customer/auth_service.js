@@ -86,8 +86,8 @@ const AuthService = {
         signupMethod === "email" ? "Email" : "Phone Number";
 
       return {
-        message: `User registered. Please check your ${formattedMethod} for the confirmation code.`,
-        data: null,
+        message: `User ${customerData.phone_number} registered. Please check your ${formattedMethod}: ${customerData.phone_number} for the confirmation code.`,
+        data: {phone_number: customerData.phone_number},
       };
     } catch (err) {
       await t.rollback();

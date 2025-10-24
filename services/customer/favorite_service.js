@@ -70,25 +70,14 @@ class FavoriteService {
     const { page, limit, offset, order } = buildPagination(query);
 
     const where = { customer_id: customerId, is_favorite: true };
-    if (query.targetType) where.targetType = query.targetType;  // ?type=menu or restaurant
+    if (query.targetType) where.targetType = query.targetType;  // ?type=item or restaurant
 
     const include =
-      query?.targetType === "menu"
-        ? [
-            { 
-              model: Menu,
-              include: [
-                {
-                  model: MenuCategory,
-                  attributes: ["id", "name"],
-                  include: [
-                    {
-                      model: MenuItem,
-                      attributes: ["name", "unit_price", "image"],
-                    },
-                  ],
-                },
-              ]
+      query?.targetType === "item"
+        ?  [
+            {
+              model: MenuItem,
+              attributes: ["id", "name", "unit_price", "image"],
             },
           ]
         : query?.targetType === "restaurant"
@@ -107,20 +96,9 @@ class FavoriteService {
             },
           ]
         : [
-            { 
-              model: Menu,
-              include: [
-                {
-                  model: MenuCategory,
-                  attributes: ["id", "name"],
-                  include: [
-                    {
-                      model: MenuItem,
-                      attributes: ["name", "unit_price", "image"],
-                    },
-                  ],
-                },
-              ],
+             {
+              model: MenuItem,
+              attributes: ["id", "name", "unit_price", "image"],
             },
             {
               model: Restaurant,
@@ -167,9 +145,9 @@ class FavoriteService {
 
 
   // Get only menu favorites
-  static async getMenuFavorites(customerId, menuId) {
+  static async getMenuItemFavorites(customerId, menuId) {
     return Favorite.findAll({
-      where: { customer_id: customerId, targetType: "menu", targetId: menuId, is_favorite: true },
+      where: { customer_id: customerId, targetType: "item", targetId: menuId, is_favorite: true },
       include: [{ model: Menu }],
     });
   }
