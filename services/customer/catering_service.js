@@ -4,6 +4,7 @@ const {
   CateringRequest,
   CateringQuote,
   Restaurant,
+  RestaurantUser,
   Branch,
   Location,
   SystemSetting,
@@ -12,6 +13,7 @@ const {
 const throwError = require("../../utils/throwError");
 const { sendNotificationEmail } = require("../../utils/sendEmail");
 const { buildPagination } = require("../../utils/pagination");
+const SendNotification = require("../../utils/send_notification");
 
 const CateringService = {
   // // list caterings for customer with pagination and filters
@@ -202,6 +204,8 @@ const CateringService = {
     };
   },
 
+
+  // create a catering request
   async createCateringRequest({ customerId, data }) {
     const {
       catering_id,
@@ -252,6 +256,8 @@ const CateringService = {
 
       let location = null;
 
+
+      // ========== Handle Delivery Logic ==========
       if (catering.delivery_available) {
         if (!typeAddress) {
           throwError("Address type is required for delivery catering", 400);
@@ -294,6 +300,7 @@ const CateringService = {
         }
       }
 
+      // ========== Create Catering Request ==========
       const cateringRequest = await CateringRequest.create(
         {
           catering_id,
@@ -308,6 +315,16 @@ const CateringService = {
       );
 
       await t.commit();
+
+      // ========== Send Notifications ==========
+      try {
+        // Send catering request create notifications to both staff/admin and customer
+        await SendNotification.sendCateringRequestCreatedNotification(cateringRequest, catering);
+
+      } catch (notifyErr) {
+        console.error("Notification Error:", notifyErr.message);
+      }
+
       return cateringRequest;
     } catch (error) {
       await t.rollback();
@@ -315,6 +332,8 @@ const CateringService = {
     }
   },
 
+
+  // ================ Update My Catering Request ================
   async updateMyCateringRequest({ customerId, requestId, data }) {
     const {
       event_type,
@@ -343,6 +362,7 @@ const CateringService = {
 
       const catering = cateringRequest.Catering;
 
+      // ========== Validate Guest Count ==========
       if (
         guest_count < catering.min_guest_count ||
         guest_count > catering.max_guest_count
@@ -353,6 +373,7 @@ const CateringService = {
         );
       }
 
+      // ========== Validate Event Date ==========
       const today = new Date();
       const eventDateObj = new Date(event_date);
       const minDate = new Date();
@@ -365,6 +386,7 @@ const CateringService = {
         );
       }
 
+      // ========== Handle Delivery Logic ==========
       let location = null;
 
       if (catering.delivery_available) {
@@ -402,6 +424,7 @@ const CateringService = {
         }
       }
 
+      // ========== Update Request ==========
       cateringRequest.event_type = event_type;
       cateringRequest.guest_count = guest_count;
       cateringRequest.event_date = event_date;
@@ -411,6 +434,15 @@ const CateringService = {
       await cateringRequest.save({ transaction: t });
       await t.commit();
 
+      // ========== Send Notifications ==========
+      try {
+        // Send catering request update notifications to both staff/admin and customer
+        await SendNotification.sendCateringRequestUpdatedNotification(cateringRequest);
+
+      } catch (notifyErr) {
+        console.error("Notification Error:", notifyErr.message);
+      }
+
       return cateringRequest;
     } catch (error) {
       await t.rollback();
@@ -418,6 +450,8 @@ const CateringService = {
     }
   },
 
+
+  // Get all catering requests
   async getAllMyCateringRequests({ customerId, page = 1, limit = 10, status }) {
     const offset = (page - 1) * limit;
 
@@ -499,6 +533,8 @@ const CateringService = {
     };
   },
 
+
+  // ================ Update Catering Quote By Customer
   async updateCateringQuoteByCustomer(customerId, quoteId, status) {
     const t = await sequelize.transaction();
 
@@ -542,10 +578,10 @@ const CateringService = {
         if (customer.email) {
           const title = `Catering Quote Negotiation - ${request.Catering.title}`;
           const body = `
-      Your catering quote requires negotiation.
-      Contact Person: ${contact_person}
-      Contact Info: ${contact_info}
-    `;
+            Your catering quote requires negotiation.
+            Contact Person: ${contact_person}
+            Contact Info: ${contact_info}
+          `;
 
           await sendNotificationEmail(
             customer.email,
@@ -560,6 +596,9 @@ const CateringService = {
       }
 
       await t.commit();
+
+      // Send catering quote status update notifications to both staff/admin and customer
+      await SendNotification.sendCateringQuoteStatusNotification(quote, quote.status);
 
       return {
         id: quote.id,

@@ -34,9 +34,9 @@ exports.registerValidator = [
           throw new Error("Invalid email format.");
         }
       } else if (signupMethod === "phone_number") {
-        if (!/^\+251[0-9]{9}$/.test(value)) {
+        if (!/^(\+251|0)[1-9][0-9]{8}$/.test(value)) {
           throw new Error(
-            "Invalid Ethiopian phone number. It must start with +251 and be 12 digits long."
+            "Invalid Ethiopian phone number. It must start with 0 or +251 and be 10 or 12 digits long."
           );
         }
       }

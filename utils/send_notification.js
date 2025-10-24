@@ -534,6 +534,345 @@ const SendNotification = {
 
     return notifications;
   },
+
+  // ========= Catering Request Created Notification =========
+  async sendCateringRequestCreatedNotification(cateringRequest, catering) {
+    const io = getIo();
+    const { id: request_id, customer_id } = cateringRequest;
+
+    const restaurant_id = catering.restaurant_id;
+    const title = catering.title;
+
+    const notifications = [];
+
+    // ===== Notify Staff/Admin =====
+    const restaurantUsers = await User.findAll({ where: { restaurant_id } });
+
+    // users
+    const userMap = new Map();
+    [...restaurantUsers].forEach(u => userMap.set(u.id, u));
+    const users = [...userMap.values()];
+
+    for (const u of users) {
+      const notification = await Notification.create({
+        title: "New Catering Request",
+        message: `A new catering request "${title}" has been created by a customer.`,
+        type: "CATERING",
+        state: "info",
+        data: { request_id, customer_id },
+        created_by: u.id,
+        target_user_id: u.id,
+        restaurant_id,
+        branch_id,
+      });
+
+      notifications.push(notification);
+      io.to(`user_${u.id}`).emit("notification", notification);
+    }
+
+    // ===== Notify Customer =====
+    if (customer_id) {
+      const customerNotification = await Notification.create({
+        title: "Catering Request Submitted",
+        message: `Your catering request "${title}" has been submitted successfully. The restaurant will respond soon.`,
+        type: "CATERING",
+        state: "success",
+        data: { request_id },
+        created_by: customer_id,
+        target_customer_id: customer_id,
+        restaurant_id,
+        branch_id,
+      });
+
+      notifications.push(customerNotification);
+      io.to(`customer_${customer_id}`).emit("notification", customerNotification);
+    }
+
+    return notifications;
+  },
+
+
+  // ========= Send Catering Request Update Notification =========
+  async sendCateringRequestUpdatedNotification(cateringRequest) {
+    const io = getIo();
+    const { id: request_id, customer_id, branch_id, restaurant_id } = cateringRequest;
+    const cateringTitle = cateringRequest.Catering.title;
+
+    const notifications = [];
+
+    // ===== Notify Admin/Staff =====
+    const branchUsers = await User.findAll({
+      where: { branch_id, restaurant_id },
+    });
+
+    const userMap = new Map([...branchUsers].map(u => [u.id, u]));
+    const users = [...userMap.values()];
+
+    for (const u of users) {
+      const notification = await Notification.create({
+        title: "Catering Request Updated",
+        message: `Customer updated their catering request "${cateringTitle}".`,
+        type: "CATERING_UPDATE",
+        state: "info",
+        data: { request_id, customer_id },
+        created_by: u.id,
+        target_user_id: u.id,
+        restaurant_id,
+        branch_id,
+      });
+      notifications.push(notification);
+      io.to(`user_${u.id}`).emit("notification", notification);
+    }
+
+    // ===== Notify Customer =====
+    if (customer_id) {
+      const customerNotification = await Notification.create({
+        title: "Catering Request Updated",
+        message: `You successfully updated your catering request "${cateringTitle}".`,
+        type: "CATERING_UPDATE",
+        state: "success",
+        data: { request_id },
+        created_by: customer_id,
+        target_customer_id: customer_id,
+        restaurant_id,
+        branch_id,
+      });
+      notifications.push(customerNotification);
+      io.to(`customer_${customer_id}`).emit("notification", customerNotification);
+    }
+
+    return notifications;
+  },
+
+
+  // Catering Quote Status Update
+  async sendCateringQuoteStatusNotification(quote, status) {
+    const io = getIo();
+    const request = quote.CateringRequest;
+    const catering = request.Catering;
+    const customer_id = request.customer_id;
+    const notifications = [];
+
+    // ===== Notify Admin/Staff =====
+    const branchUsers = await User.findAll({
+      where: { branch_id: request.branch_id, restaurant_id: request.restaurant_id },
+    });
+
+    const userMap = new Map([...branchUsers].map(u => [u.id, u]));
+    const users = [...userMap.values()];
+
+    const statusMessageMap = {
+      accepted: `${customer_id} accepted the quote for "${catering.title}"`,
+      rejected: `${customer_id} rejected the quote for "${catering.title}"`,
+      negotiate: `${customer_id} requested negotiation for "${catering.title}"`,
+    };
+
+    for (const u of users) {
+      const notification = await Notification.create({
+        title: "Catering Quote Updated",
+        message: statusMessageMap[status],
+        type: "CATERING_QUOTE",
+        state: "info",
+        data: { quote_id: quote.id, catering_id: catering.id, customer_id },
+        created_by: u.id,
+        target_user_id: u.id,
+        restaurant_id: request.restaurant_id,
+        branch_id: request.branch_id,
+      });
+
+      notifications.push(notification);
+      io.to(`user_${u.id}`).emit("notification", notification);
+    }
+
+    // ===== Notify Customer =====
+    const customerStatusMessageMap = {
+      accepted: `You accepted the catering quote for "${catering.title}".`,
+      rejected: `You rejected the catering quote for "${catering.title}".`,
+      negotiate: `You requested negotiation for "${catering.title}".`,
+    };
+
+    if (customer_id) {
+      const customerNotification = await Notification.create({
+        title: "Catering Quote Updated",
+        message: customerStatusMessageMap[status],
+        type: "CATERING_QUOTE",
+        state: "success",
+        data: { quote_id: quote.id, catering_id: catering.id },
+        created_by: customer_id,
+        target_customer_id: customer_id,
+        restaurant_id: request.restaurant_id,
+        branch_id: request.branch_id,
+      });
+
+      notifications.push(customerNotification);
+      io.to(`customer_${customer_id}`).emit("notification", customerNotification);
+    }
+
+    return notifications;
+  },
+
+  // ========= Order Created: Notify Staff/Admin + Customer =========
+  async sendOrderCreatedNotification(order) {
+    const io = getIo();
+    const { id: order_id, restaurant_id, branch_id, customer_id, } = order;
+
+    if (!restaurant_id && !branch_id) return null;
+
+    const notifications = [];
+
+    // ----- Notify Staff/Admin -----
+    const branchUsers = await User.findAll({ where: { branch_id, restaurant_id } });
+
+    for (const u of branchUsers) {
+      const notification = await Notification.create({
+        title: "New Order Received",
+        message: `A new order (#${order_id}) has been placed by a customer.`,
+        type: "ORDER",
+        state: "info",
+        data: { order_id, customer_id },
+        created_by: u.id,
+        target_user_id: u.id,
+        restaurant_id,
+        branch_id,
+      });
+
+      notifications.push(notification);
+      io.to(`user_${u.id}`).emit("notification", notification);
+    }
+
+    // ----- Notify Customer -----
+    if (customer_id) {
+      const customerNotification = await Notification.create({
+        title: "Order Placed Successfully",
+        message: "Your order has been placed and is being processed by the restaurant.",
+        type: "ORDER",
+        state: "success",
+        data: { order_id },
+        created_by: customer_id,
+        target_customer_id: customer_id,
+        restaurant_id,
+        branch_id,
+      });
+
+      notifications.push(customerNotification);
+      io.to(`customer_${customer_id}`).emit("notification", customerNotification);
+    }
+
+    return notifications;
+  },
+
+
+  // ========= Order Cancelled: Notify Staff/Admin + Customer =========
+  async sendOrderCancelledNotification(order, cancelled_by = null) {
+    const io = getIo();
+    const {
+      id: order_id,
+      restaurant_id,
+      branch_id,
+      customer_id,
+      cancelled_reason,
+    } = order;
+
+    const notifications = [];
+
+    // Notify staff/admin (users)
+    const branchUsers = await User.findAll({ where: { branch_id, restaurant_id } });
+
+    const userMap = new Map();
+    [...branchUsers].forEach((u) => userMap.set(u.id, u));
+    const users = [...userMap.values()];
+
+    for (const u of users) {
+      const notification = await Notification.create({
+        title: "Order Cancelled",
+        message: `Order (#${order_id}) has been cancelled by ${
+          cancelled_by ? "a user" : "the customer"
+        }.`,
+        type: "ORDER_CANCEL",
+        state: "warning",
+        data: { order_id, customer_id, cancelled_reason },
+        created_by: cancelled_by,
+        target_user_id: u.id,
+        restaurant_id,
+        branch_id,
+      });
+
+      notifications.push(notification);
+      io.to(`user_${u.id}`).emit("notification", notification);
+    }
+
+    // Notify the customer
+    if (customer_id) {
+      const customerNotification = await Notification.create({
+        title: "Order Cancelled",
+        message:
+          "Your order has been cancelled successfully. If you have any questions, please contact the restaurant.",
+        type: "ORDER_CANCEL",
+        state: "warning",
+        data: { order_id, cancelled_reason },
+        created_by: cancelled_by,
+        target_customer_id: customer_id,
+        restaurant_id,
+        branch_id,
+      });
+
+      notifications.push(customerNotification);
+      io.to(`customer_${customer_id}`).emit("notification", customerNotification);
+    }
+
+    return notifications;
+  },
+
+  // Order status notification
+  async sendOrderStatusUpdatedNotification(order, status,) {
+    const io = getIo();
+    const { id: order_id, restaurant_id, branch_id, customer_id } = order;
+
+    const notifications = [];
+
+    // ===== Notify staff/admin =====
+    const branchUsers = await User.findAll({ where: { branch_id, restaurant_id } });
+    const userMap = new Map([...branchUsers].map(u => [u.id, u]));
+    const users = [...userMap.values()];
+
+    for (const u of users) {
+      const notification = await Notification.create({
+        title: "Order Status Updated",
+        message: `Order (#${order_id}) status changed to "${status}"`,
+        type: "ORDER_STATUS",
+        state: "info",
+        data: { order_id, status, customer_id },
+        created_by: u.id,
+        target_user_id: u.id,
+        restaurant_id,
+        branch_id,
+      });
+
+      notifications.push(notification);
+      io.to(`user_${u.id}`).emit("notification", notification);
+    }
+
+    // ===== Notify customer =====
+    if (customer_id) {
+      const customerNotification = await Notification.create({
+        title: "Order Status Updated",
+        message: `Your order (#${order_id}) status is now "${status}"`,
+        type: "ORDER_STATUS",
+        state: "info",
+        data: { order_id, status },
+        created_by: customer_id,
+        target_customer_id: customer_id,
+        restaurant_id,
+        branch_id,
+      });
+
+      notifications.push(customerNotification);
+      io.to(`customer_${customer_id}`).emit("notification", customerNotification);
+    }
+
+    return notifications;
+  },
+
 };
 
 module.exports = SendNotification;

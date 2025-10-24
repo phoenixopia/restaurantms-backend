@@ -78,49 +78,49 @@ const { sequelize } = require("../models/index");
       // await require("./catering_requests_and_payments_seed")();
       // console.log("✅ seeding catering request, tag, quote and payment seeded");
 
-      console.log("Seeding videos...");
-      await require("./video_seeders")();
-      console.log("✅ Videos seeded");
+      // console.log("Seeding videos...");
+      // await require("./video_seeders")();
+      // console.log("✅ Videos seeded");
 
-      console.log("Seeding restaurant followers & video interactions...");
-      await require("./seed_restaurant_Followers_&_video_interaction")();
-      console.log("✅ Restaurant followers & video interactions seeded");
+      // console.log("Seeding restaurant followers & video interactions...");
+      // await require("./seed_restaurant_Followers_&_video_interaction")();
+      // console.log("✅ Restaurant followers & video interactions seeded");
 
-      console.log("Seeding activity log...");
-      await require("./activityLog_seeders")();
-      console.log("✅ Activity Log seeded");
+      // console.log("Seeding activity log...");
+      // await require("./activityLog_seeders")();
+      // console.log("✅ Activity Log seeded");
 
-      console.log("Support Ticker...");
-      await require("./support_ticket_seeders")();
-      console.log("✅ Support Ticket seeded");
+      // console.log("Support Ticker...");
+      // await require("./support_ticket_seeders")();
+      // console.log("✅ Support Ticket seeded");
 
-      console.log("Notification...");
-      await require("./notification_seeders")();
-      console.log("✅ Notification seeded");
+      // console.log("Notification...");
+      // await require("./notification_seeders")();
+      // console.log("✅ Notification seeded");
 
       console.log("Seeding favorites...");
       await require("./favorites_seeder")();
       console.log("✅ Favorites seeded");
 
-      console.log("Seeding orders...");
-      await require("./order_seeder")();
-      console.log("✅ Orders seeded");
+      // console.log("Seeding orders...");
+      // await require("./order_seeder")();
+      // console.log("✅ Orders seeded");
 
-      console.log("Seeding kds...");
-      await require("./kds_seeders")();
-      console.log("✅ KDS seeded");  
+      // console.log("Seeding kds...");
+      // await require("./kds_seeders")();
+      // console.log("✅ KDS seeded");  
       
-      console.log("Seeding reviews...");
-      await require("./review_seeders")();
-      console.log("✅ Reviews seeded");
+      // console.log("Seeding reviews...");
+      // await require("./review_seeders")();
+      // console.log("✅ Reviews seeded");
 
-      console.log("Seeding order items...");
-      await require("./order_items_seed")();
-      console.log("✅ Order items seeded");
+      // console.log("Seeding order items...");
+      // await require("./order_items_seed")();
+      // console.log("✅ Order items seeded");
 
-      console.log("Seeding reviews...");
-      await require("./review_seeders")();
-      console.log("✅ Reviews seeded");
+      // console.log("Seeding reviews...");
+      // await require("./review_seeders")();
+      // console.log("✅ Reviews seeded");
 
       console.log("🎉 All seeders completed successfully");
     } catch (error) {

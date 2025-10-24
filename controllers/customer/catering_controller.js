@@ -62,6 +62,8 @@ exports.createRequest = asyncHandler(async (req, res) => {
   return success(res, "Catering request submitted successfully", result, 201);
 });
 
+
+// Update Catering Request
 exports.updateMyCateringRequest = asyncHandler(async (req, res) => {
   const customerId = req.user.id;
   const requestId = req.params.id;
@@ -107,6 +109,8 @@ exports.getCateringQuoteByRequestId = asyncHandler(async (req, res) => {
   return success(res, "Catering quote fetched successfully", quote);
 });
 
+
+// ================ Update Catering Quote By Customer
 exports.updateCateringQuoteByCustomer = asyncHandler(async (req, res) => {
   const customerId = req.user.id;
   const quoteId = req.params.id;

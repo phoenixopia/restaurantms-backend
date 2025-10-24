@@ -1,6 +1,6 @@
 // controllers/favorite.controller.js
 const FavoriteService = require("../../services/customer/favorite_service");
-const { success } = require("../../utils/apiResponse");
+const { success, error } = require("../../utils/apiResponse");
 const throwError = require("../../utils/throwError");
 
 class FavoriteController {
@@ -8,10 +8,10 @@ class FavoriteController {
   static async toggleFavorite(req, res) {
     try {
       const { targetId, targetType } = req.body;
-      const customerId = req.user.id; // from JWT middleware
+      const customerId = req.user.id;
 
       if (!targetId || !targetType) {
-        return res.status(400).json({ message: "targetId and targetType are required." });
+        error(res, "targetId and targetType are required.", 400)
       }
 
       const favorite = await FavoriteService.toggleFavorite(customerId, targetId, targetType);

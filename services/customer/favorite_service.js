@@ -1,5 +1,6 @@
 // services/favorite.service.js
 const { Favorite, Restaurant, Menu, SystemSetting, Review, MenuCategory, MenuItem } = require("../../models/index");
+const { error } = require("../../utils/apiResponse");
 const { buildPagination } = require("../../utils/pagination");
 
 class FavoriteService {
@@ -42,6 +43,7 @@ class FavoriteService {
 
   // Toggle favorite (add/remove)
   static async toggleFavorite(customerId, targetId, targetType) {
+
     let favorite = await Favorite.findOne({
       where: { customer_id: customerId, targetId, targetType },
     });
@@ -105,7 +107,21 @@ class FavoriteService {
             },
           ]
         : [
-            { model: Menu },
+            { 
+              model: Menu,
+              include: [
+                {
+                  model: MenuCategory,
+                  attributes: ["id", "name"],
+                  include: [
+                    {
+                      model: MenuItem,
+                      attributes: ["name", "unit_price", "image"],
+                    },
+                  ],
+                },
+              ],
+            },
             {
               model: Restaurant,
               include: [
