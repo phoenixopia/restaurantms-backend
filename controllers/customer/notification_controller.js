@@ -57,7 +57,7 @@ exports.markAsRead = asyncHandler(async (req, res) => {
 
 
 exports.unreadCount = asyncHandler(async (req, res) => {
-  const count = await NotificationService.unreadCount(req.user);
+  const count = await NotificationService.unreadCount(req.user.id);
   return success(
     res,
     "Unread notifications count retrieved",
