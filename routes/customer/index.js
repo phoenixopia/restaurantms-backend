@@ -12,5 +12,6 @@ router.use("/catering", require("./catering_routes"));
 router.use("/table", require("./table_route"));
 router.use("/review", require("./review_routes"));
 router.use("/favorites", require("./favorite_route"));
+router.use("/notification", require("./notification_routes"));
 
 module.exports = router;

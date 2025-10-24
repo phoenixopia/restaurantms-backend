@@ -24,7 +24,7 @@ async function sendSMS(to, message) {
       }
     );
 
-    console.log("✅ SMS sent attempt:", response.data);
+    console.log("SMS sent attempt:", response.data);
 
     if (!response.data.data) {
       console.warn(
@@ -36,10 +36,7 @@ async function sendSMS(to, message) {
 
     return response.data.data;
   } catch (error) {
-    console.error(
-      "❌ Error sending SMS:",
-      error.response?.data || error.message
-    );
+    console.error("❌ Error sending SMS:", error.response?.data || error.message);
     return false;
   }
 }
