@@ -7,7 +7,7 @@ const { protect } = require("../../middleware/protect");
 // Toggle favorite for both menu & restaurant
 router.post("/toggle", protect("customer"), FavoriteController.toggleFavorite);
 
-// Get all favorites (optionally filter by ?type=menu or restaurant)
+// Get all favorites (optionally filter by ?targetType=item or ?targetType=restaurant)
 router.get("/", protect("customer"), FavoriteController.getFavorites);
 
 // Get favorite by targetId

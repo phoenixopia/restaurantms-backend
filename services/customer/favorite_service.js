@@ -1,5 +1,5 @@
 // services/favorite.service.js
-const { Favorite, Restaurant, Menu, SystemSetting, Review, MenuCategory, MenuItem } = require("../../models/index");
+const { Favorite, Restaurant, Menu, SystemSetting, Review, MenuCategory, MenuItem , Branch} = require("../../models/index");
 const { error } = require("../../utils/apiResponse");
 const { buildPagination } = require("../../utils/pagination");
 
@@ -78,6 +78,22 @@ class FavoriteService {
             {
               model: MenuItem,
               attributes: ["id", "name", "unit_price", "image"],
+              include: [
+                {
+                  model: MenuCategory,
+                  attributes: ["id",],
+                  include: [
+                    {
+                      model: Restaurant,
+                      attributes: ["id"],
+                    },
+                    {
+                      model: Branch,
+                      attributes: ["id"],
+                    },
+                  ]
+                },
+              ]
             },
           ]
         : query?.targetType === "restaurant"
@@ -99,6 +115,22 @@ class FavoriteService {
              {
               model: MenuItem,
               attributes: ["id", "name", "unit_price", "image"],
+              include: [
+                {
+                  model: MenuCategory,
+                  attributes: ["id",],
+                  include: [
+                    {
+                      model: Restaurant,
+                      attributes: ["id"],
+                    },
+                    {
+                      model: Branch,
+                      attributes: ["id"],
+                    },
+                  ]
+                },
+              ]
             },
             {
               model: Restaurant,
