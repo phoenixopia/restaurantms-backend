@@ -1,0 +1,68 @@
+const { Subscription, Restaurant, Plan, sequelize } = require("../models");
+const { Op } = require("sequelize");
+
+const GRACE_PERIOD_DAYS = 2;
+const TRIAL_DAYS = 15;
+
+const deactivateExpiredSubscriptions = async (io) => {
+  const transaction = await sequelize.transaction();
+  try {
+    const today = new Date();
+    const graceCutoff = new Date(today);
+    graceCutoff.setDate(today.getDate() - GRACE_PERIOD_DAYS);
+
+    const expiredSubscriptions = await Subscription.findAll({
+      where: {
+        status: "active",
+        end_date: { [Op.lt]: graceCutoff },
+      },
+      transaction,
+    });
+
+    for (const subscription of expiredSubscriptions) {
+      const restaurantId = subscription.restaurant_id;
+
+      await subscription.update({ status: "expired" }, { transaction });
+    }
+
+    await transaction.commit();
+    console.log(`${expiredSubscriptions.length} subscriptions expired.`);
+  } catch (err) {
+    await transaction.rollback();
+    console.error("Failed to deactivate subscriptions:", err);
+  }
+};
+
+const expireTrialRestaurants = async () => {
+  const transaction = await sequelize.transaction();
+  try {
+    const today = new Date();
+
+    const trialExpirationDate = new Date(today);
+    trialExpirationDate.setDate(today.getDate() - TRIAL_DAYS);
+
+    const expiredTrials = await Restaurant.findAll({
+      where: {
+        status: "trial",
+        createdAt: { [Op.lte]: trialExpirationDate },
+      },
+      transaction,
+    });
+
+    for (const restaurant of expiredTrials) {
+      await restaurant.update({ status: "expired" }, { transaction });
+    }
+
+    await transaction.commit();
+
+    console.log(`${expiredTrials.length} trial restaurants expired.`);
+  } catch (err) {
+    await transaction.rollback();
+    console.error("Failed to expire trial restaurants:", err);
+  }
+};
+
+module.exports = {
+  deactivateExpiredSubscriptions,
+  expireTrialRestaurants,
+};
