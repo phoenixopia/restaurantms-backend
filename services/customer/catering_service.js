@@ -9,6 +9,7 @@ const {
   Location,
   SystemSetting,
   sequelize,
+  UploadedFile,
 } = require("../../models");
 const throwError = require("../../utils/throwError");
 const { sendNotificationEmail } = require("../../utils/sendEmail");
@@ -17,56 +18,57 @@ const SendNotification = require("../../utils/send_notification");
 
 const CateringService = {
   // delete caterings for customer
-  async deleteCatering(cateringId, user) {
-    const t = await sequelize.transaction();
+  async deleteCateringRequest(cateringRequestId, customer) {
+    const transaction = await sequelize.transaction();
+
     try {
-      let restaurantId;
-
-      if (user.restaurant_id) {
-        restaurantId = user.restaurant_id;
-      } else if (user.branch_id) {
-        const branch = await Branch.findByPk(user.branch_id, {
-          transaction: t,
-        });
-        if (!branch) throwError("Branch not found", 404);
-        restaurantId = branch.restaurant_id;
-      } else {
-        throwError("User does not belong to a restaurant or branch", 404);
-      }
-
-      const catering = await Catering.findByPk(cateringId, { transaction: t });
-      if (!catering) throwError("Catering not found", 404);
-
-      if (catering.restaurant_id !== restaurantId) {
-        throwError("Not authorized to delete this catering", 403);
-      }
-
-      const uploadedFile = await UploadedFile.findOne({
-        where: {
-          restaurant_id: restaurantId,
-          type: "catering-card",
-          reference_id: catering.id,
-        },
-        transaction: t,
+      // Find the catering request with related data
+      const cateringRequest = await CateringRequest.findOne({
+        where: { id: cateringRequestId },
+        include: [{
+          model: CateringQuote,
+          include: [CateringPayment]
+        }],
+        transaction
       });
 
-      if (uploadedFile) {
-        const oldFilename = path.basename(uploadedFile.path);
-        const oldPath = getFilePath(UPLOAD_FOLDER, oldFilename);
-        if (fs.existsSync(oldPath)) {
-          await fs.promises.unlink(oldPath).catch(() => {});
-        }
-
-        await uploadedFile.destroy({ transaction: t });
+      if (!cateringRequest) {
+        throwError('Catering request not found', 404);
       }
 
-      await catering.destroy({ transaction: t });
+       // Check if there's an associated quote
+      const cateringQuote = cateringRequest.CateringQuote;
 
-      await t.commit();
+      // Use transaction to ensure data consistency
+      if (cateringQuote) {
+        // Check if there's an associated payment
+        const cateringPayment = cateringQuote.CateringPayment;
+
+        if (cateringPayment) {
+          // Check payment status before deletion
+          if (cateringPayment.payment_status === 'completed') {
+            throwError('Cannot delete catering request with completed payment. Please contact support.', 400);
+          }
+
+          // Delete payment
+          await cateringPayment.destroy({ transaction });
+        }
+
+      // Delete quote
+        await cateringQuote.destroy({ transaction });
+      }
+
+      // Delete the catering request
+      await cateringRequest.destroy({ transaction });
+
+      // Commit transaction
+      await transaction.commit();
+
+      // return { success: true };
       return { message: "Catering deleted successfully" };
     } catch (err) {
       await t.rollback();
-      throw err;
+      throwError('Server Error', 500);;
     }
   },
 

@@ -1,13 +1,37 @@
 const asyncHandler = require("../../utils/asyncHandler");
 const CateringService = require("../../services/customer/catering_service");
-const { success } = require("../../utils/apiResponse");
+const { success, error } = require("../../utils/apiResponse");
 
 // =============== Catering
-exports.deleteCatering = asyncHandler(async (req, res) => {
-  const cateringId = req.params.id;
+// exports.deleteCateringRequest = asyncHandler(async (req, res) => {
+//   const cateringId = req.params.id;
 
-  const result = await CateringService.deleteCatering(cateringId, req.user);
-  return success(res, result.message);
+//   const result = await CateringService.deleteCatering(cateringId, req.user);
+//   return success(res, result.message);
+// });
+
+exports.deleteCateringRequest= asyncHandler(async (req, res) => {
+  try {
+    const { id } = req.params;
+    const customerId = req.user.id; 
+
+    if (!id) {
+      // throw new AppError('Catering request ID is required', 400);
+       error(res, 'Catering request ID is required', 'Catering request ID is required', 400)
+    }
+
+    const result = await CateringService.deleteCateringRequest(cateringRequestId, req.user);
+
+    // res.status(200).json({
+    //   success: true,
+    //   message: 'Catering request deleted successfully',
+    //   data: result
+    // });
+    success(res, 'Catering request deleted successfully', result.message, 200)
+  } catch (error) {
+    // next(error);
+    error(res, 'Failed to delete catering request', error.message, 500)
+  }
 });
 
 

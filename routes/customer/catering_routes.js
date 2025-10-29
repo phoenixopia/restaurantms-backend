@@ -45,10 +45,10 @@ router.get(
 );
 
 router.delete(
-  "/delete-catering/:id",
+  "/request/:id",
   protect("customer"),
   // permissionCheck("delete_catering"),
-  CateringController.deleteCatering
+  CateringController.deleteCateringRequest
 );
 
 module.exports = router;
