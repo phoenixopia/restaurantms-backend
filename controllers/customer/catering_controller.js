@@ -3,18 +3,12 @@ const CateringService = require("../../services/customer/catering_service");
 const { success } = require("../../utils/apiResponse");
 
 // =============== Catering
+exports.deleteCatering = asyncHandler(async (req, res) => {
+  const cateringId = req.params.id;
 
-// // Get CATERINGS FOR CUSTOMER
-// exports.listCateringsForCustomer = asyncHandler(async (req, res) => {
-//   const customerId = req.user.id;
-
-//   const result = await CateringService.listCateringsForCustomer(
-//     customerId,
-//     req.query
-//   );
-
-//   return success(res, "Caterings fetched successfully", result);
-// });
+  const result = await CateringService.deleteCatering(cateringId, req.user);
+  return success(res, result.message);
+});
 
 
 exports.getCateringById = asyncHandler(async (req, res) => {

@@ -44,4 +44,11 @@ router.get(
   CateringController.getAcceptedCateringQuote
 );
 
+router.delete(
+  "/delete-catering/:id",
+  protect("customer"),
+  // permissionCheck("delete_catering"),
+  CateringController.deleteCatering
+);
+
 module.exports = router;

@@ -16,55 +16,59 @@ const { buildPagination } = require("../../utils/pagination");
 const SendNotification = require("../../utils/send_notification");
 
 const CateringService = {
-  // // list caterings for customer with pagination and filters
-  // async listCateringsForCustomer(customerId, query = {}) {
-  //   const { page, limit, offset, order } = buildPagination(query);
-  //   const where = { customer_id: customerId };
+  // delete caterings for customer
+  async deleteCatering(cateringId, user) {
+    const t = await sequelize.transaction();
+    try {
+      let restaurantId;
 
-  //   // const include = [
-  //   //   {
-  //   //     model: Menu,
-  //   //     include: [
-  //   //       {
-  //   //         model: MenuCategory,
-  //   //         attributes: ["id", "name"],
-  //   //         include: [
-  //   //           {
-  //   //             model: MenuItem,
-  //   //             attributes: ["name", "unit_price", "image"],
-  //   //           },
-  //   //         ],
-  //   //       },
-  //   //     ]
-  //   //   },
-  //   // ];
+      if (user.restaurant_id) {
+        restaurantId = user.restaurant_id;
+      } else if (user.branch_id) {
+        const branch = await Branch.findByPk(user.branch_id, {
+          transaction: t,
+        });
+        if (!branch) throwError("Branch not found", 404);
+        restaurantId = branch.restaurant_id;
+      } else {
+        throwError("User does not belong to a restaurant or branch", 404);
+      }
 
-  //   // Count total caterings
-  //   const total = await Catering.count({ where });
+      const catering = await Catering.findByPk(cateringId, { transaction: t });
+      if (!catering) throwError("Catering not found", 404);
 
-  //   // Fetch paginated caterings
-  //   const caterings = await Catering.findAll({
-  //     where,
-  //     // include,
-  //     limit,
-  //     offset,
-  //     order, // uses order from buildPagination (e.g. [["createdAt", "DESC"]])
-  //   });
+      if (catering.restaurant_id !== restaurantId) {
+        throwError("Not authorized to delete this catering", 403);
+      }
 
-  //   const totalPages = Math.ceil(total / limit);
+      const uploadedFile = await UploadedFile.findOne({
+        where: {
+          restaurant_id: restaurantId,
+          type: "catering-card",
+          reference_id: catering.id,
+        },
+        transaction: t,
+      });
 
-  //   return {
-  //     success: true,
-  //     message: "Caterings retrieved successfully",
-  //     data: {
-  //       total,
-  //       page,
-  //       limit,
-  //       total_pages: totalPages,
-  //       caterings,
-  //     },
-  //   };
-  // },
+      if (uploadedFile) {
+        const oldFilename = path.basename(uploadedFile.path);
+        const oldPath = getFilePath(UPLOAD_FOLDER, oldFilename);
+        if (fs.existsSync(oldPath)) {
+          await fs.promises.unlink(oldPath).catch(() => {});
+        }
+
+        await uploadedFile.destroy({ transaction: t });
+      }
+
+      await catering.destroy({ transaction: t });
+
+      await t.commit();
+      return { message: "Catering deleted successfully" };
+    } catch (err) {
+      await t.rollback();
+      throw err;
+    }
+  },
 
 
 
