@@ -3,6 +3,7 @@ const {
   Catering,
   CateringRequest,
   CateringQuote,
+  CateringPayment,
   Restaurant,
   RestaurantUser,
   Branch,
@@ -18,18 +19,18 @@ const SendNotification = require("../../utils/send_notification");
 
 const CateringService = {
   // delete caterings for customer
-  async deleteCateringRequest(cateringRequestId, customer) {
-    const transaction = await sequelize.transaction();
+  async deleteCateringRequest(cateringRequestId, customerId) {
+    const t = await sequelize.transaction();
 
     try {
       // Find the catering request with related data
       const cateringRequest = await CateringRequest.findOne({
-        where: { id: cateringRequestId },
+        where: { id: cateringRequestId , customer_id: customerId},
         include: [{
           model: CateringQuote,
           include: [CateringPayment]
         }],
-        transaction
+        transaction: t
       });
 
       if (!cateringRequest) {
@@ -51,24 +52,24 @@ const CateringService = {
           }
 
           // Delete payment
-          await cateringPayment.destroy({ transaction });
+          await cateringPayment.destroy({ transaction: t });
         }
 
       // Delete quote
-        await cateringQuote.destroy({ transaction });
+        await cateringQuote.destroy({ transaction: t });
       }
 
       // Delete the catering request
-      await cateringRequest.destroy({ transaction });
+      await cateringRequest.destroy({ transaction: t });
 
       // Commit transaction
-      await transaction.commit();
+      await t.commit();
 
       // return { success: true };
       return { message: "Catering deleted successfully" };
     } catch (err) {
       await t.rollback();
-      throwError('Server Error', 500);;
+      throwError(err.message, 500);
     }
   },
 

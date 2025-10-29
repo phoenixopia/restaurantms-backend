@@ -11,8 +11,15 @@ const {
 } = require("../models");
 
 module.exports = async () => {
+  
   const now = new Date();
-  console.log("🚀 Starting catering tags, requests, quotes & payments seeding...");
+   console.log("🚀 Starting catering, requests, quotes & payments syncing...");
+
+  await CateringRequest.sync({ force: true });
+  await CateringQuote.sync({ force: true });
+  await CateringPayment.sync({ force: true });
+
+  console.log("🚀 Starting catering requests, quotes & payments seeding...");
 
   try {
     // --- 1️⃣ Create or find CategoryTags

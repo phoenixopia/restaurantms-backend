@@ -74,9 +74,9 @@ const { sequelize } = require("../models/index");
       // await require("./catering_seeder")();
       // console.log("✅ Catering seeded");
 
-      // console.log("Seeding request, tag, quote and payment seeded");
-      // await require("./catering_requests_and_payments_seed")();
-      // console.log("✅ seeding catering request, tag, quote and payment seeded");
+      console.log("Seeding request, tag, quote and payment seeded");
+      await require("./catering_requests_and_payments_seed")();
+      console.log("✅ seeding catering request, tag, quote and payment seeded");
 
       // console.log("Seeding videos...");
       // await require("./video_seeders")();
