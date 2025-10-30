@@ -13,7 +13,7 @@ const {
 module.exports = async () => {
   
   const now = new Date();
-   console.log("🚀 Starting catering, requests, quotes & payments syncing...");
+   console.log("🚀 Starting catering requests, quotes & payments syncing...");
 
   await CateringRequest.sync({ force: true });
   await CateringQuote.sync({ force: true });
