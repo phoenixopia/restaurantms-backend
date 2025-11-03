@@ -189,6 +189,8 @@ const SubscriptionService = {
   },
 
   async listSubscriptions(user, query) {
+    const { Op, fn, col, where: sequelizeWhere } = require("sequelize");
+  
     const {
       status,
       billing_cycle,
@@ -198,52 +200,51 @@ const SubscriptionService = {
       sort = "createdAt",
       order = "DESC",
     } = query;
-
+  
     const where = {};
     const restaurantWhere = {};
     const planWhere = {};
-
-    if (status) {
-      where.status = status;
-    }
-
-    if (user.restaurant_id) {
-      where.restaurant_id = user.restaurant_id;
-    }
-
-    if (billing_cycle) {
-      planWhere.billing_cycle = billing_cycle;
-    }
-
+  
+    if (status) where.status = status;
+    if (user.restaurant_id) where.restaurant_id = user.restaurant_id;
+    if (billing_cycle) planWhere.billing_cycle = billing_cycle;
+  
     if (restaurant_name) {
-      restaurantWhere.restaurant_name = sequelizeWhere(
-        fn("LOWER", col("restaurant.restaurant_name")),
-        "LIKE",
-        `%${restaurant_name.toLowerCase()}%`
-      );
+      restaurantWhere.restaurant_name = {
+        [Op.iLike]: `%${restaurant_name}%`
+      };
     }
-
+  
     const offset = (page - 1) * limit;
-
+  
+    let orderArray = [];
+    if (sort === "restaurant_name") {
+      orderArray = [[{ model: Restaurant }, "restaurant_name", order]];
+    } else if (sort === "plan_name") {
+      orderArray = [[{ model: Plan }, "name", order]];
+    } else {
+      orderArray = [[sort, order.toUpperCase()]];
+    }
+  
     const result = await Subscription.findAndCountAll({
       where,
       offset,
       limit: Number(limit),
-      order: [[sort, order.toUpperCase() === "ASC" ? "ASC" : "DESC"]],
+      order: orderArray,
       include: [
         {
           model: Restaurant,
           attributes: ["restaurant_name"],
-          where: restaurantWhere,
+          where: Object.keys(restaurantWhere).length ? restaurantWhere : undefined,
         },
         {
           model: Plan,
           attributes: ["name", "price", "billing_cycle"],
-          where: planWhere,
+          where: Object.keys(planWhere).length ? planWhere : undefined,
         },
       ],
     });
-
+  
     const formattedData = result.rows.map((sub) => ({
       id: sub.id,
       restaurant_name: sub.Restaurant?.restaurant_name || null,
@@ -256,7 +257,7 @@ const SubscriptionService = {
       status: sub.status,
       createdAt: sub.createdAt,
     }));
-
+  
     return {
       currentPage: +page,
       totalPages: Math.ceil(result.count / limit),
@@ -264,6 +265,8 @@ const SubscriptionService = {
       data: formattedData,
     };
   },
+
+
 
   async getFilteredSubscriptions(filters = {}, user = {}, options = {}) {
     const where = {};

@@ -1,4 +1,4 @@
-const { Plan, PlanLimit, sequelize } = require("../../models");
+const { Plan, PlanLimit,Subscription, sequelize } = require("../../models");
 const { Op } = require("sequelize");
 const { capitalizeFirstLetter } = require("../../utils/capitalizeFirstLetter");
 const throwError = require("../../utils/throwError");
@@ -367,14 +367,21 @@ const PlanService = {
   async update(id, updates, user) {
     const t = await sequelize.transaction();
     try {
+     
       const plan = await Plan.findByPk(id, { transaction: t });
       if (!plan) throwError("Plan not found", 404);
-
+  
+     
+      const oldData = plan.toJSON();
+  
+    
       const updatedName = updates.name
         ? capitalizeFirstLetter(updates.name)
         : plan.name;
+  
       const updatedCycle = updates.billing_cycle || plan.billing_cycle;
-
+  
+    
       const duplicate = await Plan.findOne({
         where: {
           id: { [Op.ne]: id },
@@ -383,10 +390,12 @@ const PlanService = {
         },
         transaction: t,
       });
-
-      if (duplicate)
+  
+      if (duplicate) {
         throwError("Another plan with same name and billing cycle exists", 400);
-
+      }
+  
+     
       await plan.update(
         {
           name: updatedName,
@@ -395,18 +404,21 @@ const PlanService = {
         },
         { transaction: t }
       );
+  
 
       if (Array.isArray(updates.plan_limits)) {
         for (const limitUpdate of updates.plan_limits) {
           if (limitUpdate.id) {
+        
             const existingLimit = await PlanLimit.findOne({
               where: { id: limitUpdate.id, plan_id: id },
               transaction: t,
             });
-
-            if (!existingLimit)
+  
+            if (!existingLimit) {
               throwError(`Plan limit with id ${limitUpdate.id} not found`, 404);
-
+            }
+  
             await existingLimit.update(
               {
                 key: limitUpdate.key ?? existingLimit.key,
@@ -423,12 +435,17 @@ const PlanService = {
               { transaction: t }
             );
           } else {
+        
+            if (!limitUpdate.key || limitUpdate.value === undefined) {
+              throwError("New plan limits must include 'key' and 'value'", 400);
+            }
+  
             await PlanLimit.create(
               {
                 plan_id: id,
                 key: limitUpdate.key,
                 value: String(limitUpdate.value),
-                data_type: limitUpdate.data_type,
+                data_type: limitUpdate.data_type || "number",
                 description: limitUpdate.description || null,
               },
               { transaction: t }
@@ -436,21 +453,39 @@ const PlanService = {
           }
         }
       }
-
+  
+    
+      const changes = {};
+  
+      if (oldData.name !== updatedName)
+        changes.name = { from: oldData.name, to: updatedName };
+      if (oldData.billing_cycle !== updatedCycle)
+        changes.billing_cycle = { from: oldData.billing_cycle, to: updatedCycle };
+      if (updates.price !== undefined && oldData.price !== updates.price)
+        changes.price = { from: oldData.price, to: updates.price };
+  
+  
+  
       await logActivity({
         user_id: user.id,
         module: "Plan",
         action: "Update",
-        details: { before: oldData, after: plan.toJSON() },
+        details: {
+          plan_id: id,
+          changes: Object.keys(changes).length > 0 ? changes : "No changes",
+          before: oldData,
+          after: plan.toJSON(),
+        },
         transaction: t,
       });
+  
 
       await t.commit();
+  
 
       await SendNotification.sendPlanNotification(
         "Plan Updated",
-        `The plan "${plan.name}" has been updated
-        `,
+        `The plan "${updatedName}" has been updated.`,
         user.id
       );
 
@@ -467,22 +502,23 @@ const PlanService = {
           },
         ],
       });
-
+  
       const planJson = updatedPlan.toJSON();
+  
 
       const transformedLimits = planJson.PlanLimits.map((limit) => {
         let castValue;
         if (limit.data_type === "number") {
           castValue = Number(limit.value);
         } else if (limit.data_type === "boolean") {
-          const v = limit.value;
+          const v = limit.value.toLowerCase();
           if (v === "true" || v === "1") castValue = true;
           else if (v === "false" || v === "0") castValue = false;
-          else castValue = Boolean(v);
+          else castValue = Boolean(limit.value);
         } else {
           castValue = limit.value;
         }
-
+  
         return {
           id: limit.id,
           plan_id: limit.plan_id,
@@ -492,6 +528,7 @@ const PlanService = {
           description: limit.description,
         };
       });
+  
 
       return {
         ...planJson,
@@ -503,32 +540,78 @@ const PlanService = {
     }
   },
 
+
   async delete(id, user) {
     const t = await sequelize.transaction();
     try {
       const plan = await Plan.findByPk(id, { transaction: t });
       if (!plan) throwError("Plan not found", 404);
-
+  
       const oldData = plan.toJSON();
-
+  
+      const subscriptionCount = await Subscription.count({
+        where: { plan_id: id },
+        transaction: t,
+      });
+  
+      if (subscriptionCount > 0) {
+        await t.rollback();
+        return {
+          success: false,
+          message: `Cannot delete plan "${plan.name}". It is used by ${subscriptionCount} subscription(s).`,
+          code: "PLAN_IN_USE",
+        };
+      }
+  
       await PlanLimit.destroy({ where: { plan_id: id }, transaction: t });
       await plan.destroy({ transaction: t });
-
+  
       await logActivity({
         user_id: user.id,
         module: "Plan",
         action: "Delete",
-        details: oldData,
+        details: { ...oldData, note: "Plan deleted (no subscriptions)" },
         transaction: t,
       });
-
+  
       await t.commit();
+  
+      // Return minimal
       return { message: "Plan deleted successfully" };
+  
     } catch (err) {
       await t.rollback();
       throw err;
     }
   },
+
+
+  // async delete(id, user) {
+  //   const t = await sequelize.transaction();
+  //   try {
+  //     const plan = await Plan.findByPk(id, { transaction: t });
+  //     if (!plan) throwError("Plan not found", 404);
+
+  //     const oldData = plan.toJSON();
+
+  //     await PlanLimit.destroy({ where: { plan_id: id }, transaction: t });
+  //     await plan.destroy({ transaction: t });
+
+  //     await logActivity({
+  //       user_id: user.id,
+  //       module: "Plan",
+  //       action: "Delete",
+  //       details: oldData,
+  //       transaction: t,
+  //     });
+
+  //     await t.commit();
+  //     return { message: "Plan deleted successfully" };
+  //   } catch (err) {
+  //     await t.rollback();
+  //     throw err;
+  //   }
+  // },
 
   async listAllPlanLimit({ page = 1, limit = 10 }) {
     const offset = (page - 1) * limit;

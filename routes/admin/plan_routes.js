@@ -7,6 +7,8 @@ const {
   updatePlanValidator,
   createAndAssignPlanLimitValidator,
 } = require("../../validators/plan_validator");
+// const PlanService = require('../../services/admin/plan_service');
+
 const validateRequest = require("../../middleware/validateRequest");
 
 const router = express.Router();
@@ -47,6 +49,31 @@ router.delete(
   authorize("super_admin"),
   PlanController.deletePlan
 );
+
+// router.delete('/delete-plan/:id', async (req, res) => {
+//   try {
+//     const result = await PlanService.delete(req.params.id, req.user);
+
+//     if (result.success === false) {
+//       return res.status(409).json(result); // 409 Conflict
+//     }
+
+//     res.json({
+//       success: true,
+//       message: result.message,
+//       data: null
+//     });
+
+//   } catch (err) {
+//     res.status(err.status || 500).json({
+//       success: false,
+//       message: err.message || "Internal server error",
+//       errors: err.errors || null
+//     });
+//   }
+// });
+
+
 
 // ---------- PLAN LIMIT ROUTES ----------
 
