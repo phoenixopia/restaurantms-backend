@@ -128,7 +128,7 @@ const RestaurantService = {
 
     const startDate = getDateFilterRange(filters.createdFilter);
     if (startDate) {
-      where.createdAt = { [Op.gte]: startDate };
+      where.created_at = { [Op.gte]: startDate };
     }
 
     if (filters.subscriptionStatus) {
@@ -141,7 +141,7 @@ const RestaurantService = {
 
     const { count, rows } = await Restaurant.findAndCountAll({
       where,
-      attributes: { exclude: ["createdAt", "updatedAt"] },
+      attributes: { exclude: ["created_at", "updatedAt"] },
       include: [
         {
           model: SystemSetting,
@@ -169,7 +169,7 @@ const RestaurantService = {
           ],
           separate: true,
           limit: 1,
-          order: [["createdAt", "DESC"]],
+          order: [["created_at", "DESC"]],
         },
         {
           model: ContactInfo,
@@ -185,7 +185,7 @@ const RestaurantService = {
       ],
       offset,
       limit,
-      order: [["createdAt", "DESC"]],
+      order: [["created_at", "DESC"]],
       distinct: true,
     });
 

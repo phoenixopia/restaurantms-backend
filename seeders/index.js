@@ -4,15 +4,15 @@ const { sequelize } = require("../models/index");
   try {
       console.log("Starting database seeding...");
 
-      // console.log("⏳ Dropping & syncing all tables...");
-      // // Let Sequelize handle model dependencies & circular FKs
-      // await sequelize.sync({ force: true });
-      // console.log("✅ All tables ready");
+      console.log("⏳ Dropping & syncing all tables...");
+      // Let Sequelize handle model dependencies & circular FKs
+      await sequelize.sync({ force: true });
+      console.log("✅ All tables ready");
 
-      // // Begin seeding
-      // console.log("Seeding roles...");
-      // await require("./seed_roles")();
-      // console.log("✅ Roles seeded");
+      // Begin seeding
+      console.log("Seeding roles...");
+      await require("./seed_roles")();
+      console.log("✅ Roles seeded");
 
       // console.log("Seeding category tags...");
       // await require("./seed_category_tag")();
