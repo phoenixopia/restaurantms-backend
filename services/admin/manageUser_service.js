@@ -714,8 +714,8 @@ async update(id, data, updaterId) {
   const t = await sequelize.transaction();
 
   try {
-    // Extract allowed fields
-    const { role_id, first_name, last_name,email,phone_number } = data;
+    // 1. Extract allowed fields
+    const { role_id, first_name, last_name,email } = data;
 
    300
     if (!role_id) {
@@ -726,7 +726,7 @@ async update(id, data, updaterId) {
     const user = await User.findByPk(id, {
       transaction: t,
       include: [
-        { model: Role, attributes: ['id', 'name'] }, // removed total_permission
+        { model: Role, attributes: ['id', 'name'] }, 
         { model: RoleTag, attributes: ['id', 'name'] },
       ],
     });
@@ -738,7 +738,7 @@ async update(id, data, updaterId) {
       throwError("You are not authorized to update this staff member", 403);
     }
 
-    // 4. Validate role belongs to updater's restaurant
+    // Validate role belongs to updater's restaurant
     const role = await Role.findOne({
       where: { id: role_id, created_by: updaterId },
       transaction: t,
@@ -748,15 +748,14 @@ async update(id, data, updaterId) {
       throwError("Role not found or does not belong to your restaurant", 404);
     }
 
-    // 5. Update allowed fields
+    //  Update allowed fields
     user.role_id = role.id;
     user.role_tag_id = role.role_tag_id;
 
     // Only update name fields if provided
     if (first_name !== undefined) user.first_name = first_name;
     if (last_name !== undefined) user.last_name = last_name;
-    if(email !== undefined) user.email = email;
-    if(phone_number !== undefined) user.phone_number = phone_number;
+    if(email !==undefined) user.email =email;
 
     await user.save({ transaction: t });
 
