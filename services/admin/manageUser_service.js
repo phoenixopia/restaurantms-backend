@@ -710,18 +710,18 @@ const UserService = {
     }
   },
 
-async update(id, data, updaterId) {
+
+  async update(id, data, updaterId) {
   const t = await sequelize.transaction();
 
   try {
-
     const {
-      role_id,          
+      role_id,      
       first_name,
       last_name,
       email,
       phone_number,
-      creatorMode,     
+      creatorMode,   
     } = data;
 
    
@@ -735,42 +735,48 @@ async update(id, data, updaterId) {
 
     if (!user) throwError('User not found', 404);
 
+ 
     if (user.created_by !== updaterId) {
       throwError('You are not authorized to update this staff member', 403);
     }
 
-
+ 
     if (role_id) {
       const role = await Role.findOne({
         where: { id: role_id, created_by: updaterId },
         transaction: t,
       });
-
       if (!role) {
         throwError('Role not found or does not belong to your restaurant', 404);
       }
-
       user.role_id = role.id;
       user.role_tag_id = role.role_tag_id;
     }
- 
-    if (first_name !== undefined) user.first_name = first_name;
-    if (last_name !== undefined) user.last_name = last_name;
-    if (email !== undefined) user.email = email;
-    if (phone_number !== undefined) user.phone_number = phone_number;
-
 
     
-    if (creatorMode === 'email' && phone_number !== undefined) {
-      user.phone_number = null;             
-    } else if (creatorMode === 'phone' && email !== undefined) {
-      user.email = null;                      
+    if (creatorMode === 'email') {
+      user.phone_number = null;           
+      if (email !== undefined) user.email = email;
+    } 
+    else if (creatorMode === 'phone') {
+      user.email = null;                
+      if (phone_number !== undefined) user.phone_number = phone_number;
+    } 
+    else {
+     
+      if (email !== undefined) user.email = email;
+      if (phone_number !== undefined) user.phone_number = phone_number;
     }
 
+
+    if (first_name !== undefined) user.first_name = first_name;
+    if (last_name !== undefined) user.last_name = last_name;
+
+ 
     await user.save({ transaction: t });
     await t.commit();
 
- 
+
     return {
       success: true,
       message: 'Staff updated successfully',
@@ -788,9 +794,11 @@ async update(id, data, updaterId) {
     };
   } catch (err) {
     await t.rollback();
-    throw err;           
+    throw err;
   }
 },
+
+
   
 };
 
