@@ -714,7 +714,7 @@ async update(id, data, updaterId) {
   const t = await sequelize.transaction();
 
   try {
-    // 1. Extract allowed fields
+    // Extract allowed fields
     const { role_id, first_name, last_name,email } = data;
 
    300
@@ -722,7 +722,7 @@ async update(id, data, updaterId) {
       throwError("role_id is required", 400);
     }
 
-    // 2. Find the user (staff)
+    // Find the user (staff)
     const user = await User.findByPk(id, {
       transaction: t,
       include: [
@@ -733,7 +733,7 @@ async update(id, data, updaterId) {
 
     if (!user) throwError("User not found", 404);
 
-    // 3. Authorization: only creator can update
+    //  Authorization: only creator can update
     if (user.created_by !== updaterId) {
       throwError("You are not authorized to update this staff member", 403);
     }
@@ -759,10 +759,10 @@ async update(id, data, updaterId) {
 
     await user.save({ transaction: t });
 
-    // 6. Commit
+    // Commit
     await t.commit();
 
-    // 7. Return updated user
+    // Return updated user
     const responseData = {
       id: user.id,
       email: user.email,
