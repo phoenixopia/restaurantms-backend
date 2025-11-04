@@ -80,7 +80,7 @@ router.post(
 router.patch(
   "/update-staff/:id",
   protect("user"),
-  authorize("restaurant_admin"),
+  authorize("restaurant_admin","super_admin"),
   UserController.updateStaff
 );
 

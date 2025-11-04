@@ -678,37 +678,121 @@ const UserService = {
     }
   },
 
-  async updateStaff(id, data, updaterId) {
-    const t = await sequelize.transaction();
-    try {
-      // update only role_id,
-      const { role_id } = data;
-      if (!role_id) throwError("No fields to update", 400);
+  // async updateStaff(id, data, updaterId) {
+  //   const t = await sequelize.transaction();
+  //   try {
+  //     // update only role_id,
+  //     const { role_id } = data;
+  //     if (!role_id) throwError("No fields to update", 400);
 
-      const user = await User.findByPk(id, { transaction: t });
-      if (!user) throwError("User not found", 404);
+  //     const user = await User.findByPk(id, { transaction: t });
+  //     if (!user) throwError("User not found", 404);
 
-      if (user.created_by !== updaterId) {
-        throwError("You are not authorized to update this user", 403);
-      }
+  //     if (user.created_by !== updaterId) {
+  //       throwError("You are not authorized to update this user", 403);
+  //     }
 
-      const role = await Role.findOne({
-        where: { id: role_id, created_by: updaterId },
-        transaction: t,
-      });
-      if (!role)
-        throwError("Role not found or does not belong to your restaurant", 404);
-      user.role_id = role.id;
-      user.role_tag_id = role.role_tag_id;
+  //     const role = await Role.findOne({
+  //       where: { id: role_id, created_by: updaterId },
+  //       transaction: t,
+  //     });
+  //     if (!role)
+  //       throwError("Role not found or does not belong to your restaurant", 404);
+  //     user.role_id = role.id;
+  //     user.role_tag_id = role.role_tag_id;
 
-      await user.save({ transaction: t });
-      await t.commit();
-      return user;
-    } catch (err) {
-      await t.rollback();
-      throw err;
+  //     await user.save({ transaction: t });
+  //     await t.commit();
+  //     return user;
+  //   } catch (err) {
+  //     await t.rollback();
+  //     throw err;
+  //   }
+  // }
+  
+async updateStaff(id, data, updaterId) {
+  const t = await sequelize.transaction();
+
+  try {
+    // Extract allowed fields
+    const { role_id, first_name, last_name,email,phone_number } = data;
+
+   300
+    if (!role_id) {
+      throwError("role_id is required", 400);
     }
-  },
+
+    // 2. Find the user (staff)
+    const user = await User.findByPk(id, {
+      transaction: t,
+      include: [
+        { model: Role, attributes: ['id', 'name'] }, // removed total_permission
+        { model: RoleTag, attributes: ['id', 'name'] },
+      ],
+    });
+
+    if (!user) throwError("User not found", 404);
+
+    // 3. Authorization: only creator can update
+    if (user.created_by !== updaterId) {
+      throwError("You are not authorized to update this staff member", 403);
+    }
+
+    // 4. Validate role belongs to updater's restaurant
+    const role = await Role.findOne({
+      where: { id: role_id, created_by: updaterId },
+      transaction: t,
+    });
+
+    if (!role) {
+      throwError("Role not found or does not belong to your restaurant", 404);
+    }
+
+    // 5. Update allowed fields
+    user.role_id = role.id;
+    user.role_tag_id = role.role_tag_id;
+
+    // Only update name fields if provided
+    if (first_name !== undefined) user.first_name = first_name;
+    if (last_name !== undefined) user.last_name = last_name;
+    if(email !== undefined) user.email = email;
+    if(phone_number !== undefined) user.phone_number = phone_number;
+
+    await user.save({ transaction: t });
+
+    // 6. Commit
+    await t.commit();
+
+    // 7. Return updated user
+    const responseData = {
+      id: user.id,
+      email: user.email,
+      first_name: user.first_name,
+      last_name: user.last_name,
+      phone_number: user.phone_number,
+      profile_picture: user.profile_picture,
+      is_active: user.is_active,
+      Role: {
+        id: user.Role.id,
+        name: user.Role.name,
+      },
+      RoleTag: {
+        id: user.RoleTag.id,
+        name: user.RoleTag.name,
+      },
+    };
+
+    return {
+      success: true,
+      message: "Staff updated successfully",
+      data: responseData,
+    };
+
+  } catch (err) {
+    await t.rollback();
+    throw err;
+  }
+},
 };
 
 module.exports = UserService;
