@@ -364,183 +364,148 @@ const PlanService = {
     }
   },
 
-  async update(id, updates, user) {
-    const t = await sequelize.transaction();
-    try {
-     
-      const plan = await Plan.findByPk(id, { transaction: t });
-      if (!plan) throwError("Plan not found", 404);
-  
-     
-      const oldData = plan.toJSON();
-  
-    
-      const updatedName = updates.name
-        ? capitalizeFirstLetter(updates.name)
-        : plan.name;
-  
-      const updatedCycle = updates.billing_cycle || plan.billing_cycle;
-  
-    
-      const duplicate = await Plan.findOne({
-        where: {
-          id: { [Op.ne]: id },
-          name: updatedName,
-          billing_cycle: updatedCycle,
-        },
+
+async update(id, updates, user) {
+  const t = await sequelize.transaction();
+  try {
+    // Load plan
+    const plan = await Plan.findByPk(id, { transaction: t });
+    if (!plan) throwError("Plan not found", 404);
+
+    const oldData = plan.toJSON();
+
+    // Track changes
+    let planChanged = false;
+    let limitsChanged = false;
+    const changes = {};
+
+    // Update plan fields (only if changed)
+    if (updates.name !== undefined) {
+      const newName = capitalizeFirstLetter(updates.name);
+      if (newName !== plan.name) {
+        changes.name = { from: plan.name, to: newName };
+        plan.name = newName;
+        planChanged = true;
+      }
+    }
+
+    if (updates.billing_cycle !== undefined && updates.billing_cycle !== plan.billing_cycle) {
+      changes.billing_cycle = { from: plan.billing_cycle, to: updates.billing_cycle };
+      plan.billing_cycle = updates.billing_cycle;
+      planChanged = true;
+    }
+
+    if (updates.price !== undefined && updates.price !== plan.price) {
+      changes.price = { from: plan.price, to: updates.price };
+      plan.price = updates.price;
+      planChanged = true;
+    }
+
+    // OVERRIDE PLAN LIMITS: Delete All + Insert New (if sent)
+    if (updates.plan_limits !== undefined) {
+      // Delete ALL existing limits
+      await PlanLimit.destroy({
+        where: { plan_id: id },
         transaction: t,
       });
-  
-      if (duplicate) {
-        throwError("Another plan with same name and billing cycle exists", 400);
-      }
-  
-     
-      await plan.update(
-        {
-          name: updatedName,
-          billing_cycle: updatedCycle,
-          price: updates.price ?? plan.price,
-        },
-        { transaction: t }
-      );
-  
 
-      if (Array.isArray(updates.plan_limits)) {
-        for (const limitUpdate of updates.plan_limits) {
-          if (limitUpdate.id) {
-        
-            const existingLimit = await PlanLimit.findOne({
-              where: { id: limitUpdate.id, plan_id: id },
-              transaction: t,
-            });
-  
-            if (!existingLimit) {
-              throwError(`Plan limit with id ${limitUpdate.id} not found`, 404);
-            }
-  
-            await existingLimit.update(
-              {
-                key: limitUpdate.key ?? existingLimit.key,
-                value:
-                  limitUpdate.value !== undefined
-                    ? String(limitUpdate.value)
-                    : existingLimit.value,
-                data_type: limitUpdate.data_type ?? existingLimit.data_type,
-                description:
-                  limitUpdate.description !== undefined
-                    ? limitUpdate.description
-                    : existingLimit.description,
-              },
-              { transaction: t }
-            );
-          } else {
-        
-            if (!limitUpdate.key || limitUpdate.value === undefined) {
-              throwError("New plan limits must include 'key' and 'value'", 400);
-            }
-  
-            await PlanLimit.create(
-              {
-                plan_id: id,
-                key: limitUpdate.key,
-                value: String(limitUpdate.value),
-                data_type: limitUpdate.data_type || "number",
-                description: limitUpdate.description || null,
-              },
-              { transaction: t }
-            );
+      // Insert new ones (if array and has items)
+      if (Array.isArray(updates.plan_limits) && updates.plan_limits.length > 0) {
+        const newLimits = updates.plan_limits.map((limit, idx) => {
+          if (!limit.key || limit.value === undefined) {
+            throwError(`plan_limits[${idx}] must have 'key' and 'value'`, 400);
           }
-        }
+          return {
+            plan_id: id,
+            key: limit.key,
+            value: String(limit.value),
+            data_type: limit.data_type || 'number',
+            description: limit.description ?? null,
+          };
+        });
+
+        await PlanLimit.bulkCreate(newLimits, { transaction: t });
       }
-  
-    
-      const changes = {};
-  
-      if (oldData.name !== updatedName)
-        changes.name = { from: oldData.name, to: updatedName };
-      if (oldData.billing_cycle !== updatedCycle)
-        changes.billing_cycle = { from: oldData.billing_cycle, to: updatedCycle };
-      if (updates.price !== undefined && oldData.price !== updates.price)
-        changes.price = { from: oldData.price, to: updates.price };
-  
-  
-  
+
+      limitsChanged = true;
+    }
+
+    // Save plan if changed
+    if (planChanged) {
+      await plan.save({ transaction: t });
+    }
+
+    // Log & Notify only if real change
+    const anyChange = planChanged || limitsChanged;
+
+    if (anyChange) {
       await logActivity({
         user_id: user.id,
         module: "Plan",
         action: "Update",
         details: {
           plan_id: id,
-          changes: Object.keys(changes).length > 0 ? changes : "No changes",
-          before: oldData,
-          after: plan.toJSON(),
+          changes: Object.keys(changes).length ? changes : null,
+          limits_overridden: limitsChanged,
         },
         transaction: t,
       });
-  
-
-      await t.commit();
-  
 
       await SendNotification.sendPlanNotification(
         "Plan Updated",
-        `The plan "${updatedName}" has been updated.`,
+        `The plan "${plan.name}" has been updated.`,
         user.id
       );
-
-      const updatedPlan = await Plan.findByPk(id, {
-        attributes: {
-          exclude: ["created_at", "updated_at", "createdAt", "updatedAt"],
-        },
-        include: [
-          {
-            model: PlanLimit,
-            attributes: {
-              exclude: ["created_at", "updated_at", "createdAt", "updatedAt"],
-            },
-          },
-        ],
-      });
-  
-      const planJson = updatedPlan.toJSON();
-  
-
-      const transformedLimits = planJson.PlanLimits.map((limit) => {
-        let castValue;
-        if (limit.data_type === "number") {
-          castValue = Number(limit.value);
-        } else if (limit.data_type === "boolean") {
-          const v = limit.value.toLowerCase();
-          if (v === "true" || v === "1") castValue = true;
-          else if (v === "false" || v === "0") castValue = false;
-          else castValue = Boolean(limit.value);
-        } else {
-          castValue = limit.value;
-        }
-  
-        return {
-          id: limit.id,
-          plan_id: limit.plan_id,
-          key: limit.key,
-          value: castValue,
-          data_type: limit.data_type,
-          description: limit.description,
-        };
-      });
-  
-
-      return {
-        ...planJson,
-        PlanLimits: transformedLimits,
-      };
-    } catch (err) {
-      await t.rollback();
-      throw err;
     }
-  },
+
+    // Commit
+    await t.commit();
+
+    // Return fresh data
+    const freshPlan = await Plan.findByPk(id, {
+      attributes: { exclude: ["created_at", "updated_at", "createdAt", "updatedAt"] },
+      include: [{
+        model: PlanLimit,
+        attributes: { exclude: ["created_at", "updated_at", "createdAt", "updatedAt"] },
+      }],
+    });
+
+    const json = freshPlan.toJSON();
+
+    const castValue = (type, val) => {
+      switch (type) {
+        case "number": return Number(val);
+        case "boolean": return ['true', '1', true].includes(val);
+        default: return val;
+      }
+    };
+
+    const transformedLimits = (json.PlanLimits || []).map(l => ({
+      id: l.id,
+      plan_id: l.plan_id,
+      key: l.key,
+      value: castValue(l.data_type, l.value),
+      data_type: l.data_type,
+      description: l.description,
+    }));
+
+    return {
+      ...json,
+      PlanLimits: transformedLimits,
+    };
+
+  } catch (err) {
+    await t.rollback();
+    if (err.name === 'SequelizeUniqueConstraintError') {
+      throwError("Another plan with same name and billing cycle exists", 400);
+    }
+    throw err;
+  }
+},
 
 
+   
+  
   async delete(id, user) {
     const t = await sequelize.transaction();
     try {
