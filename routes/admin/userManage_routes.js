@@ -76,11 +76,17 @@ router.post(
   authorize("restaurant_admin"),
   UserController.removeBranchManager
 );
+router.patch(
+  "/update/:id",
+  protect("user"),
+  authorize("super_admin"),
+  UserController.update
+);
 
 router.patch(
   "/update-staff/:id",
   protect("user"),
-  authorize("restaurant_admin","super_admin"),
+  authorize("restaurant_admin"),
   UserController.updateStaff
 );
 

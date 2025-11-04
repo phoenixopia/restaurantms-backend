@@ -73,3 +73,12 @@ exports.updateStaff = asyncHandler(async (req, res) => {
   );
   return success(res, "Staff user updated successfully", user);
 });
+
+exports.update = asyncHandler(async (req, res) => {
+  const user = await UserService.update(
+    req.params.id,
+    req.body,
+    req.user.id
+  );
+  return success(res, "Staff user updated successfully", user);
+});
