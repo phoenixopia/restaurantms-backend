@@ -503,80 +503,51 @@ async update(id, updates, user) {
   }
 },
 
+async delete(id, user) {
+  const t = await sequelize.transaction();
+  try {
+    const plan = await Plan.findByPk(id, { transaction: t });
+    if (!plan) throwError("Plan not found", 404);
 
-   
-  
-  async delete(id, user) {
-    const t = await sequelize.transaction();
-    try {
-      const plan = await Plan.findByPk(id, { transaction: t });
-      if (!plan) throwError("Plan not found", 404);
-  
-      const oldData = plan.toJSON();
-  
-      const subscriptionCount = await Subscription.count({
-        where: { plan_id: id },
-        transaction: t,
-      });
-  
-      if (subscriptionCount > 0) {
-        await t.rollback();
-        return {
-          success: false,
-          message: `Cannot delete plan "${plan.name}". It is used by ${subscriptionCount} subscription(s).`,
-          code: "PLAN_IN_USE",
-        };
-      }
-  
-      await PlanLimit.destroy({ where: { plan_id: id }, transaction: t });
-      await plan.destroy({ transaction: t });
-  
-      await logActivity({
-        user_id: user.id,
-        module: "Plan",
-        action: "Delete",
-        details: { ...oldData, note: "Plan deleted (no subscriptions)" },
-        transaction: t,
-      });
-  
-      await t.commit();
-  
-      // Return minimal
-      return { message: "Plan deleted successfully" };
-  
-    } catch (err) {
-      await t.rollback();
-      throw err;
+    const oldData = plan.toJSON();
+
+    const subscriptionCount = await Subscription.count({
+      where: { plan_id: id },
+      transaction: t,
+    });
+
+    if (subscriptionCount > 0) {
+      throwError(
+        `Cannot delete plan "${plan.name}". It is used by ${subscriptionCount} active subscription(s).`,
+        409
+      );
     }
-  },
 
+    await PlanLimit.destroy({ where: { plan_id: id }, transaction: t });
+    await plan.destroy({ transaction: t });
 
-  // async delete(id, user) {
-  //   const t = await sequelize.transaction();
-  //   try {
-  //     const plan = await Plan.findByPk(id, { transaction: t });
-  //     if (!plan) throwError("Plan not found", 404);
+    await logActivity({
+      user_id: user.id,
+      module: "Plan",
+      action: "Delete",
+      details: { ...oldData, note: "Plan deleted" },
+      transaction: t,
+    });
 
-  //     const oldData = plan.toJSON();
+    await t.commit();
 
-  //     await PlanLimit.destroy({ where: { plan_id: id }, transaction: t });
-  //     await plan.destroy({ transaction: t });
+    return {
+      success: true,
+      message: "Plan deleted successfully",
+      data: null,
+    };
 
-  //     await logActivity({
-  //       user_id: user.id,
-  //       module: "Plan",
-  //       action: "Delete",
-  //       details: oldData,
-  //       transaction: t,
-  //     });
+  } catch (err) {
+    await t.rollback();
+    throw err;
+  }
+},
 
-  //     await t.commit();
-  //     return { message: "Plan deleted successfully" };
-  //   } catch (err) {
-  //     await t.rollback();
-  //     throw err;
-  //   }
-  // },
 
   async listAllPlanLimit({ page = 1, limit = 10 }) {
     const offset = (page - 1) * limit;
