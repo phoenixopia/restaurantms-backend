@@ -24,7 +24,8 @@ exports.getTicketById = asyncHandler(async (req, res) => {
 exports.updateTicketStatus = asyncHandler(async (req, res) => {
   const ticket = await TicketService.updateTicketStatus(
     req.params.id,
-    req.body
+    req.body,
+    req.user
   );
   return success(res, "Ticket status updated successfully", ticket);
 });
