@@ -107,6 +107,13 @@ async getAllVideosForAdmin(user, filters = {}) {
         include: [{ model: MenuCategory, attributes: ['id', 'name'] }],
       },
       { model: Branch, attributes: ['id', 'name'] },
+  {
+  model: Restaurant,
+  attributes: ['id', 'restaurant_name'], // ← match your DB column
+  where: filters.restaurant_name
+    ? { restaurant_name: { [Op.iLike]: `%${filters.restaurant_name}%` } }
+    : undefined,
+},
     ];
 
     const attributes = {
@@ -140,6 +147,8 @@ async getAllVideosForAdmin(user, filters = {}) {
         'MenuItem.id',
         'MenuItem->MenuCategory.id',
         'Branch.id',
+        'Restaurant.id',
+        'Restaurant.restaurant_name',
       ],
       order,
       limit,
