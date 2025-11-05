@@ -51,7 +51,7 @@ const VIDEO_UPLOAD_FOLDER = "videos";
 /* --------------------------- Video Service ----------------------------- */
 
 const VideoService = {
-      // Get all videos for admin side with filters
+      
 async getAllVideosForAdmin(user, filters = {}) {
     const {
       page = 1,
