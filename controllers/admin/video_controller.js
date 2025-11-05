@@ -6,14 +6,35 @@ const logActivity = require("../../utils/logActivity");
 // ==================== SUPER ADMIN CONTROLLERS ====================
 
 // Get all videos (admin)
+// exports.getAllVideosForAdmin = asyncHandler(async (req, res) => {
+//   const { page, limit, status, title, restaurant_name } = req.query;
+
+//   const filters = { page, limit, status, title, restaurant_name };
+
+//   const videos = await VideoService.getAllVideos(filters);
+
+//   return success(res, "Videos fetched successfully", videos);
+// });
+
 exports.getAllVideosForAdmin = asyncHandler(async (req, res) => {
-  const { page, limit, status, title, restaurant_name } = req.query;
+  // 1. Safely parse query params
+  const filters = {
+    page: parseInt(req.query.page, 10) || 1,
+    limit: parseInt(req.query.limit, 10) || 10,
+    title: req.query.title?.trim(),
+    status: req.query.status,
+    date: req.query.date,               // daily | weekly | monthly
+    branch_id: req.query.branch_id,
+    menu_item_id: req.query.menu_item_id,
+    sortBy: req.query.sortBy,
+    sortOrder: req.query.sortOrder?.toUpperCase() === 'ASC' ? 'ASC' : 'DESC',
+    // restaurant_name is NOT used in service → ignore it
+  };
 
-  const filters = { page, limit, status, title, restaurant_name };
+  // 2. Pass logged-in user + filters
+  const result = await VideoService.getAllVideosForAdmin(req.user, filters);
 
-  const videos = await VideoService.getAllVideosForAdmin(filters);
-
-  return success(res, "Videos fetched successfully", videos);
+  return success(res, 'Videos fetched successfully', result);
 });
 
 // Get video system stats overview

@@ -52,116 +52,113 @@ const VIDEO_UPLOAD_FOLDER = "videos";
 
 const VideoService = {
       // Get all videos for admin side with filters
-      async getAllVideos(user, filters) {
-        const {
-          page = 1,
-          limit = 10,
-          title,
-          date,
-          status,
-          branch_id,
-          menu_item_id,
-          sortBy = "createdAt",
-          sortOrder = "DESC",
-        } = filters;
+async getAllVideosForAdmin(user, filters = {}) {
+    const {
+      page = 1,
+      limit = 10,
+      title,
+      date,
+      status,
+      branch_id,
+      menu_item_id,
+      sortBy = 'createdAt',
+      sortOrder = 'DESC',
+    } = filters;
 
-        const offset = (page - 1) * limit;
+    const offset = (page - 1) * limit;
+    const where = {};
 
-        const where = {};
+  
+    if (user.restaurant_id && !user.branch_id) {
+      where.restaurant_id = user.restaurant_id;
+      if (branch_id) where.branch_id = branch_id;
+    } else if (user.branch_id) {
+      where.branch_id = user.branch_id;
+    }
 
-        // scope by restaurant/branch
-        if (user.restaurant_id && !user.branch_id) {
-          where.restaurant_id = user.restaurant_id;
-          if (branch_id) where.branch_id = branch_id;
-        } else if (user.branch_id) {
-          where.branch_id = user.branch_id;
-        }
+    if (title) where.title = { [Op.iLike]: `%${title}%` };
+    if (status) where.status = status;
+    if (menu_item_id) where.menu_item_id = menu_item_id;
 
-        // filters
-        if (title) where.title = { [Op.iLike]: `%${title}%` };
-        if (status) where.status = status;
-        if (menu_item_id) where.menu_item_id = menu_item_id;
 
-        // date filter (use Video.createdAt to avoid ambiguity)
-        if (date === "daily") {
-          where["$Video.createdAt$"] = {
-            [Op.gte]: sequelize.literal(`CURRENT_DATE`),
-          };
-        }
-        if (date === "weekly") {
-          where["$Video.createdAt$"] = {
-            [Op.gte]: sequelize.literal(`CURRENT_DATE - interval '7 days'`),
-          };
-        }
-        if (date === "monthly") {
-          where["$Video.createdAt$"] = {
-            [Op.gte]: sequelize.literal(`CURRENT_DATE - interval '1 month'`),
-          };
-        }
+    if (date === 'daily') {
+      where.created_at = { [Op.gte]: sequelize.literal('CURRENT_DATE') };
+    }
+    if (date === 'weekly') {
+      where.created_at = {
+        [Op.gte]: sequelize.literal("CURRENT_DATE - INTERVAL '7 days'"),
+      };
+    }
+    if (date === 'monthly') {
+      where.created_at = {
+        [Op.gte]: sequelize.literal("CURRENT_DATE - INTERVAL '1 month'"),
+      };
+    }
 
-        // relations
-        const include = [
-          { model: VideoLike, attributes: [] },
-          { model: VideoFavorite, attributes: [] },
-          { model: VideoComment, attributes: [] },
-          { model: VideoView, attributes: [] },
-          {
-            model: MenuItem,
-            attributes: ["id", "name", "description", "unit_price", "image"],
-            include: [{ model: MenuCategory, attributes: ["id", "name"] }],
-          },
-          { model: Branch, attributes: ["id", "name"] },
-        ];
 
-        // counts
-        const attributes = {
-          include: [
-            [fn("COUNT", col("VideoLikes.id")), "like_count"],
-            [fn("COUNT", col("VideoFavorites.id")), "favorite_count"],
-            [fn("COUNT", col("VideoComments.id")), "comment_count"],
-            [fn("COUNT", col("VideoViews.id")), "view_count"],
-          ],
-        };
-
-        // ordering
-        let order = [["Video", "createdAt", "DESC"]];
-        const sortMap = {
-          views: literal('"view_count"'),
-          likes: literal('"like_count"'),
-          favorites: literal('"favorite_count"'),
-          comments: literal('"comment_count"'),
-          createdAt: col("Video.createdAt"),
-        };
-        if (sortMap[sortBy]) order = [[sortMap[sortBy], sortOrder]];
-
-        // fetch videos
-        const videos = await Video.findAll({
-          where,
-          attributes,
-          include,
-          group: [
-            "Video.id",
-            "MenuItem.id",
-            "MenuItem->MenuCategory.id",
-            "Branch.id",
-          ],
-          order,
-          limit,
-          offset,
-          subQuery: false,
-        });
-
-        // total count
-        const total = await Video.count({ where });
-
-        return {
-          total,
-          page: Number(page),
-          limit: Number(limit),
-          total_pages: Math.ceil(total / limit),
-          rows: videos,
-        };
+    const include = [
+      { model: VideoLike, attributes: [] },
+      { model: VideoFavorite, attributes: [] },
+      { model: VideoComment, attributes: [] },
+      { model: VideoView, attributes: [] },
+      {
+        model: MenuItem,
+        attributes: ['id', 'name', 'description', 'unit_price', 'image'],
+        include: [{ model: MenuCategory, attributes: ['id', 'name'] }],
       },
+      { model: Branch, attributes: ['id', 'name'] },
+    ];
+
+    const attributes = {
+      include: [
+        [fn('COUNT', col('VideoLikes.id')), 'like_count'],
+        [fn('COUNT', col('VideoFavorites.id')), 'favorite_count'],
+        [fn('COUNT', col('VideoComments.id')), 'comment_count'],
+        [fn('COUNT', col('VideoViews.id')), 'view_count'],
+      ],
+    };
+
+    const sortMap = {
+      views: literal('"view_count"'),
+      likes: literal('"like_count"'),
+      favorites: literal('"favorite_count"'),
+      comments: literal('"comment_count"'),
+      createdAt: col('Video.created_at'), // ← snake_case fixed
+    };
+
+    const order = sortMap[sortBy]
+      ? [[sortMap[sortBy], sortOrder]]
+      : [[col('Video.created_at'), 'DESC']];
+
+ 
+    const videos = await Video.findAll({
+      where,
+      attributes,
+      include,
+      group: [
+        'Video.id',
+        'MenuItem.id',
+        'MenuItem->MenuCategory.id',
+        'Branch.id',
+      ],
+      order,
+      limit,
+      offset,
+      subQuery: false,
+    });
+
+ 
+    const total = await Video.count({ where });
+
+
+    return {
+      total,
+      page: Number(page),
+      limit: Number(limit),
+      total_pages: Math.ceil(total / limit),
+      rows: videos.map(v => v.get({ plain: true })), // clean Sequelize wrapper
+    };
+  },
 
 
       // Get video stats overview for admin dashboard    
