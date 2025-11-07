@@ -892,6 +892,70 @@ async updateSuperAdminProfile(superAdminId, data, req = null) {
     throw err;
   }
 },
+
+async updateStaffProfile(id, data, req = null) {
+  let t;
+  try {
+    t = await sequelize.transaction();
+
+    const { email, phone_number, password, current_password } = data;
+
+    const user = await User.findByPk(id, {
+      transaction: t,
+      include: [{ model: RoleTag }]
+    });
+
+    if (!user) throwError("Super admin not found", 404);
+
+
+    
+    if (password) {
+      if (!current_password) {
+        throwError("Current password is required to set a new password", 400);
+      }
+      const isMatch = await user.comparePassword(current_password);
+      if (!isMatch) throwError("Current password is incorrect", 401);
+
+      user.password = password; 
+    }
+
+    
+
+    await user.save({ transaction: t });
+    await t.commit();
+    t = null;
+
+    
+    try {
+      await logActivity({
+        user_id: user.id,
+        action: "update_own_profile",
+        description: `uiser updated profile (${password ? 'password, ' : ''}${email ? 'email, ' : ''}${phone_number ? 'phone' : ''})`.replace(/, $/, ''),
+        ip_address: req?.ip || "unknown",
+        user_agent: req?.headers["user-agent"] || "unknown",
+      });
+    } catch (e) {
+      console.error("Activity log failed:", e);
+    }
+
+    return {
+      id: user.id,
+      first_name: user.first_name,
+      last_name: user.last_name,
+      email: user.email,
+      phone_number: user.phone_number,
+      email_verified_at: user.email_verified_at,
+      phone_verified_at: user.phone_verified_at,
+      updated_at: user.updatedAt,
+    };
+
+  } catch (err) {
+    if (t) {
+      try { await t.rollback(); } catch {}
+    }
+    throw err;
+  }
+},
   
 };
 

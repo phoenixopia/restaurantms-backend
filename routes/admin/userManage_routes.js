@@ -91,6 +91,13 @@ router.patch(
 );
 
 router.put(
+  "/staff/profile",
+  protect("user"),
+  authorize("restaurant_admin","staff"),
+  UserController.updateStaffProfile
+);
+
+router.put(
   "/super-admin/profile",
   protect("user"),
   authorize("super_admin"),
