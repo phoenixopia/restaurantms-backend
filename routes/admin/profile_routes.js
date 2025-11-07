@@ -6,7 +6,11 @@ const { protect } = require("../../middleware/protect");
 const ValidateUploadedFiles = require("../../middleware/validateUploadedFiles");
 const Upload = require("../../middleware/uploads");
 
-router.get("/get-profile", protect("user"), ProfileController.getProfile);
+router.get(
+  "/get-profile", 
+  protect("user"), 
+  ProfileController.getProfile
+);
 
 router.put(
   "/update-profile",

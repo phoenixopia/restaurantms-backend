@@ -798,7 +798,100 @@ const UserService = {
   }
 },
 
+async updateSuperAdminProfile(superAdminId, data, req = null) {
+  let t;
+  try {
+    t = await sequelize.transaction();
 
+    const { email, phone_number, password, current_password } = data;
+
+    const user = await User.findByPk(superAdminId, {
+      transaction: t,
+      include: [{ model: RoleTag }]
+    });
+
+    if (!user) throwError("Super admin not found", 404);
+
+    const isSuperAdmin = user.RoleTag?.name === 'super_admin';
+
+    
+    if (password) {
+      if (!current_password) {
+        throwError("Current password is required to set a new password", 400);
+      }
+      const isMatch = await user.comparePassword(current_password);
+      if (!isMatch) throwError("Current password is incorrect", 401);
+
+      user.password = password; 
+    }
+
+    
+    if (email !== undefined && email !== user.email) {
+      const existing = await User.findOne({
+        where: { email },
+        transaction: t,
+      });
+      if (existing) throwError("This email is already taken", 409);
+
+      user.email = email;
+
+      
+      if (!isSuperAdmin) {
+        user.email_verified_at = null;
+      }
+      
+    }
+
+    
+    if (phone_number !== undefined && phone_number !== user.phone_number) {
+      const existing = await User.findOne({
+        where: { phone_number },
+        transaction: t,
+      });
+      if (existing) throwError("This phone number is already taken", 409);
+
+      user.phone_number = phone_number;
+
+      if (!isSuperAdmin) {
+        user.phone_verified_at = null;
+      }
+    }
+
+    await user.save({ transaction: t });
+    await t.commit();
+    t = null;
+
+    
+    try {
+      await logActivity({
+        user_id: user.id,
+        action: "update_own_profile",
+        description: `Super admin updated profile (${password ? 'password, ' : ''}${email ? 'email, ' : ''}${phone_number ? 'phone' : ''})`.replace(/, $/, ''),
+        ip_address: req?.ip || "unknown",
+        user_agent: req?.headers["user-agent"] || "unknown",
+      });
+    } catch (e) {
+      console.error("Activity log failed:", e);
+    }
+
+    return {
+      id: user.id,
+      first_name: user.first_name,
+      last_name: user.last_name,
+      email: user.email,
+      phone_number: user.phone_number,
+      email_verified_at: user.email_verified_at,
+      phone_verified_at: user.phone_verified_at,
+      updated_at: user.updatedAt,
+    };
+
+  } catch (err) {
+    if (t) {
+      try { await t.rollback(); } catch {}
+    }
+    throw err;
+  }
+},
   
 };
 

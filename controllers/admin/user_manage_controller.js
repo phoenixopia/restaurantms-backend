@@ -82,3 +82,12 @@ exports.update = asyncHandler(async (req, res) => {
   );
   return success(res, "Staff user updated successfully", user);
 });
+
+exports.updateSuperAdminProfile = asyncHandler(async (req, res) => {
+  const updatedUser = await UserService.updateSuperAdminProfile(
+    req.user.id,
+    req.body,
+    req   
+  );
+  return success(res, "Profile updated successfully", updatedUser);
+});

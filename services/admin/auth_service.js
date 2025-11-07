@@ -10,70 +10,91 @@ const {
 
 const { sendSMS } = require("../../utils/sendSMS");
 
+
+
 const AuthService = {
-  async login({ emailOrPhone, password, signupMethod }) {
-    const t = await sequelize.transaction();
+  
+async login({ emailOrPhone, password, signupMethod }) {
+  const t = await sequelize.transaction();
 
-    try {
-      const identifierField =
-        signupMethod === "email" ? "email" : "phone_number";
+  try {
+    const identifierField =
+      signupMethod === "email" ? "email" : "phone_number";
 
-      const user = await User.findOne({
-        where: { [identifierField]: emailOrPhone },
-        transaction: t,
-      });
+    const user = await User.findOne({
+      where: { [identifierField]: emailOrPhone },
+      include: [
+        {
+          model: sequelize.models.RoleTag,
+          as: "RoleTag",
+          attributes: ["name"],
+        },
+      ],
+      transaction: t,
+    });
 
-      if (!user) throwError("No account found.", 404);
-
-      if (signupMethod === "email" && !user.email_verified_at)
-        throwError("Email not confirmed.", 403);
-
-      if (signupMethod === "phone_number" && !user.phone_verified_at)
-        throwError("Phone not confirmed.", 403);
-
-      if (user.isLocked()) {
-        const remainingMs = new Date(user.locked_until) - new Date();
-        throwError(
-          `Account locked. Try again in ${Math.ceil(
-            remainingMs / 1000
-          )} seconds.`,
-          403
-        );
-      }
-
-      const isMatched = await user.comparePassword(password);
-      if (!isMatched) {
-        await user.markFailedLoginAttempt();
-        throwError(
-          `Invalid credentials. ${
-            5 - user.failed_login_attempts
-          } attempts remaining.`,
-          401
-        );
-      }
-
-      await user.markSuccessfulLogin();
-
-      const isCreatedUser = !!user.created_by;
-      const hasChangedPassword = !!user.password_changed_at;
-
-      await t.commit();
-
-      if (isCreatedUser && !hasChangedPassword) {
-        return {
-          user,
-          requiresPasswordChange: true,
-          message: "Please change your temporary password before proceeding.",
-        };
-      }
-
-      return { user, requiresPasswordChange: false };
-    } catch (err) {
-      await t.rollback();
-      throw err;
+    if (!user) {
+      await t.rollback(); // ← rollback early
+      throwError("No account found.", 404);
     }
-  },
 
+    const isSuperAdmin = user.RoleTag?.name === "super_admin";
+
+    if (signupMethod === "email" && !isSuperAdmin && !user.email_verified_at) {
+      await t.rollback();
+      throwError("Email not confirmed.", 403);
+    }
+
+    if (signupMethod === "phone_number" && !isSuperAdmin && !user.phone_verified_at) {
+      await t.rollback();
+      throwError("Phone not confirmed.", 403);
+    }
+
+    if (user.isLocked()) {
+      await t.rollback();
+      const remainingMs = new Date(user.locked_until) - new Date();
+      throwError(
+        `Account locked. Try again in ${Math.ceil(remainingMs / 1000)} seconds.`,
+        403
+      );
+    }
+
+    const isMatched = await user.comparePassword(password);
+    if (!isMatched) {
+      // ← Update failed attempts INSIDE transaction
+      await user.markFailedLoginAttempt(5, 5);
+      await t.commit(); // ← Save failed attempt
+
+      throwError(
+        `Invalid credentials. ${5 - user.failed_login_attempts} attempts remaining.`,
+        401
+      );
+    }
+
+    // ← SUCCESS PATH ONLY
+    await user.markSuccessfulLogin();
+    await t.commit(); // ← Only commit on success
+
+    const isCreatedUser = !!user.created_by;
+    const hasChangedPassword = !!user.password_changed_at;
+
+    if (isCreatedUser && !hasChangedPassword) {
+      return {
+        user,
+        requiresPasswordChange: true,
+        message: "Please change your temporary password before proceeding.",
+      };
+    }
+
+    return { user, requiresPasswordChange: false };
+  } catch (err) {
+    // Only rollback if transaction is still active
+    if (t.finished !== "commit" && t.finished !== "rollback") {
+      await t.rollback();
+    }
+    throw err;
+  }
+},
   async changeTemporaryPassword({ userId, newPassword }) {
     const t = await sequelize.transaction();
     try {

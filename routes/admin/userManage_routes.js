@@ -90,4 +90,13 @@ router.patch(
   UserController.updateStaff
 );
 
+router.put(
+  "/super-admin/profile",
+  protect("user"),
+  authorize("super_admin"),
+  UserController.updateSuperAdminProfile
+);
+
+
+
 module.exports = router;
