@@ -51,6 +51,9 @@ const VIDEO_UPLOAD_FOLDER = "videos";
 /* --------------------------- Video Service ----------------------------- */
 
 const VideoService = {
+
+
+  //  get all video for admin
       
 async getAllVideosForAdmin(user, filters = {}) {
     const {

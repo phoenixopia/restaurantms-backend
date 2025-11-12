@@ -34,7 +34,7 @@ router.get(
 router.get(
   "/all-video",
   protect("user"),
-  authorize("super_admin"),
+  authorize("super_admin","restaurant_admin"),
   VideoController.getAllVideosForAdmin
 );
 
@@ -74,6 +74,7 @@ router.delete(
 router.get(
   "/all-videos",
   protect("user"),
+  authorize("restaurant_admin"),
   // permissionCheck("view_social_media_profile"),
   VideoController.getAllVideos
 );
