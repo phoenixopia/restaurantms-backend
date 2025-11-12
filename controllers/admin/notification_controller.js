@@ -45,7 +45,7 @@ exports.listNotifications = asyncHandler(async (req, res) => {
   // If you still want the "No notifications" message:
   const message = rows.length === 0 ? "No notifications found" : "Notifications retrieved";
 
-  return success(res, message, { notifications: rows, pagination }, 200);
+  return success(res, message, { data: rows, pagination }, 200);
 });
 
 exports.getNotificationById = asyncHandler(async (req, res) => {
