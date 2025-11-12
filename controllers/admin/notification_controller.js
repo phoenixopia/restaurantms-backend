@@ -15,21 +15,37 @@ exports.createNotification = asyncHandler(async (req, res) => {
   return success(res, "Notification created successfully", notifications, 201);
 });
 
-exports.listNotifications = asyncHandler(async (req, res) => {
-  const page = parseInt(req.query.page) || 1;
-  const limit = parseInt(req.query.limit) || 20;
+// exports.listNotifications = asyncHandler(async (req, res) => {
+//   const page = parseInt(req.query.page) || 1;
+//   const limit = parseInt(req.query.limit) || 20;
 
-  const { rows, count } = await NotificationService.listNotifications(
+//   const { rows, count } = await NotificationService.listNotifications(
+//     req.user,
+//     page,
+//     limit
+//   );
+
+//   if (count === 0) {
+//     return success(res, "No notifications found", [], 200);
+//   }
+
+//   return success(res, "Notifications retrieved", rows, 200);
+// });
+
+exports.listNotifications = asyncHandler(async (req, res) => {
+  const page = parseInt(req.query.page, 10) || 1;
+  const limit = parseInt(req.query.limit, 10) || 20;
+
+  const { rows, pagination } = await NotificationService.listNotifications(
     req.user,
     page,
     limit
   );
 
-  if (count === 0) {
-    return success(res, "No notifications found", [], 200);
-  }
+  // If you still want the "No notifications" message:
+  const message = rows.length === 0 ? "No notifications found" : "Notifications retrieved";
 
-  return success(res, "Notifications retrieved", rows, 200);
+  return success(res, message, { notifications: rows, pagination }, 200);
 });
 
 exports.getNotificationById = asyncHandler(async (req, res) => {

@@ -26,6 +26,7 @@ module.exports = (sequelize, DataTypes) => {
     {
       tableName: "plans",
       timestamps: true,
+      
       underscored: true,
       defaultScope: {
         attributes: {

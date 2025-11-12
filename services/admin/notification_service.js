@@ -84,12 +84,29 @@ const NotificationService = {
     return notifications;
   },
 
+  // async listNotifications(user, page = 1, limit = 20) {
+  //   const offset = (page - 1) * limit;
+
+  //   const where = {
+  //     target_user_id: user.id,
+  //   };
+
+  //   const { count, rows } = await Notification.findAndCountAll({
+  //     where,
+  //     order: [["createdAt", "DESC"]],
+  //     limit,
+  //     offset,
+  //   });
+
+  //   return { rows, count };
+  // }
+  
+  
+  
   async listNotifications(user, page = 1, limit = 20) {
     const offset = (page - 1) * limit;
 
-    const where = {
-      target_user_id: user.id,
-    };
+    const where = { target_user_id: user.id };
 
     const { count, rows } = await Notification.findAndCountAll({
       where,
@@ -98,7 +115,20 @@ const NotificationService = {
       offset,
     });
 
-    return { rows, count };
+    // ---- pagination meta ----
+    const totalPages = Math.ceil(count / limit);
+   
+
+    return {
+      rows,
+      pagination: {
+        total: count,          
+        page,                 
+        limit,
+        totalPages,
+  
+      },
+    };
   },
 
   async getNotificationById(notificationId) {
@@ -127,8 +157,8 @@ const NotificationService = {
       is_read: false,
       [Op.or]: [
         { target_user_id: user?.id || null },
-        { branch_id: user?.branch_id || null },
-        { restaurant_id: user?.restaurant_id || null },
+        // { branch_id: user?.branch_id || null },
+        // { restaurant_id: user?.restaurant_id || null },
       ],
     };
 

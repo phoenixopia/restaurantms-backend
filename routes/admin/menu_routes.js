@@ -31,7 +31,7 @@ router.post(
 router.put(
   "/update-menu",
   protect("user"),
-  // permissionCheck("edit_menu"),
+  // permissionCheck("edit_menuv"),
   RestaurantStatus.checkRestaurantStatus,
   MenuController.updateMenu
 );

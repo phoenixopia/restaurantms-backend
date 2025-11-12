@@ -710,3 +710,4 @@ async delete(id, user) {
 };
 
 module.exports = PlanService;
+     
