@@ -45,6 +45,7 @@ router.post(
   "/upload-video",
   protect("user"),
   // permissionCheck("upload_video"),
+  authorize("restaurant_admin"),
   uploadVideoFile,
   validateVideoThumbnailSizes,
   checkStorageQuota,
