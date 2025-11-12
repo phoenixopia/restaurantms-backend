@@ -84,24 +84,7 @@ const NotificationService = {
     return notifications;
   },
 
-  // async listNotifications(user, page = 1, limit = 20) {
-  //   const offset = (page - 1) * limit;
 
-  //   const where = {
-  //     target_user_id: user.id,
-  //   };
-
-  //   const { count, rows } = await Notification.findAndCountAll({
-  //     where,
-  //     order: [["createdAt", "DESC"]],
-  //     limit,
-  //     offset,
-  //   });
-
-  //   return { rows, count };
-  // }
-  
-  
   
   async listNotifications(user, page = 1, limit = 20) {
     const offset = (page - 1) * limit;
