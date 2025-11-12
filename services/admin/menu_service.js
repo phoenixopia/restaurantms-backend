@@ -67,44 +67,90 @@ const MenuService = {
     }
   },
 
+  // async listMenu(user) {
+  //   const restaurantId = await getRestaurantIdFromUser(user);
+
+  //   const restaurant = await Restaurant.findByPk(restaurantId);
+
+  //   if (!restaurant) throwError("Restaurant not found", 404);
+
+  //   const menu = await Menu.findOne({
+  //     where: { restaurant_id: restaurant.id },
+  //   });
+  //   if (!menu) throwError("Menu not found ", 404);
+
+  //   let categoryWhere = { menu_id: menu.id };
+  //   if (user.branch_id && !user.restaurant_id) {
+  //     categoryWhere.branch_id = user.branch_id;
+  //   }
+
+  //   const totalCategories = await MenuCategory.count({ where: categoryWhere });
+
+  //   const categories = await MenuCategory.findAll({
+  //     where: categoryWhere,
+  //     attributes: ["id"],
+  //   });
+  //   const categoryIds = categories.map((c) => c.id);
+
+  //   const totalItems = categoryIds.length
+  //     ? await MenuItem.count({
+  //         where: { menu_category_id: { [Op.in]: categoryIds } },
+  //       })
+  //     : 0;
+
+  //   return {
+  //     id: menu.id,
+  //     name: menu.name,
+  //     total_categories: totalCategories,
+  //     total_items: totalItems,
+  //   };
+  // },
+
   async listMenu(user) {
-    const restaurantId = await getRestaurantIdFromUser(user);
+  const restaurantId = await getRestaurantIdFromUser(user);
 
-    const restaurant = await Restaurant.findByPk(restaurantId);
+  const restaurant = await Restaurant.findByPk(restaurantId);
+  if (!restaurant) throwError("Restaurant not found", 404);
 
-    if (!restaurant) throwError("Restaurant not found", 404);
+  const menu = await Menu.findOne({
+    where: { restaurant_id: restaurant.id },
+  });
 
-    const menu = await Menu.findOne({
-      where: { restaurant_id: restaurant.id },
-    });
-    if (!menu) throwError("Menu not found", 404);
-
-    let categoryWhere = { menu_id: menu.id };
-    if (user.branch_id && !user.restaurant_id) {
-      categoryWhere.branch_id = user.branch_id;
-    }
-
-    const totalCategories = await MenuCategory.count({ where: categoryWhere });
-
-    const categories = await MenuCategory.findAll({
-      where: categoryWhere,
-      attributes: ["id"],
-    });
-    const categoryIds = categories.map((c) => c.id);
-
-    const totalItems = categoryIds.length
-      ? await MenuItem.count({
-          where: { menu_category_id: { [Op.in]: categoryIds } },
-        })
-      : 0;
-
+  if (!menu) {
     return {
-      id: menu.id,
-      name: menu.name,
-      total_categories: totalCategories,
-      total_items: totalItems,
+      id: null,
+      name: null,
+      total_categories: 0,
+      total_items: 0,
     };
-  },
+  }
+
+  let categoryWhere = { menu_id: menu.id };
+  if (user.branch_id && !user.restaurant_id) {
+    categoryWhere.branch_id = user.branch_id;
+  }
+
+  const totalCategories = await MenuCategory.count({ where: categoryWhere });
+
+  const categories = await MenuCategory.findAll({
+    where: categoryWhere,
+    attributes: ["id"],
+  });
+  const categoryIds = categories.map((c) => c.id);
+
+  const totalItems = categoryIds.length
+    ? await MenuItem.count({
+        where: { menu_category_id: { [Op.in]: categoryIds } },
+      })
+    : 0;
+
+  return {
+    id: menu.id,
+    name: menu.name,
+    total_categories: totalCategories,
+    total_items: totalItems,
+  };
+},
 
   async updateMenu(user, data) {
     return await sequelize.transaction(async (t) => {
