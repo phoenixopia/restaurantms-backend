@@ -16,6 +16,7 @@ exports.createNotification = asyncHandler(async (req, res) => {
 });
 
 
+
 exports.listNotifications = asyncHandler(async (req, res) => {
   const page = parseInt(req.query.page, 10) || 1;
   const limit = parseInt(req.query.limit, 10) || 20;
@@ -26,12 +27,10 @@ exports.listNotifications = asyncHandler(async (req, res) => {
     limit
   );
 
+  
   const message = rows.length === 0 ? "No notifications found" : "Notifications retrieved";
 
-  return success(res, message, {
-  data: rows,
-  pagination
-}, 200);
+ return success(res, "Notifications retrieved", rows, 200);
 });
 
 exports.getNotificationById = asyncHandler(async (req, res) => {
