@@ -177,10 +177,10 @@ router.get(
 
 router.get('/barcode/:menuId', 
   
-  protect("user"),
-  authorize("restaurant_admin"),
-  // permissionCheck("generate_qr"),
-  RestaurantStatus.checkRestaurantStatus,
+  // protect("user"),
+  // authorize("restaurant_admin"),
+  // // permissionCheck("generate_qr"),
+  // RestaurantStatus.checkRestaurantStatus,
   MenuController.generateBarcode
 );
 
