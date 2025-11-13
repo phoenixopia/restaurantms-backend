@@ -177,6 +177,8 @@ const url = `https://restaurant-zeta-wheat.vercel.app/${locale}/menu/${encodeURI
       scale: 3,
       height: 30,
       includetext: false,
+      monochrome: true,
+      ecclev: 'H',
     });
 
     res.set('Content-Type', 'image/png');
