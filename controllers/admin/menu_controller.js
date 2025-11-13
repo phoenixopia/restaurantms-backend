@@ -165,8 +165,9 @@ exports.getSingleMenuItem = asyncHandler(async (req, res) => {
 exports.generateBarcode = asyncHandler(async (req, res) => {
   const { menuId } = req.params;
   // const url = `${process.env.TEST_FRONTEND_URL}/menu/${menuId}`;
-    const url = `https://restaurant-zeta-wheat.vercel.app/menu/${menuId}`;
-
+  //  const url = `https://restaurant-zeta-wheat.vercel.app/menu/${menuId}`;
+const locale = req.query.locale || 'en';
+const url = `https://restaurant-zeta-wheat.vercel.app/${locale}/menu/${menuId}`;
 
   try {
     const png = await bwipjs.toBuffer({
