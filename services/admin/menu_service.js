@@ -137,7 +137,18 @@ const MenuService = {
     attributes: ["id"],
   });
   const categoryIds = categories.map((c) => c.id);
+  
+  
+  
+  const menuItems = await MenuItem.findAll({
+        where: { menu_category_id: { [Op.in]: categoryIds } },
+      });
 
+
+        const categoriesx = await MenuCategory.findAll({
+    where: categoryWhere,
+   
+  });
   const totalItems = categoryIds.length
     ? await MenuItem.count({
         where: { menu_category_id: { [Op.in]: categoryIds } },
@@ -149,8 +160,57 @@ const MenuService = {
     name: menu.name,
     total_categories: totalCategories,
     total_items: totalItems,
+    catagory:{categoriesx},
+    menuItem:{menuItems}
   };
 },
+
+  async getSingleMenu(menuId) {
+    const menu = await Menu.findByPk(menuId);
+  
+
+    if (!menu) throwError("Menu not found", 404);
+let categoryWhere = { menu_id: menuId };
+  // if (user.branch_id && !user.restaurant_id) {
+  //   categoryWhere.branch_id = user.branch_id;
+  // }
+
+  const totalCategories = await MenuCategory.count({ where: categoryWhere });
+
+  const categories = await MenuCategory.findAll({
+    where: categoryWhere,
+    attributes: ["id"],
+  });
+  const categoryIds = categories.map((c) => c.id);
+  
+  
+  
+  const menuItems = await MenuItem.findAll({
+        where: { menu_category_id: { [Op.in]: categoryIds } },
+      });
+
+
+        const categoriesx = await MenuCategory.findAll({
+    where: categoryWhere,
+   
+  });
+  const totalItems = categoryIds.length
+    ? await MenuItem.count({
+        where: { menu_category_id: { [Op.in]: categoryIds } },
+      })
+    : 0;
+
+  return {
+    id: menu.id,
+    name: menu.name,
+    total_categories: totalCategories,
+    total_items: totalItems,
+    catagory:{categoriesx},
+    menuItem:{menuItems}
+  };
+
+  },
+
 
   async updateMenu(user, data) {
     return await sequelize.transaction(async (t) => {

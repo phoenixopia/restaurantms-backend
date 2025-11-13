@@ -20,6 +20,12 @@ router.get(
   MenuController.getMenu
 );
 
+router.get(
+  "/menu-byID/:id",
+
+  MenuController.getSingleMenu
+);
+
 router.post(
   "/create-menu",
   protect("user"),
@@ -167,6 +173,15 @@ router.get(
   // permissionCheck("view_menu_item"),
   RestaurantStatus.checkRestaurantStatus,
   MenuController.listMenuItemsWithRestaurant
+);
+
+router.get('/barcode/:menuId', 
+  
+  protect("user"),
+  authorize("restaurant_admin"),
+  // permissionCheck("generate_qr"),
+  RestaurantStatus.checkRestaurantStatus,
+  MenuController.generateBarcode
 );
 
 module.exports = router;

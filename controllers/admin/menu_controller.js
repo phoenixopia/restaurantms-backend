@@ -5,6 +5,7 @@ const MenuService = require("../../services/admin/menu_service");
 const MenuCategoryService = require("../../services/admin/menuCategory_service");
 const MenuItemService = require("../../services/admin/menuItem_service");
 const { success } = require("../../utils/apiResponse");
+const bwipjs = require('bwip-js');
 
 // ====================== Menu
 exports.createMenu = asyncHandler(async (req, res) => {
@@ -17,6 +18,12 @@ exports.getMenu = asyncHandler(async (req, res) => {
   const menu = await MenuService.listMenu(req.user);
   return success(res, "Menu fetched successfully", menu);
 });
+
+exports.getSingleMenu = asyncHandler(async (req, res) => {
+  const menu = await MenuService.getSingleMenu(req.params.id);
+  return success(res, "Menu item fetched successfully",menu);
+});
+
 
 exports.updateMenu = asyncHandler(async (req, res) => {
   const menu = await MenuService.updateMenu(req.user, req.body);
@@ -153,4 +160,24 @@ exports.toggleMenuItemActivation = asyncHandler(async (req, res) => {
 exports.getSingleMenuItem = asyncHandler(async (req, res) => {
   const item = await MenuItemService.getSingleMenuItem(req.params.id, req.user);
   return success(res, "Menu item fetched successfully", item);
+});
+
+exports.generateBarcode = asyncHandler(async (req, res) => {
+  const { menuId } = req.params;
+  const url = `${process.env.DEV_FRONTEND_URL}/menu/${menuId}`;
+
+  try {
+    const png = await bwipjs.toBuffer({
+      bcid: 'qrcode',
+      text: url,
+      scale: 3,
+      height: 30,
+      includetext: false,
+    });
+
+    res.set('Content-Type', 'image/png');
+    res.send(png);
+  } catch (err) {
+    return res.status(500).json({ message: 'Failed to generate barcode' });
+  }
 });
