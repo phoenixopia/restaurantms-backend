@@ -18,6 +18,7 @@ router.use("/review", require("./review_routes"));
 router.use("/plan", require("./plan_routes"));
 router.use("/rbac", require("./rbac_routes"));
 router.use("/menu", require("./menu_routes"));
+router.use("/order",require("./order_route"));
 
 // ==================================================
 router.use("/kds", require("./kds"));

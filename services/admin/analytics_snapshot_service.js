@@ -4,6 +4,7 @@ const {
   Branch,
   Customer,
   Order,
+  KdsOrder,
   OrderItem,
   Subscription,
   Plan,
@@ -203,118 +204,77 @@ const AnalyticsSnapshot = {
     }
   },
 
-  // Analytics for branch-level staff
-  async getStaffAnalytics({ staffId, restaurantId, branchId }) {
-    try {
-      const now = new Date();
-      const startOfDay = new Date(now.setHours(0, 0, 0, 0));
-      const endOfDay = new Date(now.setHours(23, 59, 59, 999));
 
-      // ---- ORDER ANALYTICS ----
-      const baseOrderWhere = {
-        restaurant_id: restaurantId,
-        branch_id: branchId, // ensure branch-specific
-        user_id: staffId,
-      };
 
-      const todayOrders = await Order.count({
-        where: { ...baseOrderWhere, created_at: { [Op.between]: [startOfDay, endOfDay] } },
-      });
+async  getStaffAnalytics({ staffId, restaurantId, branchId }) {
+  try {
+    const now = new Date();
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
 
-      const completedOrders = await Order.count({
-        where: { ...baseOrderWhere, status: "Served" },
-      });
+    const orderFilter = {
+      restaurant_id: restaurantId,
+      branch_id: branchId,
+    };
 
-      const pendingOrders = await Order.count({
-        where: { ...baseOrderWhere, status: { [Op.in]: ["Pending", "InProgress", "Preparing"] } },
-      });
+    const todayOrders = await KdsOrder.count({
+      where: {
+        ...orderFilter,
+        created_at: { [Op.between]: [startOfDay, endOfDay] },
+      },
+    });
 
-      const avgOrderValue = await Order.findOne({
-        where: baseOrderWhere,
-        attributes: [[fn("AVG", col("total_amount")), "avg_value"]],
-        raw: true,
-      });
+    const completedOrders = await KdsOrder.count({
+      where: { ...orderFilter, status: 'Served' },
+    });
 
-      // // ---- PAYMENT ANALYTICS ----
-      // const payments = await Payment.findAll({
-      //   where: {
-      //     restaurant_id: restaurantId,
-      //     // branch_id: branchId, // add branch filter
-      //     user_id: staffId,
-      //   },
-      //   raw: true,
-      // });
+    const pendingOrders = await KdsOrder.count({
+      where: {
+        ...orderFilter,
+        status: { [Op.in]: ['Pending', 'InProgress', 'Preparing'] },
+      },
+    });
 
-      // const totalRevenueHandled = payments
-      //   .filter((p) => p.status === "completed")
-      //   .reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
-
-      // const totalTips = payments
-      //   .filter((p) => p.payment_method === "tip")
-      //   .reduce((sum, p) => sum + parseFloat(p.amount || 0), 0);
-
-      // const paymentStats = { byMethod: {}, byStatus: {} };
-
-      // for (const p of payments) {
-      //   paymentStats.byMethod[p.payment_method] = (paymentStats.byMethod[p.payment_method] || 0) + 1;
-      //   paymentStats.byStatus[p.status] = (paymentStats.byStatus[p.status] || 0) + 1;
-      // }
-
-      // const successRate =
-      //   payments.length > 0
-      //     ? ((paymentStats.byStatus.completed || 0) / payments.length) * 100
-      //     : 0;
-
-      // ---- REVIEW ANALYTICS ----
-      const reviews = await Review.findAll({
-        where: { restaurant_id: restaurantId },
-        include: [
-          {
-            model: Order,
-            attributes: [],
-            where: { ...baseOrderWhere },
-          },
-        ],
-        raw: true,
-      });
-
-      const avgRating =
-        reviews.length > 0
-          ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
-          : 0;
-
-      // const ratingDist = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
-      // reviews.forEach((r) => {
-      //   if (ratingDist[r.rating] !== undefined) ratingDist[r.rating]++;
-      // });
-      const ratingDist = [1, 2, 3, 4, 5].map((r) => ({
-        rating: r,
-        count: reviews.filter((rev) => rev.rating === r).length,
-      }));
-
-      // ---- RETURN STRUCTURED JSON ----
-      return {
-        summary: {
-          todayOrders,
-          completedOrders,
-          pendingOrders,
-          averageOrderValue: parseFloat(avgOrderValue?.avg_value || 0).toFixed(2),
-          // totalRevenueHandled: totalRevenueHandled.toFixed(2),
-          // totalTips: totalTips.toFixed(2),
-          // paymentSuccessRate: parseFloat(successRate.toFixed(1)),
-          customerFeedbackScore: parseFloat(avgRating.toFixed(1)),
+    const reviews = await Review.findAll({
+      attributes: ['rating'], 
+      include: [
+        {
+          model: Order,
+          attributes: [],
+          where: orderFilter, 
         },
-        ratings: {
-          totalReviews: reviews.length,
-          distribution: ratingDist,
-        },
-        // paymentBreakdown: paymentStats,
-      };
-    } catch (error) {
-      throwError(error.message || "Failed to fetch staff analytics snapshot", 500);
-    }
-  },
+      ],
+      raw: true,
+    });
 
+    const totalReviews = reviews.length;
+    const avgRating = totalReviews > 0
+      ? (reviews.reduce((sum, r) => sum + r.rating, 0) / totalReviews).toFixed(1)
+      : '0.0';
+
+    const ratingDist = [1, 2, 3, 4, 5].map(rating => ({
+      rating,
+      count: reviews.filter(r => r.rating === rating).length,
+    }));
+console.log(pendingOrders);
+    return {
+      summary: {
+        todayOrders,
+        completedOrders,
+        pendingOrders,
+        customerFeedbackScore: avgRating,
+      },
+      ratings: {
+        totalReviews,
+        distribution: ratingDist,
+      },
+    };
+  } catch (error) {
+    console.error('Staff Analytics Error:', error);
+    throw throwError(error.message || 'Failed to fetch staff analytics', 500);
+  }
+},
+  
 
 };
 
