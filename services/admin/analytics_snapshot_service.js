@@ -216,6 +216,11 @@ async  getStaffAnalytics({ staffId, restaurantId, branchId }) {
       restaurant_id: restaurantId,
       branch_id: branchId,
     };
+   const totalOrders = await KdsOrder.count({
+  where: orderFilter,
+  include: [{ model: Order, attributes: [] }],
+});
+
 
     const todayOrders = await KdsOrder.count({
       where: {
@@ -256,9 +261,9 @@ async  getStaffAnalytics({ staffId, restaurantId, branchId }) {
       rating,
       count: reviews.filter(r => r.rating === rating).length,
     }));
-console.log(pendingOrders);
     return {
       summary: {
+        totalOrders,
         todayOrders,
         completedOrders,
         pendingOrders,
@@ -274,6 +279,96 @@ console.log(pendingOrders);
     throw throwError(error.message || 'Failed to fetch staff analytics', 500);
   }
 },
+
+
+// async  getStaffAnalytics({ staffId, restaurantId, branchId }) {
+//   try {
+//     // ── DATE RANGE (today) ─────────────────────────────────────
+//     const now = new Date();
+//     const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+//     const endOfDay   = new Date(now.getFullYear(), now.getMonth(), now.getDate(),
+//                                 23, 59, 59, 999);
+
+//     const kdsFilter = {
+//       restaurant_id: restaurantId,
+//       branch_id:     branchId,
+//       //'$Order.user_id$': staffId,               
+//     };
+
+//     // ── 1. TODAY’S ORDERS (count of KdsOrders created today) ───────
+//     const todayOrders = await KdsOrder.count({
+//       where: {
+//         ...kdsFilter,
+//         created_at: { [Op.between]: [startOfDay, endOfDay] },
+//       },
+//       include: [{ model: Order, attributes: [] }],   // needed for the join
+//     });
+
+//     // ── 2. COMPLETED (Served) ─────────────────────────────────────
+//     const completedOrders = await KdsOrder.count({
+//       where: { ...kdsFilter, status: 'Served' },
+//       include: [{ model: Order, attributes: [] }],
+//     });
+
+//     // ── 3. PENDING (Pending / InProgress / Preparing) ─────────────
+//     const pendingOrders = await KdsOrder.count({
+//       where: {
+//         ...kdsFilter,
+//         status: { [Op.in]: ['Pending', 'InProgress', 'Preparing'] },
+//       },
+//       include: [{ model: Order, attributes: [] }],
+//     });
+
+//     // ── 4. AVERAGE ORDER VALUE (still from Order table) ───────────
+//     const avgResult = await Order.findOne({
+//       attributes: [[fn('COALESCE', fn('AVG', col('total_amount')), 0), 'avg_value']],
+//       where: { user_id: staffId, restaurant_id: restaurantId, branch_id: branchId },
+//       raw: true,
+//     });
+//     const averageOrderValue = parseFloat(avgResult?.avg_value || 0).toFixed(2);
+
+//     // ── 5. REVIEW ANALYTICS (unchanged – still joins Order) ───────
+//     const reviews = await Review.findAll({
+//       attributes: ['rating'],
+//       include: [
+//         {
+//           model: Order,
+//           attributes: [],
+//           where: { user_id: staffId, restaurant_id: restaurantId, branch_id: branchId },
+//         },
+//       ],
+//       raw: true,
+//     });
+
+//     const totalReviews = reviews.length;
+//     const avgRating = totalReviews
+//       ? (reviews.reduce((s, r) => s + r.rating, 0) / totalReviews).toFixed(1)
+//       : '0.0';
+
+//     const ratingDist = [1, 2, 3, 4, 5].map(r => ({
+//       rating: r,
+//       count: reviews.filter(v => v.rating === r).length,
+//     }));
+
+//     // ── RETURN ───────────────────────────────────────────────────
+//     return {
+//       summary: {
+//         todayOrders,
+//         completedOrders,
+//         pendingOrders,
+//         averageOrderValue,
+//         customerFeedbackScore: avgRating,
+//       },
+//       ratings: {
+//         totalReviews,
+//         distribution: ratingDist,
+//       },
+//     };
+//   } catch (error) {
+//     console.error('Staff analytics error:', error);
+//     throw throwError(error.message || 'Failed to fetch staff analytics', 500);
+//   }
+// }
   
 
 };
