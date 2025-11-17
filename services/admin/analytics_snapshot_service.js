@@ -160,32 +160,29 @@ const AnalyticsSnapshot = {
       // -----------------------------
       // Top Branches by Revenue
       // -----------------------------
-      const branchRevenue = await Order.findAll({
-        attributes: [
-          "branch_id",
-          [sequelize.fn("SUM", sequelize.col("total_amount")), "revenue"]
-        ],
-        where: {
-          restaurant_id: user.restaurant_id,
-          payment_status: "Paid",
-          status: "Served",
-        },
-        include: [
-          {
-            model: Branch,
-            attributes: ["name"],
-          }
-        ],
-        group: ["branch_id", "Branch.id", "Branch.name"],
-        raw: true,
-        nest: true
-      });
+      const topBranchesRaw = await KdsOrder.findAll({
+      attributes: [
+        [sequelize.fn("SUM", sequelize.col("Order.total_amount")), "revenue"],
+        [sequelize.col("Branch.name"), "branchName"],
+      ],
+      include: [
+        { model: Order, attributes: [] },
+        { model: Branch, attributes: [] },
+      ],
+      where: {
+        restaurant_id: user.restaurant_id,
+        status: "Served",
+      },
+      group: ["Branch.id", "Branch.name"],
+      order: [[sequelize.fn("SUM", sequelize.col("Order.total_amount")), "DESC"]],
+      limit: 5,
+      raw: true,
+    });
 
-      const topRestaurantsData = branchRevenue
-        .map(b => ({ name: b.Branch.name, revenue: parseFloat(b.revenue) }))
-        .sort((a, b) => b.revenue - a.revenue)
-        .slice(0, 5); // top 5 branches
-
+    const topRestaurantsData = topBranchesRaw.map(b => ({
+      name: b.branchName || "Unnamed Branch",
+      revenue: parseFloat(b.revenue || 0).toFixed(2),
+    }));
       // -----------------------------
       // Return full analytics
       // -----------------------------
@@ -204,6 +201,43 @@ const AnalyticsSnapshot = {
     }
   },
 
+
+  // SERVICE FUNCTION – Top Revenue Branches (using your exact models)
+async  getTopRevenueBranches(restaurantId, limit = 5) {
+  const result = await KdsOrder.findAll({
+    attributes: [
+      [sequelize.fn("SUM", sequelize.col("Order.total_amount")), "totalRevenue"],
+      [sequelize.col("Branch.name"), "branchName"],
+      [sequelize.col("Branch.id"), "branchId"]
+    ],
+    where: {
+      restaurant_id: restaurantId,
+      status: "Served"   // ← Only count fully completed orders
+    },
+    include: [
+      {
+        model: Order,
+        attributes: [],   // we only need total_amount from Order
+        required: true
+      },
+      {
+        model: Branch,
+        attributes: [],   // name selected via col() above
+        required: true
+      }
+    ],
+    group: ["Branch.id", "Branch.name"],
+    order: [[sequelize.fn("SUM", sequelize.col("Order.total_amount")), "DESC"]],
+    limit: limit,
+    raw: true
+  });
+
+  return result.map(row => ({
+    branchId: row.branchId,
+    name: row.branchName || "Unnamed Branch",
+    revenue: parseFloat(row.totalRevenue || 0).toFixed(2)
+  }));
+},
 
 
 async  getStaffAnalytics({ staffId, restaurantId, branchId }) {

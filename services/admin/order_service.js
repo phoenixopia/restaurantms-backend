@@ -147,15 +147,16 @@ const OrderService = {
       const order = await Order.findByPk(kdsOrder.order_id, { transaction: t });
       if (!order) throwError("Order not found", 404);
 
-      if (
-        paymentStatus === "Unpaid" &&
-        ["InProgress", "Preparing", "Ready", "Served"].includes(order.status)
-      ) {
-        throwError(
-          "Cannot revert payment to Unpaid for orders already in progress",
-          400
-        );
-      }
+      // if (
+      //   paymentStatus === "Unpaid" &&
+      //   ["InProgress", "Preparing", "Ready", "Served"].includes(order.status)
+      // ) {
+        
+      //   // throwError(
+      //   //   "Cannot revert payment to Unpaid for orders already in progress",
+      //   //   400
+      //   // );
+      // }
 
       order.payment_status = paymentStatus;
 
@@ -169,6 +170,7 @@ const OrderService = {
         );
       } else if (paymentStatus === "Unpaid") {
         order.status = "Pending";
+        kdsOrder.status = "Pending";
 
         await Payment.update(
           { status: "pending", payment_date: null },
