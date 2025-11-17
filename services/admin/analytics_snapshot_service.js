@@ -188,7 +188,7 @@ const AnalyticsSnapshot = {
       // -----------------------------
       return {
         filter,
-        totalRestaurants,
+        //totalRestaurants,
         totalBranches,
         totalStaffs,
         totalRevenue,
