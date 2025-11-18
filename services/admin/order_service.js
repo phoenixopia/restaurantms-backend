@@ -285,7 +285,7 @@ async  getKitchenDisplayOrders(branchId) {
       },
     ],
   
-    order: [["created_at", "ASC"]],  
+    order: [["created_at", "DESC"]],  
     limit: 100,
     subQuery: false,
   });
