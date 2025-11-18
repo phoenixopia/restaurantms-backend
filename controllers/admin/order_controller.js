@@ -2,7 +2,37 @@ const OrderService = require("../../services/admin/order_service");
 const asyncHandler = require("../../utils/asyncHandler");
 const { success } = require("../../utils/apiResponse");
 const throwError = require("../../utils/throwError");
+const { Branch } = require ("../../models")
 
+
+exports.getKitchenDisplay = asyncHandler(async (req, res) => {
+  const { branchId } = req.params;   // ← From URL
+
+  if (!branchId) {
+    return res.status(400).json({
+      success: false,
+      message: "branchId is required in URL",
+    });
+
+  }
+      const branchExists = await Branch.findByPk(branchId);
+  if (!branchExists) {
+    return res.status(404).json({
+      success: false,
+      message: "Branch not found or invalid branchId",
+    });
+  }
+
+  const data = await OrderService.getKitchenDisplayOrders(branchId);
+
+  // Auto-refresh every 10 seconds — perfect for TV
+  res.setHeader("Refresh", "10");
+  res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
+
+  return success(res, "Kitchen display loaded", data);
+});
 exports.listOrders = asyncHandler(async (req, res) => {
   const orders = await OrderService.listOrders(req.query, req.user);
   return success(res, "Orders fetched successfully.", orders);

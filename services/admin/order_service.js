@@ -257,8 +257,95 @@ const OrderService = {
     }
   },
 
+async  getKitchenDisplayOrders(branchId) {
+  if (!branchId) throw new Error("branchId is required");
 
-  async listOrders(query, user) {
+  const activeKdsOrders = await KdsOrder.findAll({
+    where: {
+      branch_id: branchId,
+      status: { [Op.in]: ["Pending", "InProgress", "Preparing", "Ready"] },
+    },
+    include: [
+      {
+        model: Order,
+        attributes: ["id", "type", "total_amount", "order_date"],
+        required: true,
+        include: [
+          { model: Table, attributes: ["table_number"], required: false },
+          { model: Customer, attributes: ["first_name"], required: false },
+          {
+            model: OrderItem,
+            attributes: ["quantity"],
+            required: false,
+            include: [
+              { model: MenuItem, attributes: ["name", "image"], required: false },
+            ],
+          },
+        ],
+      },
+    ],
+  
+    order: [["created_at", "ASC"]],  
+    limit: 100,
+    subQuery: false,
+  });
+
+  const formatted = activeKdsOrders.map(kds => {
+    const order = kds.Order;
+
+
+    const createdAt = kds.created_at || kds.createdAt;
+    const minutesWaiting = createdAt 
+      ? Math.floor((Date.now() - new Date(createdAt)) / 60000)
+      : 0;
+
+    const priority = minutesWaiting > 15 ? "urgent"
+                   : minutesWaiting > 10 ? "warning"
+                   : "normal";
+
+    return {
+      kds_id: kds.id,
+      order_id: order.id,
+      status: kds.status,
+      priority,
+      minutes_waiting: minutesWaiting,  
+
+      table: order.type === "dine-in"
+        ? order.Table?.table_number ? `Table ${order.Table.table_number}` : "No Table"
+        : order.type === "takeaway" ? "Takeaway" : "Delivery",
+
+      customer: order.Customer?.first_name?.trim() || "Guest",
+
+      total_amount: parseFloat(order.total_amount || 0).toFixed(2),
+
+      items: (order.OrderItems || []).map(item => ({
+        name: item.MenuItem?.name || "Unknown Item",
+        quantity: item.quantity || 1,
+        image: item.MenuItem?.image || null,
+      })),
+
+      created_at: kds.created_at,
+    };
+  });
+
+
+  formatted.sort((a, b) => {
+    if (a.priority === "urgent" && b.priority !== "urgent") return -1;
+    if (b.priority === "urgent" && a.priority !== "urgent") return 1;
+    return b.minutes_waiting - a.minutes_waiting;
+  });
+
+  return {
+    branch_id: branchId,
+    total_active: formatted.length,
+    refreshed_at: new Date().toISOString(),
+    orders: formatted,
+  };
+},
+
+
+
+ async listOrders(query, user) {
     const { page = 1, limit = 10, status, from, to, branchId } = query;
     const offset = (page - 1) * limit;
 
@@ -363,6 +450,7 @@ const OrderService = {
       },
     };
   },
+
 
 
 

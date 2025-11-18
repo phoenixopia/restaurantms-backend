@@ -4,6 +4,15 @@ const OrderController = require("../../controllers/admin/order_controller");
 const { protect } = require("../../middleware/protect");
 const { permissionCheck } = require("../../middleware/permissionCheck");
 
+
+
+router.get(
+  "/display/:branchId",
+  protect("user"),
+  // permissionCheck("view_kds_order"),
+  OrderController.getKitchenDisplay
+);
+
 router.get(
   "/get-all-orders",
   protect("user"),
