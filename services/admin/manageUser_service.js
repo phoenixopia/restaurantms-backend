@@ -1017,6 +1017,88 @@ async updateStaffProfile(id, data, req = null) {
     throw err;
   }
 },
+
+
+async updateCustomer(customerId, data, updaterId) {
+  const t = await sequelize.transaction();
+  try {
+    const customer = await Customer.findByPk(customerId, { transaction: t });
+    if (!customer) throwError("Customer not found", 404);
+
+    const { first_name, last_name, email, phone_number, profile_picture, notes } = data;
+
+    
+    if (first_name !== undefined) customer.first_name = first_name.trim();
+    if (last_name !== undefined) customer.last_name = last_name.trim();
+    if (email !== undefined) {
+      if (email && email !== customer.email) {
+        const exists = await Customer.findOne({ where: { email }, transaction: t });
+        if (exists) throwError("Email already taken", 409);
+        customer.email = email;
+      }
+    }
+    if (phone_number !== undefined) {
+      if (phone_number && phone_number !== customer.phone_number) {
+        const exists = await Customer.findOne({ where: { phone_number }, transaction: t });
+        if (exists) throwError("Phone number already taken", 409);
+        customer.phone_number = phone_number;
+      }
+    }
+    if (profile_picture !== undefined) customer.profile_picture = profile_picture;
+    if (notes !== undefined) customer.notes = notes;
+
+    await customer.save({ transaction: t });
+    await t.commit();
+
+    return {
+      success: true,
+      message: "Customer updated successfully",
+      data: {
+        id: customer.id,
+        first_name: customer.first_name,
+        last_name: customer.last_name,
+        full_name: `${customer.first_name} ${customer.last_name}`.trim(),
+        email: customer.email,
+        phone_number: customer.phone_number,
+        profile_picture: customer.profile_picture,
+        notes: customer.notes,
+        is_active: customer.is_active,
+      },
+    };
+  } catch (err) {
+    await t.rollback();
+    throw err;
+  }
+},
+
+async deleteCustomer(customerId, deleterId) {
+  const t = await sequelize.transaction();
+  try {
+    const customer = await Customer.findByPk(customerId, { transaction: t });
+    if (!customer) throwError("Customer not found", 404);
+
+    customer.is_active = false;
+    customer.deleted_at = new Date(); 
+    await customer.save({ transaction: t });
+
+    await logActivity({
+      user_id: deleterId,
+      action: "delete_customer",
+      description: `Deleted customer: ${customer.first_name} ${customer.last_name} (${customer.phone_number || customer.email})`,
+    });
+
+    await t.commit();
+
+    return {
+      success: true,
+      message: "Customer deleted successfully",
+      data: { customer_id: customer.id },
+    };
+  } catch (err) {
+    await t.rollback();
+    throw err;
+  }
+},
   
 };
 

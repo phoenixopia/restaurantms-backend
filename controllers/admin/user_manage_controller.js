@@ -104,3 +104,17 @@ exports.updateSuperAdminProfile = asyncHandler(async (req, res) => {
   );
   return success(res, "Profile updated successfully", updatedUser);
 });
+
+
+exports.updateCustomer = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const result = await UserService.updateCustomer(id, req.body, req.user.id);
+  return success(res, result.message, result.data);
+});
+
+
+exports.deleteCustomer = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const result = await UserService.deleteCustomer(id, req.user.id);
+  return success(res, result.message, result.data);
+});

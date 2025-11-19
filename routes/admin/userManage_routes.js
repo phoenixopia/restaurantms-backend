@@ -112,6 +112,21 @@ router.get(
 );
 
 
+router.put(
+  "/update-customer/:id",
+  protect("user"),
+  authorize("super_admin"),
+  UserController.updateCustomer
+);
+
+router.delete(
+  "/inactive-customer/:id",
+  protect("user"),
+  authorize("super_admin"),
+  UserController.deleteCustomer
+);
+
+
 
 
 module.exports = router;
