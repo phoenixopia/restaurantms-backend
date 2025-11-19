@@ -14,6 +14,7 @@ const { OAuth2Client } = require("google-auth-library");
 const { sendTokenResponse } = require("../../utils/sendTokenResponse");
 const { assignRoleToUser } = require("../../utils/roleUtils");
 const { sendSMS } = require("../../utils/sendSMS");
+const { sendTelegramOTP } = require("../../utils/sendTelegramOTP");
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
@@ -75,10 +76,25 @@ const AuthService = {
           confirmationCode
         );
       } else {
-        await sendSMS(
-          emailOrPhone,
-          `Hi ${customerData.first_name}, your signup confirmation code is: ${confirmationCode}`
-        );
+        // await sendSMS(
+        //   emailOrPhone,
+        //   `Hi ${customerData.first_name}, your signup confirmation code is: ${confirmationCode}`
+        // );
+       const sent = await sendTelegramOTP(emailOrPhone, confirmationCode);
+
+  if (sent) {
+    return res.json({
+      success: true,
+      message: "Verification code sent to Telegram!",
+      // otp for testing only
+    });
+  } else {
+    return res.json({
+      success: true,
+      message: "Code generated. Telegram not found — using fallback (SMS/email later)",
+      confirmationCode, // remove in production
+    });
+  }
       }
 
       await t.commit();
