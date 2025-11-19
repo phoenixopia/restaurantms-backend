@@ -1097,11 +1097,11 @@ async toggleCustomerStatus(customerId, userId) {
 
     await customer.save({ transaction: t });
 
-    await logActivity({
-      user_id: userId,
-      action: actionType,
-      description: logDescription,
-    });
+    // await logActivity({
+    //   user_id: userId,
+    //   action: actionType,
+    //   description: logDescription,
+    // });
 
     await t.commit();
 
