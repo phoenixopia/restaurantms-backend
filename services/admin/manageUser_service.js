@@ -6,6 +6,7 @@ const {
   RoleTag,
   Restaurant,
   Branch,
+  Customer,
   Plan,
   PlanLimit,
   Permission,
@@ -24,6 +25,8 @@ const throwError = require("../../utils/throwError");
 const { sendUserCredentialsEmail } = require("../../utils/sendEmail");
 const { sendSMS } = require("../../utils/sendSMS");
 const logActivity = require("../../utils/logActivity");
+const { Op} = require("sequelize");
+
 
 const UserService = {
   async createRestaurantAdmin(superAdminId, data) {
@@ -501,6 +504,64 @@ const UserService = {
       })),
     };
   },
+
+
+async getCreatedCustomers(userId, query) {
+  const page   = parseInt(query.page, 10) || 1;
+  const limit  = parseInt(query.limit, 10) || 10;
+  const offset = (page - 1) * limit;
+
+  const search = typeof query.search === "string"
+    ? query.search.trim().toLowerCase()
+    : "";
+
+  const where = {
+    
+    ...(search && {
+      [Op.or]: [
+        sequelize.where(
+          sequelize.fn("LOWER", sequelize.col("first_name")),
+          { [Op.like]: `%${search}%` }
+        ),
+        sequelize.where(
+          sequelize.fn("LOWER", sequelize.col("last_name")),
+          { [Op.like]: `%${search}%` }
+        ),
+        { phone_number: { [Op.like]: `%${search}%` } },
+      ]
+    })
+  };
+
+  const { rows, count } = await Customer.findAndCountAll({
+    where,
+    attributes: [
+      "id","email","first_name","last_name",
+      "phone_number","profile_picture",
+      "is_active","createdAt"
+    ],
+    order: [["createdAt", "DESC"]],
+    limit,
+    offset,
+  });
+
+  return {
+    total: count,
+    page,
+    pages: Math.ceil(count / limit),
+    data: rows.map(u => ({
+      id: u.id,
+      email: u.email,
+      first_name: u.first_name,
+      last_name: u.last_name,
+      full_name: `${u.first_name || ""} ${u.last_name || ""}`.trim(),
+      phone_number: u.phone_number,
+      profile_picture: u.profile_picture,
+      is_active: u.is_active,
+      created_at: u.createdAt,
+    })),
+  };
+},
+
 
   async assignUserToBranch(userId, branchId, currentUser) {
     const t = await sequelize.transaction();

@@ -104,6 +104,14 @@ router.put(
   UserController.updateSuperAdminProfile
 );
 
+router.get(
+  "/get-all-customers",
+  protect("user"),
+  authorize( "super_admin"),
+  UserController.getCreatedCustomers
+);
+
+
 
 
 module.exports = router;

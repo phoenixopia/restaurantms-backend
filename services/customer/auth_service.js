@@ -82,19 +82,19 @@ const AuthService = {
         // );
        const sent = await sendTelegramOTP(emailOrPhone, confirmationCode);
 
-  if (sent) {
-    return res.json({
-      success: true,
-      message: "Verification code sent to Telegram!",
-      // otp for testing only
-    });
-  } else {
-    return res.json({
-      success: true,
-      message: "Code generated. Telegram not found — using fallback (SMS/email later)",
-      confirmationCode, // remove in production
-    });
-  }
+  // if (sent) {
+  //   return res.json({
+  //     success: true,
+  //     message: "Verification code sent to Telegram!",
+  //     // otp for testing only
+  //   });
+  // } else {
+  //   return res.json({
+  //     success: true,
+  //     message: "Code generated. Telegram not found — using fallback (SMS/email later)",
+  //     confirmationCode, // remove in production
+  //   });
+  // }
       }
 
       await t.commit();

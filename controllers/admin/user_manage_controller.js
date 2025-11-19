@@ -26,6 +26,10 @@ exports.getCreatedUsers = asyncHandler(async (req, res) => {
   const users = await UserService.getAllCreatedUsers(req.user.id, req.query);
   return success(res, "Created users retrieved successfully", users);
 });
+exports.getCreatedCustomers = asyncHandler(async (req, res) => {
+  const users = await UserService.getCreatedCustomers(req.user.id, req.query);
+  return success(res, "Created customer retrieved successfully", users);
+});
 
 exports.assignUserToBranch = asyncHandler(async (req, res) => {
   const { userId, branchId } = req.body;
