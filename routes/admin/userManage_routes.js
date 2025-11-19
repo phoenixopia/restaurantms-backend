@@ -119,7 +119,7 @@ router.put(
   UserController.updateCustomer
 );
 
-router.delete(
+router.post(
   "/inactive-customer/:id",
   protect("user"),
   authorize("super_admin"),

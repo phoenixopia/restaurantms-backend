@@ -115,6 +115,6 @@ exports.updateCustomer = asyncHandler(async (req, res) => {
 
 exports.deleteCustomer = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const result = await UserService.deleteCustomer(id, req.user.id);
+  const result = await UserService.toggleCustomerStatus(id, req.user.id);
   return success(res, result.message, result.data);
 });

@@ -1071,34 +1071,54 @@ async updateCustomer(customerId, data, updaterId) {
   }
 },
 
-async deleteCustomer(customerId, deleterId) {
+async toggleCustomerStatus(customerId, userId) {
   const t = await sequelize.transaction();
+
   try {
     const customer = await Customer.findByPk(customerId, { transaction: t });
     if (!customer) throwError("Customer not found", 404);
 
-    customer.is_active = false;
-    customer.deleted_at = new Date(); 
+    let actionType = "";
+    let logDescription = "";
+
+    if (customer.is_active) {
+      // Deactivate customer
+      customer.is_active = false;
+      customer.deleted_at = new Date();
+      actionType = "deactivate_customer";
+      logDescription = `Deactivated customer: ${customer.first_name} ${customer.last_name} (${customer.phone_number || customer.email})`;
+    } else {
+      // Reactivate customer
+      customer.is_active = true;
+      customer.deleted_at = null;
+      actionType = "activate_customer";
+      logDescription = `Reactivated customer: ${customer.first_name} ${customer.last_name} (${customer.phone_number || customer.email})`;
+    }
+
     await customer.save({ transaction: t });
 
     await logActivity({
-      user_id: deleterId,
-      action: "delete_customer",
-      description: `Deleted customer: ${customer.first_name} ${customer.last_name} (${customer.phone_number || customer.email})`,
+      user_id: userId,
+      action: actionType,
+      description: logDescription,
     });
 
     await t.commit();
 
     return {
       success: true,
-      message: "Customer deleted successfully",
-      data: { customer_id: customer.id },
+      message: customer.is_active
+        ? "Customer activated successfully"
+        : "Customer deactivated successfully",
+      data: { customer_id: customer.id, is_active: customer.is_active },
     };
   } catch (err) {
     await t.rollback();
     throw err;
   }
 },
+
+
   
 };
 
