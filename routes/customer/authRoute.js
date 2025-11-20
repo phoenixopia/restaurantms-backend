@@ -62,7 +62,7 @@ router.post(
 
 router.post(
   "/logout",
-  authController.logout // no validation needed here
+  authController.logout 
 );
 
 router.post(
@@ -81,7 +81,8 @@ router.post(
 
 router.post(
   "/verify-token",
-  authController.refreshOrValidateToken // no validation needed here
+  authController.refreshOrValidateToken 
+  
 );
 
 module.exports = router;

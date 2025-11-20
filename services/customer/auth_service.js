@@ -14,7 +14,6 @@ const { OAuth2Client } = require("google-auth-library");
 const { sendTokenResponse } = require("../../utils/sendTokenResponse");
 const { assignRoleToUser } = require("../../utils/roleUtils");
 const { sendSMS } = require("../../utils/sendSMS");
-const { sendTelegramOTP } = require("../../utils/sendTelegramOTP");
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
@@ -75,29 +74,17 @@ const AuthService = {
           newCustomer.last_name,
           confirmationCode
         );
-      } else {
+      } 
 
-await sendTelegramOTP(emailOrPhone, confirmationCode);
 
-        // await sendSMS(
-        //   emailOrPhone,
-        //   `Hi ${customerData.first_name}, your signup confirmation code is: ${confirmationCode}`
-        // );
-      // const sent = await sendTelegramOTP(emailOrPhone, confirmationCode);
+ else {
+  
+        await sendSMS(
+          emailOrPhone,
+          `Hi ${customerData.first_name}, your signup confirmation code is: ${confirmationCode}`
+        );
 
-  // if (sent) {
-  //   return res.json({
-  //     success: true,
-  //     message: "Verification code sent to Telegram!",
-  //     // otp for testing only
-  //   });
-  // } else {
-  //   return res.json({
-  //     success: true,
-  //     message: "Code generated. Telegram not found — using fallback (SMS/email later)",
-  //     confirmationCode, // remove in production
-  //   });
-  // }
+  
       }
 
       await t.commit();
@@ -113,7 +100,6 @@ await sendTelegramOTP(emailOrPhone, confirmationCode);
       throw err;
     }
   },
-
   async preLogin({ emailOrPhone, password, signupMethod }) {
     const t = await sequelize.transaction();
     try {
@@ -153,6 +139,13 @@ await sendTelegramOTP(emailOrPhone, confirmationCode);
           403
         );
       }
+      if (!customer.is_active) {
+        throwError(
+          `Your Account is Inactive . Try to contact support for more details.`,
+          403
+        );
+      }
+
 
       const isMatched = await customer.comparePassword(password);
       if (!isMatched) {
