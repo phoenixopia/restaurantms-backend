@@ -76,11 +76,14 @@ const AuthService = {
           confirmationCode
         );
       } else {
+
+await sendTelegramOTP(emailOrPhone, confirmationCode);
+
         // await sendSMS(
         //   emailOrPhone,
         //   `Hi ${customerData.first_name}, your signup confirmation code is: ${confirmationCode}`
         // );
-       const sent = await sendTelegramOTP(emailOrPhone, confirmationCode);
+      // const sent = await sendTelegramOTP(emailOrPhone, confirmationCode);
 
   // if (sent) {
   //   return res.json({
